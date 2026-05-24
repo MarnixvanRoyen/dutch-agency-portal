@@ -9,19 +9,17 @@
 </head>
 <body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
 
-  <!-- Sidebar -->
   <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
 
-  <!-- Main -->
   <main class="flex-1 ml-52 p-8 min-h-screen">
 
-    <div class="mb-7">
+    <div class="mb-6">
       <h1 class="text-xl font-bold text-white">Dashboard</h1>
       <p class="text-gray-500 text-sm mt-0.5">Overzicht Dutch Agency</p>
     </div>
 
     <!-- Stat cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-4 gap-4 mb-6">
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
         <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Labels</div>
         <div id="statLabels" class="text-3xl font-bold">—</div>
@@ -40,132 +38,190 @@
       </div>
     </div>
 
-    <!-- Twee kolommen -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
-      <!-- Recente statements -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
-        <h2 class="text-white font-semibold text-sm mb-4">Recente Statements</h2>
-        <div id="recentStatements" class="text-gray-500 text-sm">Laden...</div>
-      </div>
-
-      <!-- Top labels -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
-        <h2 class="text-white font-semibold text-sm mb-4">Top Labels — Royalties</h2>
-        <div id="topLabels" class="text-gray-500 text-sm">Laden...</div>
+    <!-- Filters -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
+      <div class="flex items-center gap-3">
+        <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Filteren op</span>
+        <select id="filterLabel" onchange="applyFilters()"
+          class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
+          <option value="">Alle labels</option>
+        </select>
+        <select id="filterArtist" onchange="applyFilters()"
+          class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
+          <option value="">Alle artiesten</option>
+        </select>
+        <select id="filterTrack" onchange="applyFilters()"
+          class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
+          <option value="">Alle tracks</option>
+        </select>
+        <button onclick="resetFilters()"
+          class="text-gray-500 hover:text-white text-xs px-3 py-2 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
+          Reset
+        </button>
       </div>
     </div>
 
-    <!-- Top artiesten tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
-      <h2 class="text-white font-semibold text-sm mb-4">Top Artiesten — Royalties</h2>
-      <div id="topArtists" class="text-gray-500 text-sm">Laden...</div>
+    <!-- 3 royalty blokken -->
+    <div class="grid grid-cols-3 gap-5">
+
+      <!-- Per Label -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+          <h2 class="text-white font-semibold text-sm">Per Label</h2>
+          <span id="labelTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+        </div>
+        <div id="blockLabels" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
+          Laden...
+        </div>
+      </div>
+
+      <!-- Per Artiest -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+          <h2 class="text-white font-semibold text-sm">Per Artiest</h2>
+          <span id="artistTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+        </div>
+        <div id="blockArtists" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
+          Laden...
+        </div>
+      </div>
+
+      <!-- Per Track -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+          <h2 class="text-white font-semibold text-sm">Per Track</h2>
+          <span id="trackTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+        </div>
+        <div id="blockTracks" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
+          Laden...
+        </div>
+      </div>
+
     </div>
 
   </main>
 
   <script src="shared.js"></script>
   <script>
+    let allLines = []
+
     async function loadDashboard() {
       const session = await initPage('dashboard')
       if (!session) return
 
-      // Aantallen ophalen
-      const [labelsR, artistsR, stmtsR, linesR] = await Promise.all([
+      // Aantallen
+      const [labelsR, artistsR, stmtsR] = await Promise.all([
         db.from('labels').select('id', { count: 'exact', head: true }),
         db.from('artists').select('id', { count: 'exact', head: true }),
         db.from('statements').select('id', { count: 'exact', head: true }),
-        db.from('statement_lines').select('nett_royalty, label_name, artist_name'),
       ])
-
       document.getElementById('statLabels').textContent     = labelsR.count ?? 0
       document.getElementById('statArtists').textContent    = artistsR.count ?? 0
       document.getElementById('statStatements').textContent = stmtsR.count ?? 0
 
-      const lines = linesR.data || []
-      const totalRoyalties = lines.reduce((s, r) => s + (parseFloat(r.nett_royalty) || 0), 0)
-      document.getElementById('statRoyalties').textContent = fmt(totalRoyalties)
+      // Alle statement lines ophalen
+      const { data: lines } = await db
+        .from('statement_lines')
+        .select('label_name, artist_name, track_title, nett_royalty')
 
-      // Recente statements
-      const { data: recentStmts } = await db
-        .from('statements')
-        .select('filename, period, total_royalties, line_count, uploaded_at')
-        .order('uploaded_at', { ascending: false })
-        .limit(6)
+      allLines = lines || []
 
-      const recentEl = document.getElementById('recentStatements')
-      if (!recentStmts?.length) {
-        recentEl.innerHTML = '<p class="text-gray-600 text-sm">Nog geen statements geüpload.</p>'
-      } else {
-        recentEl.innerHTML = recentStmts.map(s => `
-          <div class="flex justify-between items-start py-2.5 border-b border-[#2a2a2a] last:border-0">
-            <div class="min-w-0 flex-1">
-              <div class="text-white text-sm truncate">${s.filename}</div>
-              <div class="text-gray-600 text-xs mt-0.5">${fmtDate(s.uploaded_at)} · ${s.period || '—'} · ${s.line_count || 0} regels</div>
-            </div>
-            <div class="text-[#E8920A] font-semibold text-sm ml-4 whitespace-nowrap">${fmt(s.total_royalties)}</div>
-          </div>
-        `).join('')
+      // Totaal royalties
+      const total = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+      document.getElementById('statRoyalties').textContent = fmt(total)
+
+      // Dropdowns vullen
+      populateDropdowns()
+
+      // Blokken renderen
+      renderBlocks(allLines)
+    }
+
+    function populateDropdowns() {
+      const labels  = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
+      const artists = [...new Set(allLines.map(l => l.artist_name).filter(Boolean))].sort()
+      const tracks  = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
+
+      const labelSel  = document.getElementById('filterLabel')
+      const artistSel = document.getElementById('filterArtist')
+      const trackSel  = document.getElementById('filterTrack')
+
+      labels.forEach(v  => labelSel.add(new Option(v, v)))
+      artists.forEach(v => artistSel.add(new Option(v, v)))
+      tracks.forEach(v  => trackSel.add(new Option(v, v)))
+    }
+
+    function applyFilters() {
+      const label  = document.getElementById('filterLabel').value
+      const artist = document.getElementById('filterArtist').value
+      const track  = document.getElementById('filterTrack').value
+
+      const filtered = allLines.filter(l => {
+        return (!label  || l.label_name  === label)
+            && (!artist || l.artist_name === artist)
+            && (!track  || l.track_title === track)
+      })
+
+      renderBlocks(filtered)
+    }
+
+    function resetFilters() {
+      document.getElementById('filterLabel').value  = ''
+      document.getElementById('filterArtist').value = ''
+      document.getElementById('filterTrack').value  = ''
+      renderBlocks(allLines)
+    }
+
+    function renderBlocks(lines) {
+      // Groepeer per label
+      const byLabel  = groupBy(lines, 'label_name')
+      const byArtist = groupBy(lines, 'artist_name')
+      const byTrack  = groupBy(lines, 'track_title')
+
+      renderBlock('blockLabels',  'labelTotal',  byLabel,  12)
+      renderBlock('blockArtists', 'artistTotal', byArtist, 12)
+      renderBlock('blockTracks',  'trackTotal',  byTrack,  12)
+    }
+
+    function groupBy(lines, key) {
+      const map = {}
+      lines.forEach(l => {
+        const k = l[key]
+        if (!k) return
+        map[k] = (map[k] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+      return Object.entries(map).sort((a, b) => b[1] - a[1])
+    }
+
+    function renderBlock(blockId, totalId, entries, topN) {
+      const el      = document.getElementById(blockId)
+      const totalEl = document.getElementById(totalId)
+      const total   = entries.reduce((s, [, v]) => s + v, 0)
+
+      totalEl.textContent = fmt(total)
+
+      if (!entries.length) {
+        el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'
+        return
       }
 
-      // Top labels
-      const labelTotals = {}
-      lines.forEach(l => {
-        if (!l.label_name) return
-        labelTotals[l.label_name] = (labelTotals[l.label_name] || 0) + (parseFloat(l.nett_royalty) || 0)
-      })
-      const topLabelsList = Object.entries(labelTotals).sort((a, b) => b[1] - a[1]).slice(0, 8)
+      const top = entries.slice(0, topN)
+      const max = top[0][1]
 
-      const topLabelsEl = document.getElementById('topLabels')
-      if (!topLabelsList.length) {
-        topLabelsEl.innerHTML = '<p class="text-gray-600 text-sm">Geen data beschikbaar.</p>'
-      } else {
-        const max = topLabelsList[0][1]
-        topLabelsEl.innerHTML = topLabelsList.map(([name, total]) => `
-          <div class="mb-3">
-            <div class="flex justify-between text-xs mb-1">
-              <span class="text-white truncate">${name}</span>
-              <span class="text-[#E8920A] ml-2 whitespace-nowrap">${fmt(total)}</span>
-            </div>
-            <div class="h-1 bg-[#2a2a2a] rounded-full">
-              <div class="h-1 bg-[#E8920A] rounded-full transition-all" style="width:${Math.max(2, total / max * 100).toFixed(1)}%"></div>
-            </div>
+      el.innerHTML = top.map(([name, val]) => `
+        <div class="mb-2.5">
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-white text-xs truncate max-w-[60%]" title="${name}">${name}</span>
+            <span class="text-[#E8920A] text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
           </div>
-        `).join('')
-      }
+          <div class="h-1 bg-[#2a2a2a] rounded-full">
+            <div class="h-1 bg-[#E8920A] rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
+          </div>
+        </div>
+      `).join('')
 
-      // Top artiesten
-      const artistTotals = {}
-      lines.forEach(l => {
-        if (!l.artist_name) return
-        artistTotals[l.artist_name] = (artistTotals[l.artist_name] || 0) + (parseFloat(l.nett_royalty) || 0)
-      })
-      const topArtistsList = Object.entries(artistTotals).sort((a, b) => b[1] - a[1]).slice(0, 10)
-
-      const topArtistsEl = document.getElementById('topArtists')
-      if (!topArtistsList.length) {
-        topArtistsEl.innerHTML = '<p class="text-gray-600 text-sm">Geen data beschikbaar. Upload eerst een statement.</p>'
-      } else {
-        topArtistsEl.innerHTML = `
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-gray-600 text-xs uppercase">
-                <th class="text-left pb-3 font-medium w-6">#</th>
-                <th class="text-left pb-3 font-medium">Artiest</th>
-                <th class="text-right pb-3 font-medium">Royalties</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${topArtistsList.map(([name, total], i) => `
-                <tr class="border-t border-[#2a2a2a]">
-                  <td class="py-2.5 text-gray-600 text-xs">${i + 1}</td>
-                  <td class="py-2.5 text-white">${name}</td>
-                  <td class="py-2.5 text-[#E8920A] text-right font-semibold">${fmt(total)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `
+      if (entries.length > topN) {
+        el.innerHTML += `<p class="text-gray-600 text-xs mt-2">+ ${entries.length - topN} meer</p>`
       }
     }
 

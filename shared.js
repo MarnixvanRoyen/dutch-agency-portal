@@ -35,6 +35,15 @@ function renderNav(activePage, email) {
         <div class="text-[#E8920A] font-bold text-base tracking-widest uppercase">Dutch Agency</div>
         <div class="text-gray-600 text-xs mt-0.5">Rob Boskamp BV</div>
       </div>
+      <div class="p-4 border-b border-[#2a2a2a] flex items-center gap-3">
+        <img src="rob.jpg" alt="Rob Boskamp"
+          class="w-10 h-10 rounded-full object-cover border border-[#2a2a2a]"
+          onerror="this.style.display='none'">
+        <div>
+          <div class="text-white text-xs font-medium">Rob Boskamp</div>
+          <div class="text-gray-600 text-xs">Eigenaar</div>
+        </div>
+      </div>
       <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
         ${NAV_LINKS.map(l => `
           <a href="${l.href}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${

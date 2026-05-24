@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statements — Dutch Agency</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+
+  <main class="flex-1 ml-52 p-8">
+
+    <div class="mb-7">
+      <h1 class="text-xl font-bold">Royalty Statements</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Upload Excel-bestanden (24 sheets per label)</p>
+    </div>
+
+    <!-- Upload sectie -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6 mb-6">
+      <h2 class="text-white font-semibold text-sm mb-4">Nieuw statement uploaden</h2>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Periode (bijv. Q1 2025)</label>
+          <input type="text" id="period"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="Q1 2025">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Excel bestand</label>
+          <input type="file" id="fileInput" accept=".xlsx,.xls"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-[#E8920A] file:text-white file:font-medium hover:file:bg-[#d4830a] file:cursor-pointer cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="uploadProgress" class="hidden mb-4">
+        <div class="flex justify-between text-xs text-gray-500 mb-1">
+          <span id="progressLabel">Verwerken...</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+          <div id="progressBar" class="h-2 bg-[#E8920A] rounded-full transition-all duration-300" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Preview na parse -->
+      <div id="parsePreview" class="hidden mb-4 p-4 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg text-sm">
+        <div id="previewContent"></div>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="parseFile()" id="parseBtn"
+          class="bg-[#2a2a2a] hover:bg-[#333] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+          Controleren
+        </button>
+        <button onclick="uploadStatement()" id="uploadBtn" disabled
+          class="bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Opslaan in database
+        </button>
+      </div>
+    </div>
+
+    <!-- Overzicht van statements -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-[#2a2a2a]">
+        <h2 class="text-white font-semibold text-sm">Geüploade Statements</h2>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Bestandsnaam</th>
+            <th class="text-left px-5 py-3 font-medium">Periode</th>
+            <th class="text-right px-5 py-3 font-medium">Regels</th>
+            <th class="text-right px-5 py-3 font-medium">Totaal Royalties</th>
+            <th class="text-right px-5 py-3 font-medium">Geüpload</th>
+            <th class="text-right px-5 py-3 font-medium">Actie</th>
+          </tr>
+        </thead>
+        <tbody id="statementsTable">
+          <tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail modal -->
+    <div id="detailModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 id="detailTitle" class="text-white font-semibold text-base"></h2>
+          <button onclick="closeDetail()" class="text-gray-500 hover:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="overflow-auto flex-1 p-1">
+          <table class="w-full text-xs">
+            <thead class="sticky top-0 bg-[#1e1e1e]">
+              <tr class="border-b border-[#2a2a2a] text-gray-500 uppercase">
+                <th class="text-left px-4 py-3 font-medium">Label</th>
+                <th class="text-left px-4 py-3 font-medium">Artiest</th>
+                <th class="text-left px-4 py-3 font-medium">Track</th>
+                <th class="text-left px-4 py-3 font-medium">ISRC</th>
+                <th class="text-right px-4 py-3 font-medium">Royalty</th>
+              </tr>
+            </thead>
+            <tbody id="detailTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    let parsedData = null // opgeslagen parse-resultaat
+
+    async function loadPage() {
+      const session = await initPage('statements')
+      if (!session) return
+      await loadStatements()
+    }
+
+    async function loadStatements() {
+      const { data, error } = await db
+        .from('statements')
+        .select('*')
+        .order('uploaded_at', { ascending: false })
+
+      const tbody = document.getElementById('statementsTable')
+      if (!data?.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Nog geen statements geüpload.</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = data.map(s => `
+        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+          <td class="px-5 py-3.5 text-white font-medium">${s.filename}</td>
+          <td class="px-5 py-3.5 text-gray-500">${s.period || '—'}</td>
+          <td class="px-5 py-3.5 text-right text-gray-400">${s.line_count || 0}</td>
+          <td class="px-5 py-3.5 text-right text-[#E8920A] font-semibold">${fmt(s.total_royalties)}</td>
+          <td class="px-5 py-3.5 text-right text-gray-500 text-xs">${fmtDate(s.uploaded_at)}</td>
+          <td class="px-5 py-3.5 text-right">
+            <button onclick="viewDetail('${s.id}', '${s.filename.replace(/'/g, "\\'")}')"
+              class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bekijken</button>
+            <button onclick="deleteStatement('${s.id}')"
+              class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+          </td>
+        </tr>
+      `).join('')
+    }
+
+    // ---------- Excel parsen ----------
+    function detectCols(headers) {
+      const h = headers.map(x => String(x || '').toLowerCase().trim())
+      return {
+        artist:  h.findIndex(x => x.includes('artist') || x.includes('artiest') || x.includes('performer') || x.includes('uitvoerder')),
+        track:   h.findIndex(x => x.includes('track') || x.includes('titel') || x.includes('title') || x.includes('song') || x.includes('werk')),
+        isrc:    h.findIndex(x => x.includes('isrc')),
+        royalty: h.findIndex(x => x.includes('royalt') || x.includes('bedrag') || x.includes('nett') || x.includes('amount') || x.includes('net ') || x === 'net'),
+        period:  h.findIndex(x => x.includes('period') || x.includes('kwartaal') || x.includes('quarter')),
+      }
+    }
+
+    async function parseFile() {
+      const file = document.getElementById('fileInput').files[0]
+      if (!file) { showToast('Selecteer eerst een Excel-bestand.', 'error'); return }
+
+      setProgress(true, 'Bestand lezen...', 5)
+
+      const buffer = await file.arrayBuffer()
+      const wb     = XLSX.read(buffer, { type: 'array' })
+
+      const allLines = []
+      const sheetNames = wb.SheetNames
+      let totalRoyalties = 0
+
+      sheetNames.forEach((sheetName, idx) => {
+        setProgress(true, `Sheet ${idx + 1}/${sheetNames.length}: ${sheetName}`, 5 + Math.round(idx / sheetNames.length * 85))
+
+        const ws   = wb.Sheets[sheetName]
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null })
+
+        if (rows.length < 2) return
+
+        // Zoek de headerrij (eerste rij met >2 gevulde cellen)
+        let headerRowIdx = 0
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+          const filled = rows[i].filter(c => c !== null && c !== '').length
+          if (filled > 2) { headerRowIdx = i; break }
+        }
+
+        const headers = rows[headerRowIdx].map(x => String(x || ''))
+        const cols    = detectCols(headers)
+        const dataRows = rows.slice(headerRowIdx + 1)
+
+        dataRows.forEach(row => {
+          if (!row || row.every(c => c === null || c === '')) return
+
+          const royaltyVal = cols.royalty >= 0 ? parseFloat(row[cols.royalty]) : null
+          if (isNaN(royaltyVal) && royaltyVal !== null) return // sla lege bedragen over
+
+          const line = {
+            label_name:  sheetName,
+            artist_name: cols.artist >= 0  ? String(row[cols.artist] || '').trim()  || null : null,
+            track_title: cols.track >= 0   ? String(row[cols.track]  || '').trim()  || null : null,
+            isrc:        cols.isrc >= 0    ? String(row[cols.isrc]   || '').trim()  || null : null,
+            nett_royalty: royaltyVal || 0,
+            period:      cols.period >= 0  ? String(row[cols.period] || '').trim()  || null : null,
+            raw_data:    Object.fromEntries(headers.map((h, i) => [h, row[i]])),
+          }
+          allLines.push(line)
+          totalRoyalties += royaltyVal || 0
+        })
+      })
+
+      setProgress(true, 'Klaar!', 100)
+
+      // Preview tonen
+      const labelCounts = {}
+      allLines.forEach(l => { labelCounts[l.label_name] = (labelCounts[l.label_name] || 0) + 1 })
+
+      document.getElementById('previewContent').innerHTML = `
+        <div class="font-medium text-white mb-2">${file.name}</div>
+        <div class="text-gray-400 mb-3">
+          ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#E8920A] font-semibold">${fmt(totalRoyalties)}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+          ${Object.entries(labelCounts).map(([name, cnt]) => `
+            <div class="text-xs text-gray-500">${name} <span class="text-gray-600">(${cnt})</span></div>
+          `).join('')}
+        </div>
+      `
+      document.getElementById('parsePreview').classList.remove('hidden')
+      document.getElementById('uploadBtn').disabled = false
+
+      parsedData = { file, lines: allLines, total: totalRoyalties, sheetCount: sheetNames.length }
+
+      setTimeout(() => setProgress(false), 1000)
+    }
+
+    // ---------- Opslaan ----------
+    async function uploadStatement() {
+      if (!parsedData) return
+      const { file, lines, total } = parsedData
+      const period = document.getElementById('period').value.trim() || null
+
+      document.getElementById('uploadBtn').disabled = true
+      setProgress(true, 'Opslaan...', 10)
+
+      // Statement record aanmaken
+      const { data: stmt, error: stmtErr } = await db
+        .from('statements')
+        .insert({ filename: file.name, period, total_royalties: total, line_count: lines.length })
+        .select()
+        .single()
+
+      if (stmtErr) {
+        showToast('Fout bij aanmaken statement: ' + stmtErr.message, 'error')
+        document.getElementById('uploadBtn').disabled = false
+        setProgress(false)
+        return
+      }
+
+      // Regels in batches van 500 opslaan
+      const batchSize = 500
+      for (let i = 0; i < lines.length; i += batchSize) {
+        const batch = lines.slice(i, i + batchSize).map(l => ({ ...l, statement_id: stmt.id }))
+        const { error } = await db.from('statement_lines').insert(batch)
+        if (error) {
+          showToast('Fout bij opslaan regels: ' + error.message, 'error')
+          setProgress(false)
+          return
+        }
+        setProgress(true, `Regels opslaan ${Math.min(i + batchSize, lines.length)}/${lines.length}...`,
+          10 + Math.round((i + batchSize) / lines.length * 85))
+      }
+
+      setProgress(true, 'Klaar!', 100)
+      showToast(`${lines.length} regels opgeslagen!`)
+
+      // Reset
+      parsedData = null
+      document.getElementById('fileInput').value = ''
+      document.getElementById('period').value = ''
+      document.getElementById('parsePreview').classList.add('hidden')
+      document.getElementById('uploadBtn').disabled = true
+
+      setTimeout(() => setProgress(false), 1000)
+      await loadStatements()
+    }
+
+    function setProgress(show, label = '', pct = 0) {
+      const el = document.getElementById('uploadProgress')
+      if (!show) { el.classList.add('hidden'); return }
+      el.classList.remove('hidden')
+      document.getElementById('progressLabel').textContent = label
+      document.getElementById('progressPct').textContent   = pct + '%'
+      document.getElementById('progressBar').style.width   = pct + '%'
+    }
+
+    // ---------- Detail bekijken ----------
+    async function viewDetail(stmtId, filename) {
+      document.getElementById('detailTitle').textContent = filename
+      document.getElementById('detailTable').innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-gray-500">Laden...</td></tr>'
+      document.getElementById('detailModal').classList.remove('hidden')
+
+      const { data: lines } = await db
+        .from('statement_lines')
+        .select('label_name, artist_name, track_title, isrc, nett_royalty')
+        .eq('statement_id', stmtId)
+        .order('label_name')
+
+      document.getElementById('detailTable').innerHTML = (lines || []).map(l => `
+        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/20">
+          <td class="px-4 py-2 text-gray-400">${l.label_name || '—'}</td>
+          <td class="px-4 py-2 text-white">${l.artist_name || '—'}</td>
+          <td class="px-4 py-2 text-gray-300">${l.track_title || '—'}</td>
+          <td class="px-4 py-2 text-gray-500">${l.isrc || '—'}</td>
+          <td class="px-4 py-2 text-right text-[#E8920A] font-medium">${fmt(l.nett_royalty)}</td>
+        </tr>
+      `).join('')
+    }
+
+    function closeDetail() { document.getElementById('detailModal').classList.add('hidden') }
+
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeDetail()
+    })
+
+    // ---------- Verwijderen ----------
+    async function deleteStatement(id) {
+      if (!confirm('Weet je zeker dat je dit statement (en alle regels) wilt verwijderen?')) return
+      const { error } = await db.from('statements').delete().eq('id', id)
+      if (error) {
+        showToast('Fout: ' + error.message, 'error')
+      } else {
+        showToast('Statement verwijderd.')
+        await loadStatements()
+      }
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

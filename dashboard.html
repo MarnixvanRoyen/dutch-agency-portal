@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Dutch Agency</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+
+  <!-- Main -->
+  <main class="flex-1 ml-52 p-8 min-h-screen">
+
+    <div class="mb-7">
+      <h1 class="text-xl font-bold text-white">Dashboard</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Overzicht Dutch Agency</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Labels</div>
+        <div id="statLabels" class="text-3xl font-bold">—</div>
+      </div>
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Artiesten</div>
+        <div id="statArtists" class="text-3xl font-bold">—</div>
+      </div>
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Statements</div>
+        <div id="statStatements" class="text-3xl font-bold">—</div>
+      </div>
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Totaal Royalties</div>
+        <div id="statRoyalties" class="text-3xl font-bold text-[#E8920A]">—</div>
+      </div>
+    </div>
+
+    <!-- Twee kolommen -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+      <!-- Recente statements -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
+        <h2 class="text-white font-semibold text-sm mb-4">Recente Statements</h2>
+        <div id="recentStatements" class="text-gray-500 text-sm">Laden...</div>
+      </div>
+
+      <!-- Top labels -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
+        <h2 class="text-white font-semibold text-sm mb-4">Top Labels — Royalties</h2>
+        <div id="topLabels" class="text-gray-500 text-sm">Laden...</div>
+      </div>
+    </div>
+
+    <!-- Top artiesten tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
+      <h2 class="text-white font-semibold text-sm mb-4">Top Artiesten — Royalties</h2>
+      <div id="topArtists" class="text-gray-500 text-sm">Laden...</div>
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    async function loadDashboard() {
+      const session = await initPage('dashboard')
+      if (!session) return
+
+      // Aantallen ophalen
+      const [labelsR, artistsR, stmtsR, linesR] = await Promise.all([
+        db.from('labels').select('id', { count: 'exact', head: true }),
+        db.from('artists').select('id', { count: 'exact', head: true }),
+        db.from('statements').select('id', { count: 'exact', head: true }),
+        db.from('statement_lines').select('nett_royalty, label_name, artist_name'),
+      ])
+
+      document.getElementById('statLabels').textContent     = labelsR.count ?? 0
+      document.getElementById('statArtists').textContent    = artistsR.count ?? 0
+      document.getElementById('statStatements').textContent = stmtsR.count ?? 0
+
+      const lines = linesR.data || []
+      const totalRoyalties = lines.reduce((s, r) => s + (parseFloat(r.nett_royalty) || 0), 0)
+      document.getElementById('statRoyalties').textContent = fmt(totalRoyalties)
+
+      // Recente statements
+      const { data: recentStmts } = await db
+        .from('statements')
+        .select('filename, period, total_royalties, line_count, uploaded_at')
+        .order('uploaded_at', { ascending: false })
+        .limit(6)
+
+      const recentEl = document.getElementById('recentStatements')
+      if (!recentStmts?.length) {
+        recentEl.innerHTML = '<p class="text-gray-600 text-sm">Nog geen statements geüpload.</p>'
+      } else {
+        recentEl.innerHTML = recentStmts.map(s => `
+          <div class="flex justify-between items-start py-2.5 border-b border-[#2a2a2a] last:border-0">
+            <div class="min-w-0 flex-1">
+              <div class="text-white text-sm truncate">${s.filename}</div>
+              <div class="text-gray-600 text-xs mt-0.5">${fmtDate(s.uploaded_at)} · ${s.period || '—'} · ${s.line_count || 0} regels</div>
+            </div>
+            <div class="text-[#E8920A] font-semibold text-sm ml-4 whitespace-nowrap">${fmt(s.total_royalties)}</div>
+          </div>
+        `).join('')
+      }
+
+      // Top labels
+      const labelTotals = {}
+      lines.forEach(l => {
+        if (!l.label_name) return
+        labelTotals[l.label_name] = (labelTotals[l.label_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+      const topLabelsList = Object.entries(labelTotals).sort((a, b) => b[1] - a[1]).slice(0, 8)
+
+      const topLabelsEl = document.getElementById('topLabels')
+      if (!topLabelsList.length) {
+        topLabelsEl.innerHTML = '<p class="text-gray-600 text-sm">Geen data beschikbaar.</p>'
+      } else {
+        const max = topLabelsList[0][1]
+        topLabelsEl.innerHTML = topLabelsList.map(([name, total]) => `
+          <div class="mb-3">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-white truncate">${name}</span>
+              <span class="text-[#E8920A] ml-2 whitespace-nowrap">${fmt(total)}</span>
+            </div>
+            <div class="h-1 bg-[#2a2a2a] rounded-full">
+              <div class="h-1 bg-[#E8920A] rounded-full transition-all" style="width:${Math.max(2, total / max * 100).toFixed(1)}%"></div>
+            </div>
+          </div>
+        `).join('')
+      }
+
+      // Top artiesten
+      const artistTotals = {}
+      lines.forEach(l => {
+        if (!l.artist_name) return
+        artistTotals[l.artist_name] = (artistTotals[l.artist_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+      const topArtistsList = Object.entries(artistTotals).sort((a, b) => b[1] - a[1]).slice(0, 10)
+
+      const topArtistsEl = document.getElementById('topArtists')
+      if (!topArtistsList.length) {
+        topArtistsEl.innerHTML = '<p class="text-gray-600 text-sm">Geen data beschikbaar. Upload eerst een statement.</p>'
+      } else {
+        topArtistsEl.innerHTML = `
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-gray-600 text-xs uppercase">
+                <th class="text-left pb-3 font-medium w-6">#</th>
+                <th class="text-left pb-3 font-medium">Artiest</th>
+                <th class="text-right pb-3 font-medium">Royalties</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${topArtistsList.map(([name, total], i) => `
+                <tr class="border-t border-[#2a2a2a]">
+                  <td class="py-2.5 text-gray-600 text-xs">${i + 1}</td>
+                  <td class="py-2.5 text-white">${name}</td>
+                  <td class="py-2.5 text-[#E8920A] text-right font-semibold">${fmt(total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `
+      }
+    }
+
+    loadDashboard()
+  </script>
+</body>
+</html>

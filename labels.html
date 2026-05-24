@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labels — Dutch Agency</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+
+  <main class="flex-1 ml-52 p-8">
+
+    <div class="flex items-center justify-between mb-7">
+      <div>
+        <h1 class="text-xl font-bold">Labels</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Beheer alle record labels</p>
+      </div>
+      <button onclick="openModal()"
+        class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Label toevoegen
+      </button>
+    </div>
+
+    <!-- Tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Label</th>
+            <th class="text-left px-5 py-3 font-medium">Omschrijving</th>
+            <th class="text-right px-5 py-3 font-medium">Totaal Royalties</th>
+            <th class="text-right px-5 py-3 font-medium">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="labelsTable">
+          <tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Label toevoegen</h2>
+      <form id="labelForm" class="space-y-4">
+        <input type="hidden" id="labelId">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Naam *</label>
+          <input type="text" id="labelName" required
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="bijv. Spinnin Records">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Omschrijving</label>
+          <input type="text" id="labelDesc"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="Optionele omschrijving">
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()"
+            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            Annuleren
+          </button>
+          <button type="submit"
+            class="flex-1 bg-[#E8920A] hover:bg-[#d4830a] text-white font-semibold rounded-lg py-3 text-sm transition-colors">
+            Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    let royaltyByLabel = {}
+
+    async function loadPage() {
+      const session = await initPage('labels')
+      if (!session) return
+      await loadLabels()
+    }
+
+    async function loadLabels() {
+      // Royalties per label uit statement_lines
+      const { data: lines } = await db.from('statement_lines').select('label_name, nett_royalty')
+      royaltyByLabel = {}
+      ;(lines || []).forEach(l => {
+        if (!l.label_name) return
+        royaltyByLabel[l.label_name] = (royaltyByLabel[l.label_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+
+      const { data: labels, error } = await db.from('labels').select('*').order('name')
+      const tbody = document.getElementById('labelsTable')
+
+      if (error || !labels?.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Nog geen labels. Voeg er één toe.</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = labels.map(l => `
+        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+          <td class="px-5 py-3.5 font-medium text-white">${l.name}</td>
+          <td class="px-5 py-3.5 text-gray-500">${l.description || '—'}</td>
+          <td class="px-5 py-3.5 text-right ${royaltyByLabel[l.name] ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
+            ${royaltyByLabel[l.name] ? fmt(royaltyByLabel[l.name]) : '—'}
+          </td>
+          <td class="px-5 py-3.5 text-right">
+            <button onclick='editLabel(${JSON.stringify(l)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
+            <button onclick="deleteLabel('${l.id}', '${l.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+          </td>
+        </tr>
+      `).join('')
+    }
+
+    function openModal(label = null) {
+      document.getElementById('labelId').value   = label?.id || ''
+      document.getElementById('labelName').value = label?.name || ''
+      document.getElementById('labelDesc').value = label?.description || ''
+      document.getElementById('modalTitle').textContent = label ? 'Label bewerken' : 'Label toevoegen'
+      document.getElementById('modal').classList.remove('hidden')
+      setTimeout(() => document.getElementById('labelName').focus(), 50)
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden')
+    }
+
+    function editLabel(label) { openModal(label) }
+
+    document.getElementById('labelForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const id   = document.getElementById('labelId').value
+      const name = document.getElementById('labelName').value.trim()
+      const desc = document.getElementById('labelDesc').value.trim()
+
+      if (!name) return
+
+      let error
+      if (id) {
+        ({ error } = await db.from('labels').update({ name, description: desc || null }).eq('id', id))
+      } else {
+        ({ error } = await db.from('labels').insert({ name, description: desc || null }))
+      }
+
+      if (error) {
+        showToast(error.message || 'Er ging iets mis.', 'error')
+      } else {
+        showToast(id ? 'Label bijgewerkt.' : 'Label toegevoegd.')
+        closeModal()
+        await loadLabels()
+      }
+    })
+
+    async function deleteLabel(id, name) {
+      if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen?`)) return
+      const { error } = await db.from('labels').delete().eq('id', id)
+      if (error) {
+        showToast('Kan niet verwijderen: ' + error.message, 'error')
+      } else {
+        showToast('Label verwijderd.')
+        await loadLabels()
+      }
+    }
+
+    // Klik buiten modal = sluiten
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal()
+    })
+
+    loadPage()
+  </script>
+</body>
+</html>

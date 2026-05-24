@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artiesten — Dutch Agency</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+
+  <main class="flex-1 ml-52 p-8">
+
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h1 class="text-xl font-bold">Artiesten</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Beheer alle artiesten</p>
+      </div>
+      <button onclick="openModal()"
+        class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Artiest toevoegen
+      </button>
+    </div>
+
+    <!-- Zoek + filter -->
+    <div class="flex gap-3 mb-5">
+      <input type="text" id="searchInput" placeholder="Zoek op naam..."
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-64 placeholder-gray-600"
+        oninput="filterTable()">
+      <select id="labelFilter"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+        onchange="filterTable()">
+        <option value="">Alle labels</option>
+      </select>
+    </div>
+
+    <!-- Tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Artiest</th>
+            <th class="text-left px-5 py-3 font-medium">Label</th>
+            <th class="text-left px-5 py-3 font-medium">E-mail</th>
+            <th class="text-right px-5 py-3 font-medium">Royalties</th>
+            <th class="text-right px-5 py-3 font-medium">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="artistsTable">
+          <tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Artiest toevoegen</h2>
+      <form id="artistForm" class="space-y-4">
+        <input type="hidden" id="artistId">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Naam *</label>
+          <input type="text" id="artistName" required
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="Artiestennaam">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
+          <select id="artistLabel"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
+            <option value="">— Geen label —</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mail</label>
+          <input type="email" id="artistEmail"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="artiest@email.nl">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Telefoonnummer</label>
+          <input type="text" id="artistPhone"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            placeholder="+31 6 00000000">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Notities</label>
+          <textarea id="artistNotes" rows="2"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors resize-none"
+            placeholder="Optionele notities..."></textarea>
+        </div>
+        <div class="flex gap-3 pt-1">
+          <button type="button" onclick="closeModal()"
+            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            Annuleren
+          </button>
+          <button type="submit"
+            class="flex-1 bg-[#E8920A] hover:bg-[#d4830a] text-white font-semibold rounded-lg py-3 text-sm transition-colors">
+            Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    let allArtists = []
+    let allLabels  = []
+    let royaltyByArtist = {}
+
+    async function loadPage() {
+      const session = await initPage('artists')
+      if (!session) return
+      await Promise.all([loadLabels(), loadRoyalties()])
+      await loadArtists()
+    }
+
+    async function loadLabels() {
+      const { data } = await db.from('labels').select('id, name').order('name')
+      allLabels = data || []
+
+      // Vul label-filter dropdown
+      const filterSel = document.getElementById('labelFilter')
+      allLabels.forEach(l => {
+        const opt = document.createElement('option')
+        opt.value = l.id
+        opt.textContent = l.name
+        filterSel.appendChild(opt)
+      })
+
+      // Vul modal label-dropdown
+      const modalSel = document.getElementById('artistLabel')
+      allLabels.forEach(l => {
+        const opt = document.createElement('option')
+        opt.value = l.id
+        opt.textContent = l.name
+        modalSel.appendChild(opt)
+      })
+    }
+
+    async function loadRoyalties() {
+      const { data: lines } = await db.from('statement_lines').select('artist_name, nett_royalty')
+      royaltyByArtist = {}
+      ;(lines || []).forEach(l => {
+        if (!l.artist_name) return
+        royaltyByArtist[l.artist_name] = (royaltyByArtist[l.artist_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+    }
+
+    async function loadArtists() {
+      const { data, error } = await db.from('artists').select('*, labels(name)').order('name')
+      allArtists = data || []
+      renderTable(allArtists)
+    }
+
+    function renderTable(artists) {
+      const tbody = document.getElementById('artistsTable')
+      if (!artists.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Geen artiesten gevonden.</td></tr>'
+        return
+      }
+      tbody.innerHTML = artists.map(a => {
+        const labelName = a.labels?.name || '—'
+        const royalty   = royaltyByArtist[a.name]
+        return `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+            <td class="px-5 py-3.5 font-medium text-white">${a.name}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs">${labelName}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
+            <td class="px-5 py-3.5 text-right ${royalty ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
+              ${royalty ? fmt(royalty) : '—'}
+            </td>
+            <td class="px-5 py-3.5 text-right">
+              <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
+              <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+            </td>
+          </tr>
+        `
+      }).join('')
+    }
+
+    function filterTable() {
+      const q      = document.getElementById('searchInput').value.toLowerCase()
+      const labelId = document.getElementById('labelFilter').value
+      const filtered = allArtists.filter(a => {
+        const matchName  = a.name.toLowerCase().includes(q)
+        const matchLabel = !labelId || a.label_id === labelId
+        return matchName && matchLabel
+      })
+      renderTable(filtered)
+    }
+
+    function openModal(artist = null) {
+      document.getElementById('artistId').value    = artist?.id || ''
+      document.getElementById('artistName').value  = artist?.name || ''
+      document.getElementById('artistLabel').value = artist?.label_id || ''
+      document.getElementById('artistEmail').value = artist?.email || ''
+      document.getElementById('artistPhone').value = artist?.phone || ''
+      document.getElementById('artistNotes').value = artist?.notes || ''
+      document.getElementById('modalTitle').textContent = artist ? 'Artiest bewerken' : 'Artiest toevoegen'
+      document.getElementById('modal').classList.remove('hidden')
+      setTimeout(() => document.getElementById('artistName').focus(), 50)
+    }
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden') }
+    function editArtist(a) { openModal(a) }
+
+    document.getElementById('artistForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const id      = document.getElementById('artistId').value
+      const payload = {
+        name:     document.getElementById('artistName').value.trim(),
+        label_id: document.getElementById('artistLabel').value || null,
+        email:    document.getElementById('artistEmail').value.trim() || null,
+        phone:    document.getElementById('artistPhone').value.trim() || null,
+        notes:    document.getElementById('artistNotes').value.trim() || null,
+      }
+
+      let error
+      if (id) {
+        ({ error } = await db.from('artists').update(payload).eq('id', id))
+      } else {
+        ({ error } = await db.from('artists').insert(payload))
+      }
+
+      if (error) {
+        showToast(error.message || 'Er ging iets mis.', 'error')
+      } else {
+        showToast(id ? 'Artiest bijgewerkt.' : 'Artiest toegevoegd.')
+        closeModal()
+        await loadArtists()
+      }
+    })
+
+    async function deleteArtist(id, name) {
+      if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen?`)) return
+      const { error } = await db.from('artists').delete().eq('id', id)
+      if (error) {
+        showToast('Kan niet verwijderen: ' + error.message, 'error')
+      } else {
+        showToast('Artiest verwijderd.')
+        await loadArtists()
+      }
+    }
+
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal()
+    })
+
+    loadPage()
+  </script>
+</body>
+</html>

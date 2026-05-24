@@ -12,7 +12,7 @@ import os
 
 # ── Configuratie ──────────────────────────────────────────
 SUPABASE_URL = 'https://agurvyolmndhefsafboi.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndXJ2eW9sbW5kaGVmc2FmYm9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTYzNDUzNCwiZXhwIjoyMDk1MjEwNTM0fQ.J_J1AFKp6ViB4wu-QlAdCokfL4UrVZOleetzoM_X8xU'
+SUPABASE_KEY = 'PLAK_HIER_JE_SERVICE_ROLE_KEY'  # Haal op uit Supabase → Settings → API
 
 # Pad naar de SQLite database (relatief aan dit script)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'dutch_agency.db')

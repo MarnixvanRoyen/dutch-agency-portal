@@ -27,6 +27,13 @@
       </button>
     </div>
 
+    <!-- Zoeken -->
+    <div class="mb-5">
+      <input type="text" id="searchInput" placeholder="Zoek op labelnaam..."
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-72 placeholder-gray-600"
+        oninput="filterTable()">
+    </div>
+
     <!-- Tabel -->
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
       <table class="w-full text-sm">
@@ -80,11 +87,18 @@
   <script src="shared.js"></script>
   <script>
     let royaltyByLabel = {}
+    let allLabels = []
 
     async function loadPage() {
       const session = await initPage('labels')
       if (!session) return
       await loadLabels()
+    }
+
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase()
+      const filtered = allLabels.filter(l => l.name.toLowerCase().includes(q))
+      renderRows(filtered)
     }
 
     async function loadLabels() {
@@ -97,13 +111,22 @@
       })
 
       const { data: labels, error } = await db.from('labels').select('*').order('name')
-      const tbody = document.getElementById('labelsTable')
 
       if (error || !labels?.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Nog geen labels. Voeg er één toe.</td></tr>'
+        document.getElementById('labelsTable').innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Nog geen labels. Voeg er één toe.</td></tr>'
         return
       }
 
+      allLabels = labels
+      renderRows(labels)
+    }
+
+    function renderRows(labels) {
+      const tbody = document.getElementById('labelsTable')
+      if (!labels.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Geen labels gevonden.</td></tr>'
+        return
+      }
       tbody.innerHTML = labels.map(l => `
         <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
           <td class="px-5 py-3.5 font-medium text-white">${l.name}</td>

@@ -36,7 +36,7 @@ function renderNav(activePage, email) {
         <div class="text-gray-600 text-xs mt-0.5">Rob Boskamp BV</div>
       </div>
       <div class="p-4 border-b border-[#2a2a2a] flex items-center gap-3">
-        <img src="rob.jpg" alt="Rob Boskamp"
+        <img src="https://marnixvanroyen.github.io/dutch-agency-portal/rob.jpg" alt="Rob Boskamp"
           class="w-10 h-10 rounded-full object-cover border border-[#2a2a2a]"
           onerror="this.style.display='none'">
         <div>

@@ -42,18 +42,9 @@
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Filteren op</span>
-        <select id="filterLabel" onchange="applyFilters()"
-          class="w-full sm:flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
-          <option value="">Alle labels</option>
-        </select>
-        <select id="filterArtist" onchange="applyFilters()"
-          class="w-full sm:flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
-          <option value="">Alle artiesten</option>
-        </select>
-        <select id="filterTrack" onchange="applyFilters()"
-          class="w-full sm:flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
-          <option value="">Alle tracks</option>
-        </select>
+        <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
+        <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
+        <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
         <button onclick="resetFilters()"
           class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
           Reset
@@ -105,6 +96,11 @@
   <script>
     let allLines = []
 
+    // Huidige filterwaarden (vrije tekst)
+    const filterValues = { label: '', artist: '', track: '' }
+    // Beschikbare opties per filter
+    const filterOpts   = { label: [], artist: [], track: [] }
+
     async function loadDashboard() {
       const session = await initPage('dashboard')
       if (!session) return
@@ -130,50 +126,126 @@
       const total = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
       document.getElementById('statRoyalties').textContent = fmt(total)
 
-      // Dropdowns vullen
+      // Autocomplete filters bouwen
       populateDropdowns()
 
       // Blokken renderen
       renderBlocks(allLines)
     }
 
+    // ── Autocomplete bouwen ──────────────────────────────────────────────
+
     function populateDropdowns() {
-      const labels  = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
-      const artists = [...new Set(allLines.map(l => l.artist_name).filter(Boolean))].sort()
-      const tracks  = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
+      filterOpts.label  = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
+      filterOpts.artist = [...new Set(allLines.map(l => l.artist_name).filter(Boolean))].sort()
+      filterOpts.track  = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
 
-      const labelSel  = document.getElementById('filterLabel')
-      const artistSel = document.getElementById('filterArtist')
-      const trackSel  = document.getElementById('filterTrack')
-
-      labels.forEach(v  => labelSel.add(new Option(v, v)))
-      artists.forEach(v => artistSel.add(new Option(v, v)))
-      tracks.forEach(v  => trackSel.add(new Option(v, v)))
+      buildAutocomplete('wrap_label',  'label',  'Label zoeken...')
+      buildAutocomplete('wrap_artist', 'artist', 'Artiest zoeken...')
+      buildAutocomplete('wrap_track',  'track',  'Track zoeken...')
     }
 
+    function buildAutocomplete(wrapperId, key, placeholder) {
+      const wrap = document.getElementById(wrapperId)
+      wrap.innerHTML = `
+        <input type="text" id="input_${key}"
+          placeholder="${placeholder}" autocomplete="off" spellcheck="false"
+          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 pr-8 text-sm focus:outline-none focus:border-[#E8920A] transition-colors placeholder-gray-600"
+          oninput="onFilterInput('${key}')"
+          onfocus="showDropdown('${key}')">
+        <button id="clear_${key}" onclick="clearFilter('${key}')"
+          class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors p-0.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <div id="dd_${key}"
+          class="hidden absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 max-h-52 overflow-y-auto">
+        </div>
+      `
+    }
+
+    // Terwijl de gebruiker tikt
+    function onFilterInput(key) {
+      const q = document.getElementById(`input_${key}`).value
+      filterValues[key] = q
+      document.getElementById(`clear_${key}`).classList.toggle('hidden', !q)
+      showDropdown(key)
+      applyFilters()
+    }
+
+    // Dropdown vullen met gefilterde opties
+    function showDropdown(key) {
+      const q    = (document.getElementById(`input_${key}`)?.value || '').toLowerCase()
+      const opts = filterOpts[key] || []
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const matches = q ? opts.filter(o => o.toLowerCase().includes(q)) : opts
+      const dd = document.getElementById(`dd_${key}`)
+      if (!matches.length) { dd.classList.add('hidden'); return }
+
+      dd.classList.remove('hidden')
+      dd.innerHTML = matches.slice(0, 40).map(o => {
+        const hl = escaped
+          ? o.replace(new RegExp(`(${escaped})`, 'gi'),
+              '<span style="color:#E8920A;font-weight:600">$1</span>')
+          : o
+        const safeVal = o.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+        return `<button type="button"
+          onmousedown="selectFilter('${key}', '${safeVal}'); event.preventDefault()"
+          class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] hover:text-white transition-colors">${hl}</button>`
+      }).join('')
+    }
+
+    // Optie geselecteerd uit dropdown
+    function selectFilter(key, value) {
+      filterValues[key] = value
+      document.getElementById(`input_${key}`).value = value
+      document.getElementById(`clear_${key}`).classList.remove('hidden')
+      document.getElementById(`dd_${key}`).classList.add('hidden')
+      applyFilters()
+    }
+
+    // Filter wissen met kruisje
+    function clearFilter(key) {
+      filterValues[key] = ''
+      document.getElementById(`input_${key}`).value = ''
+      document.getElementById(`clear_${key}`).classList.add('hidden')
+      document.getElementById(`dd_${key}`).classList.add('hidden')
+      applyFilters()
+    }
+
+    // Sluit alle dropdowns bij klik buiten filterblok
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#wrap_label, #wrap_artist, #wrap_track')) {
+        ;['label', 'artist', 'track'].forEach(k => {
+          const dd = document.getElementById(`dd_${k}`)
+          if (dd) dd.classList.add('hidden')
+        })
+      }
+    })
+
+    // ── Filter toepassen ─────────────────────────────────────────────────
+
     function applyFilters() {
-      const label  = document.getElementById('filterLabel').value
-      const artist = document.getElementById('filterArtist').value
-      const track  = document.getElementById('filterTrack').value
+      const lq = filterValues.label.toLowerCase()
+      const aq = filterValues.artist.toLowerCase()
+      const tq = filterValues.track.toLowerCase()
 
-      const filtered = allLines.filter(l => {
-        return (!label  || l.label_name  === label)
-            && (!artist || l.artist_name === artist)
-            && (!track  || l.track_title === track)
-      })
-
+      const filtered = allLines.filter(l =>
+        (!lq || (l.label_name  || '').toLowerCase().includes(lq)) &&
+        (!aq || (l.artist_name || '').toLowerCase().includes(aq)) &&
+        (!tq || (l.track_title || '').toLowerCase().includes(tq))
+      )
       renderBlocks(filtered)
     }
 
     function resetFilters() {
-      document.getElementById('filterLabel').value  = ''
-      document.getElementById('filterArtist').value = ''
-      document.getElementById('filterTrack').value  = ''
-      renderBlocks(allLines)
+      ;['label', 'artist', 'track'].forEach(clearFilter)
     }
 
+    // ── Blokken renderen ─────────────────────────────────────────────────
+
     function renderBlocks(lines) {
-      // Groepeer per label
       const byLabel  = groupBy(lines, 'label_name')
       const byArtist = groupBy(lines, 'artist_name')
       const byTrack  = groupBy(lines, 'track_title')

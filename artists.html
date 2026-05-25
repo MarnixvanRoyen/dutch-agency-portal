@@ -111,6 +111,90 @@
     </div>
   </div>
 
+  <!-- ── Rapport overlay (volledig scherm) ────────────────────────────── -->
+  <div id="reportOverlay" class="hidden fixed inset-0 bg-[#0d0d0d] z-50 overflow-y-auto">
+
+    <!-- Sticky header -->
+    <div class="sticky top-0 bg-[#0d0d0d]/95 border-b border-[#2a2a2a] px-4 md:px-8 py-4 flex items-center gap-4 z-10">
+      <button onclick="closeReport()"
+        class="flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        <span class="hidden sm:inline">Terug</span>
+      </button>
+      <div class="flex-1 min-w-0">
+        <div class="text-gray-500 text-xs uppercase tracking-wider">Artiest Rapport</div>
+        <div id="reportName" class="text-lg font-bold text-white truncate">...</div>
+      </div>
+      <div class="text-right shrink-0">
+        <div class="text-gray-500 text-xs mb-0.5">Totale verdiensten</div>
+        <div id="reportTotal" class="text-xl font-bold text-[#E8920A]">—</div>
+      </div>
+      <button onclick="window.print()"
+        class="hidden md:flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white px-3 py-2 rounded-lg text-xs transition-colors shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Afdrukken
+      </button>
+    </div>
+
+    <!-- Inhoud -->
+    <div class="p-4 md:p-8 max-w-5xl mx-auto">
+
+      <!-- Samenvatting kaarten -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Totale royalties</div>
+          <div id="summaryTotal" class="text-xl font-bold text-[#E8920A]">—</div>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Nummers</div>
+          <div id="summaryTracks" class="text-xl font-bold">—</div>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Labels</div>
+          <div id="summaryLabels" class="text-xl font-bold">—</div>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Periodes</div>
+          <div id="summaryPeriods" class="text-xl font-bold">—</div>
+        </div>
+      </div>
+
+      <!-- Per Nummer + Per Label -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
+          <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+            <h2 class="text-white font-semibold text-sm">Verdiensten per Nummer</h2>
+            <span id="reportTrackCount" class="text-gray-600 text-xs"></span>
+          </div>
+          <div id="reportTracks" class="p-5 overflow-y-auto max-h-96 text-sm text-gray-500">Laden...</div>
+        </div>
+
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
+          <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+            <h2 class="text-white font-semibold text-sm">Verdiensten per Label</h2>
+            <span id="reportLabelCount" class="text-gray-600 text-xs"></span>
+          </div>
+          <div id="reportLabels" class="p-5 text-sm text-gray-500">Laden...</div>
+        </div>
+
+      </div>
+
+      <!-- Per Periode -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl">
+        <div class="px-5 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-sm">Verdiensten per Periode / Statement</h2>
+        </div>
+        <div id="reportPeriods" class="p-5 text-sm text-gray-500">Laden...</div>
+      </div>
+
+    </div>
+  </div>
+
   <script src="shared.js"></script>
   <script>
     let allArtists = []
@@ -179,7 +263,8 @@
             <td class="px-5 py-3.5 text-right ${royalty ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
               ${royalty ? fmt(royalty) : '—'}
             </td>
-            <td class="px-5 py-3.5 text-right">
+            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+              <button onclick="openReport('${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#E8920A] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -254,6 +339,141 @@
 
     document.getElementById('modal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeModal()
+    })
+
+    // ── Rapport ─────────────────────────────────────────────────────────
+
+    async function openReport(artistName) {
+      const overlay = document.getElementById('reportOverlay')
+      overlay.classList.remove('hidden')
+      overlay.scrollTop = 0
+      document.body.style.overflow = 'hidden'
+
+      // Reset naar laadstatus
+      document.getElementById('reportName').textContent  = artistName
+      document.getElementById('reportTotal').textContent = '...'
+      ;['summaryTotal','summaryTracks','summaryLabels','summaryPeriods'].forEach(id => {
+        document.getElementById(id).textContent = '—'
+      })
+      ;['reportTracks','reportLabels','reportPeriods'].forEach(id => {
+        document.getElementById(id).innerHTML =
+          '<p class="text-gray-600 text-sm py-6 text-center">Laden...</p>'
+      })
+
+      await loadReport(artistName)
+    }
+
+    function closeReport() {
+      document.getElementById('reportOverlay').classList.add('hidden')
+      document.body.style.overflow = ''
+    }
+
+    async function loadReport(artistName) {
+      // Haal alle statement-regels op voor deze artiest, inclusief periode
+      const { data: lines, error } = await db
+        .from('statement_lines')
+        .select('track_title, label_name, nett_royalty, statements(period, filename)')
+        .eq('artist_name', artistName)
+
+      if (error || !lines?.length) {
+        const msg = '<p class="text-gray-600 text-sm py-6 text-center">Geen royalty-data gevonden voor deze artiest.</p>'
+        ;['reportTracks','reportLabels','reportPeriods'].forEach(id => {
+          document.getElementById(id).innerHTML = msg
+        })
+        document.getElementById('reportTotal').textContent  = fmt(0)
+        document.getElementById('summaryTotal').textContent = fmt(0)
+        return
+      }
+
+      // Groepeer data
+      const byTrack  = {}
+      const byLabel  = {}
+      const byPeriod = {}
+      let total = 0
+
+      lines.forEach(l => {
+        const royalty = parseFloat(l.nett_royalty) || 0
+        total += royalty
+
+        const t  = l.track_title || 'Onbekend'
+        const lb = l.label_name  || 'Onbekend'
+        const p  = l.statements?.period || l.statements?.filename || 'Onbekend'
+
+        byTrack[t]   = (byTrack[t]   || 0) + royalty
+        byLabel[lb]  = (byLabel[lb]  || 0) + royalty
+        byPeriod[p]  = (byPeriod[p]  || 0) + royalty
+      })
+
+      const trackEntries  = Object.entries(byTrack).sort((a, b) => b[1] - a[1])
+      const labelEntries  = Object.entries(byLabel).sort((a, b) => b[1] - a[1])
+      const periodEntries = Object.entries(byPeriod).sort((a, b) => a[0].localeCompare(b[0]))
+
+      // Samenvatting
+      document.getElementById('reportTotal').textContent    = fmt(total)
+      document.getElementById('summaryTotal').textContent   = fmt(total)
+      document.getElementById('summaryTracks').textContent  = trackEntries.length
+      document.getElementById('summaryLabels').textContent  = labelEntries.length
+      document.getElementById('summaryPeriods').textContent = periodEntries.length
+
+      document.getElementById('reportTrackCount').textContent =
+        trackEntries.length + ' nummers'
+      document.getElementById('reportLabelCount').textContent =
+        labelEntries.length + ' labels'
+
+      // Blokken renderen
+      renderReportBars('reportTracks', trackEntries)
+      renderReportBars('reportLabels', labelEntries)
+      renderReportPeriods('reportPeriods', periodEntries, total)
+    }
+
+    function renderReportBars(elId, entries) {
+      const el = document.getElementById(elId)
+      if (!entries.length) {
+        el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'
+        return
+      }
+      const max = entries[0][1]
+      el.innerHTML = entries.map(([name, val]) => `
+        <div class="mb-3">
+          <div class="flex justify-between items-baseline mb-1.5">
+            <span class="text-white text-xs truncate max-w-[65%]" title="${name}">${name}</span>
+            <span class="text-[#E8920A] text-xs font-bold ml-2 whitespace-nowrap">${fmt(val)}</span>
+          </div>
+          <div class="h-1.5 bg-[#2a2a2a] rounded-full">
+            <div class="h-1.5 bg-[#E8920A] rounded-full" style="width:${Math.max(2, val/max*100).toFixed(1)}%"></div>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    function renderReportPeriods(elId, entries, totalAll) {
+      const el = document.getElementById(elId)
+      if (!entries.length) {
+        el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'
+        return
+      }
+      const max = Math.max(...entries.map(([,v]) => v))
+      el.innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          ${entries.map(([period, val]) => `
+            <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+              <div class="text-gray-500 text-xs mb-2 truncate" title="${period}">${period}</div>
+              <div class="text-[#E8920A] font-bold text-base">${fmt(val)}</div>
+              <div class="mt-2 h-1 bg-[#2a2a2a] rounded-full">
+                <div class="h-1 bg-[#E8920A]/60 rounded-full" style="width:${Math.max(2, val/max*100).toFixed(1)}%"></div>
+              </div>
+              <div class="text-gray-600 text-xs mt-1">
+                ${totalAll > 0 ? (val/totalAll*100).toFixed(1) + '% van totaal' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `
+    }
+
+    // Rapport sluiten met Escape-toets
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeReport()
     })
 
     loadPage()

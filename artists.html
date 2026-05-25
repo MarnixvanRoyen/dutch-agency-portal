@@ -7,40 +7,41 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
-  <main class="flex-1 ml-52 p-8">
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
-    <div class="flex items-center justify-between mb-5">
+    <div class="flex items-center justify-between mb-4">
       <div>
         <h1 class="text-xl font-bold">Artiesten</h1>
         <p class="text-gray-500 text-sm mt-0.5">Beheer alle artiesten</p>
       </div>
       <button onclick="openModal()"
-        class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Artiest toevoegen
+        <span class="hidden sm:inline">Artiest toevoegen</span>
+        <span class="sm:hidden">Toevoegen</span>
       </button>
     </div>
 
     <!-- Zoek + filter -->
-    <div class="flex gap-3 mb-5">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op naam..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-64 placeholder-gray-600"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-full sm:w-64 placeholder-gray-600"
         oninput="filterTable()">
       <select id="labelFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-full sm:w-auto"
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
     </div>
 
     <!-- Tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">

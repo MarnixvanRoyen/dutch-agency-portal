@@ -8,11 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen flex font-sans">
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-10 top-0 left-0"></aside>
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
-  <main class="flex-1 ml-52 p-8">
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
     <div class="mb-7">
       <h1 class="text-xl font-bold">Royalty Statements</h1>
@@ -23,7 +23,7 @@
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6 mb-6">
       <h2 class="text-white font-semibold text-sm mb-4">Nieuw statement uploaden</h2>
 
-      <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Periode (bijv. Q1 2025)</label>
           <input type="text" id="period"
@@ -53,7 +53,7 @@
         <div id="previewContent"></div>
       </div>
 
-      <div class="flex gap-3">
+      <div class="flex flex-col sm:flex-row gap-3">
         <button onclick="parseFile()" id="parseBtn"
           class="bg-[#2a2a2a] hover:bg-[#333] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
           Controleren
@@ -66,7 +66,7 @@
     </div>
 
     <!-- Overzicht van statements -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
       <div class="px-5 py-4 border-b border-[#2a2a2a]">
         <h2 class="text-white font-semibold text-sm">Geüploade Statements</h2>
       </div>

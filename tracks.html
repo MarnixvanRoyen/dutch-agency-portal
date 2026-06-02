@@ -16,7 +16,7 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h1 class="text-xl font-bold">Tracks</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Alle tracks in de catalogus</p>
+        <p class="text-gray-500 text-sm mt-0.5">Catalogus — koppel artiesten en splits per track</p>
       </div>
       <button onclick="openModal()"
         class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
@@ -45,15 +45,18 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
-            <th class="text-left px-5 py-3 font-medium">Titel</th>
+            <th class="text-left px-5 py-3 font-medium">Track</th>
             <th class="text-left px-5 py-3 font-medium">Label</th>
-            <th class="text-left px-5 py-3 font-medium">ISRC / Catalogus</th>
-            <th class="text-right px-5 py-3 font-medium">Royalties</th>
+            <th class="text-left px-5 py-3 font-medium">ISRC</th>
+            <th class="text-left px-5 py-3 font-medium">Artiesten</th>
+            <th class="text-right px-5 py-3 font-medium">Streams</th>
+            <th class="text-right px-5 py-3 font-medium">Downloads</th>
+            <th class="text-right px-5 py-3 font-medium">Totaal</th>
             <th class="text-right px-5 py-3 font-medium">Acties</th>
           </tr>
         </thead>
         <tbody id="tracksTable">
-          <tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          <tr><td colspan="8" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -63,44 +66,58 @@
       <span id="pageInfo"></span>
       <div class="flex gap-2">
         <button id="prevBtn" onclick="prevPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors disabled:opacity-30">
-          ← Vorige
-        </button>
+          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">← Vorige</button>
         <button id="nextBtn" onclick="nextPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors disabled:opacity-30">
-          Volgende →
-        </button>
+          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">Volgende →</button>
       </div>
     </div>
 
   </main>
 
-  <!-- Modal -->
-  <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+  <!-- ── Track modal ──────────────────────────────────────────────── -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8">
       <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Track toevoegen</h2>
       <form id="trackForm" class="space-y-4">
         <input type="hidden" id="trackId">
+
+        <!-- Basis info -->
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Titel *</label>
           <input type="text" id="trackTitle" required
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
             placeholder="Track titel">
         </div>
-        <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
-          <select id="trackLabel"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
-            <option value="">— Geen label —</option>
-          </select>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
+            <select id="trackLabel"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
+              <option value="">— Geen label —</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">ISRC / Catalogus</label>
+            <input type="text" id="trackIsrc"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+              placeholder="bijv. BBR184-12">
+          </div>
         </div>
-        <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">ISRC / Catalogusnummer</label>
-          <input type="text" id="trackIsrc"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
-            placeholder="bijv. NL-A51-24-00001">
+
+        <!-- Artiesten & splits -->
+        <div class="pt-2">
+          <div class="flex items-center justify-between mb-3">
+            <label class="text-gray-400 text-xs uppercase tracking-wider">Artiesten & Splits</label>
+            <span id="splitTotal" class="text-xs font-semibold text-gray-500">Totaal: 0%</span>
+          </div>
+          <div id="splitRows" class="space-y-2 mb-2"></div>
+          <button type="button" onclick="addSplitRow()"
+            class="w-full py-2.5 border border-dashed border-[#2a2a2a] text-gray-500 hover:text-white hover:border-[#E8920A] rounded-lg text-xs transition-colors">
+            + Artiest toevoegen
+          </button>
         </div>
-        <div class="flex gap-3 pt-1">
+
+        <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()"
             class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
             Annuleren
@@ -116,53 +133,66 @@
 
   <script src="shared.js"></script>
   <script>
-    let allTracks = []
-    let allLabels = []
-    let royaltyByIsrc = {}
-    let filtered = []
+    let allTracks   = []
+    let allLabels   = []
+    let allArtists  = []
+    let royaltyByTrack = {}   // { track_id: { total, stream, download } }
+    let filtered    = []
     let currentPage = 0
     const PAGE_SIZE = 50
+
+    // ── Laden ────────────────────────────────────────────────────────
 
     async function loadPage() {
       const session = await initPage('tracks')
       if (!session) return
-      await Promise.all([loadLabels(), loadRoyalties()])
+      await Promise.all([loadLabels(), loadArtists(), loadRoyalties()])
       await loadTracks()
     }
 
     async function loadLabels() {
       const { data } = await db.from('labels').select('id, name').order('name')
       allLabels = data || []
-
       const filterSel = document.getElementById('labelFilter')
       const modalSel  = document.getElementById('trackLabel')
       allLabels.forEach(l => {
-        [filterSel, modalSel].forEach(sel => {
-          const opt = document.createElement('option')
-          opt.value = l.id
-          opt.textContent = l.name
-          sel.appendChild(opt)
-        })
+        filterSel.add(new Option(l.name, l.id))
+        modalSel.add(new Option(l.name, l.id))
       })
     }
 
+    async function loadArtists() {
+      const { data } = await db.from('artists').select('id, name').order('name')
+      allArtists = data || []
+    }
+
     async function loadRoyalties() {
-      const { data: lines } = await db.from('statement_lines').select('isrc, nett_royalty, track_title')
-      royaltyByIsrc = {}
+      const { data: lines } = await db
+        .from('statement_lines')
+        .select('track_id, usage_type, nett_royalty')
+      royaltyByTrack = {}
       ;(lines || []).forEach(l => {
-        const key = l.isrc || l.track_title
-        if (!key) return
-        royaltyByIsrc[key] = (royaltyByIsrc[key] || 0) + (parseFloat(l.nett_royalty) || 0)
+        if (!l.track_id) return
+        if (!royaltyByTrack[l.track_id]) royaltyByTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
+        const amt = parseFloat(l.nett_royalty) || 0
+        royaltyByTrack[l.track_id].total  += amt
+        if (l.usage_type === 'stream')   royaltyByTrack[l.track_id].stream   += amt
+        if (l.usage_type === 'download') royaltyByTrack[l.track_id].download += amt
       })
     }
 
     async function loadTracks() {
-      const { data, error } = await db.from('tracks').select('*, labels(name)').order('title')
+      const { data } = await db
+        .from('tracks')
+        .select('*, labels(name), track_artists(split_percentage, artists(id, name))')
+        .order('title')
       allTracks = data || []
-      filtered = allTracks
+      filtered  = allTracks
       currentPage = 0
       renderTable()
     }
+
+    // ── Tabel renderen ───────────────────────────────────────────────
 
     function renderTable() {
       const tbody = document.getElementById('tracksTable')
@@ -170,24 +200,37 @@
       const page  = filtered.slice(start, start + PAGE_SIZE)
 
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Geen tracks gevonden.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-6 text-gray-600 text-sm">Geen tracks gevonden.</td></tr>'
         document.getElementById('pageInfo').textContent = ''
         return
       }
 
       tbody.innerHTML = page.map(t => {
-        const labelName = t.labels?.name || '—'
-        const royaltyKey = t.isrc || t.title
-        const royalty = royaltyByIsrc[royaltyKey]
+        const label  = t.labels?.name || '—'
+        const roy    = royaltyByTrack[t.id] || { total: 0, stream: 0, download: 0 }
+        const artists = (t.track_artists || [])
+          .sort((a, b) => b.split_percentage - a.split_percentage)
+          .map(ta => `${ta.artists?.name || '?'} <span class="text-gray-600">${ta.split_percentage}%</span>`)
+          .join(', ')
+
         return `
           <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
             <td class="px-5 py-3 text-white font-medium">${t.title}</td>
-            <td class="px-5 py-3 text-gray-500 text-xs">${labelName}</td>
+            <td class="px-5 py-3 text-gray-500 text-xs">${label}</td>
             <td class="px-5 py-3 text-gray-500 text-xs font-mono">${t.isrc || '—'}</td>
-            <td class="px-5 py-3 text-right ${royalty ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
-              ${royalty ? fmt(royalty) : '—'}
+            <td class="px-5 py-3 text-xs text-gray-400 max-w-[200px]">
+              ${artists || '<span class="text-gray-600">—</span>'}
             </td>
-            <td class="px-5 py-3 text-right">
+            <td class="px-5 py-3 text-right text-xs ${roy.stream ? 'text-[#E8920A]' : 'text-gray-600'}">
+              ${roy.stream ? fmt(roy.stream) : '—'}
+            </td>
+            <td class="px-5 py-3 text-right text-xs ${roy.download ? 'text-blue-400' : 'text-gray-600'}">
+              ${roy.download ? fmt(roy.download) : '—'}
+            </td>
+            <td class="px-5 py-3 text-right text-xs font-semibold ${roy.total ? 'text-white' : 'text-gray-600'}">
+              ${roy.total ? fmt(roy.total) : '—'}
+            </td>
+            <td class="px-5 py-3 text-right whitespace-nowrap">
               <button onclick='editTrack(${JSON.stringify(t)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteTrack('${t.id}', '${t.title.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -217,20 +260,100 @@
     function prevPage() { if (currentPage > 0) { currentPage--; renderTable() } }
     function nextPage() { if ((currentPage + 1) * PAGE_SIZE < filtered.length) { currentPage++; renderTable() } }
 
+    // ── Modal openen/sluiten ─────────────────────────────────────────
+
     function openModal(track = null) {
-      document.getElementById('trackId').value    = track?.id || ''
+      document.getElementById('trackId').value    = track?.id    || ''
       document.getElementById('trackTitle').value = track?.title || ''
       document.getElementById('trackLabel').value = track?.label_id || ''
-      document.getElementById('trackIsrc').value  = track?.isrc || ''
+      document.getElementById('trackIsrc').value  = track?.isrc  || ''
       document.getElementById('modalTitle').textContent = track ? 'Track bewerken' : 'Track toevoegen'
+
+      // Splits laden
+      const existingSplits = track?.track_artists || []
+      buildSplitRows(existingSplits)
+
       document.getElementById('modal').classList.remove('hidden')
       setTimeout(() => document.getElementById('trackTitle').focus(), 50)
     }
 
-    function closeModal() { document.getElementById('modal').classList.add('hidden') }
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden')
+    }
+
     function editTrack(t) { openModal(t) }
 
-    document.getElementById('trackForm').addEventListener('submit', async (e) => {
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal()
+    })
+
+    // ── Artiest splits in modal ──────────────────────────────────────
+
+    function buildSplitRows(existingSplits) {
+      const container = document.getElementById('splitRows')
+      container.innerHTML = ''
+      if (existingSplits.length === 0) {
+        addSplitRow()
+      } else {
+        existingSplits.forEach(ta => addSplitRow(ta.artists?.id, ta.split_percentage))
+      }
+      updateSplitTotal()
+    }
+
+    function addSplitRow(artistId = '', pct = '') {
+      const container = document.getElementById('splitRows')
+      const div = document.createElement('div')
+      div.className = 'flex gap-2 items-center split-row'
+
+      const options = allArtists.map(a =>
+        `<option value="${a.id}" ${a.id === artistId ? 'selected' : ''}>${a.name}</option>`
+      ).join('')
+
+      div.innerHTML = `
+        <select class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors artist-select" onchange="updateSplitTotal()">
+          <option value="">— Artiest —</option>
+          ${options}
+        </select>
+        <div class="flex items-center gap-1 shrink-0">
+          <input type="number" min="0" max="100" step="0.01" value="${pct !== '' ? pct : 100}"
+            class="w-20 bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:border-[#E8920A] transition-colors split-input"
+            oninput="updateSplitTotal()">
+          <span class="text-gray-500 text-xs">%</span>
+        </div>
+        <button type="button" onclick="removeSplitRow(this)"
+          class="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0 px-1">×</button>
+      `
+      container.appendChild(div)
+      updateSplitTotal()
+    }
+
+    function removeSplitRow(btn) {
+      btn.closest('.split-row').remove()
+      updateSplitTotal()
+    }
+
+    function updateSplitTotal() {
+      const inputs = document.querySelectorAll('.split-input')
+      const total  = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0)
+      const el     = document.getElementById('splitTotal')
+      el.textContent = `Totaal: ${total.toFixed(1)}%`
+      const ok = Math.abs(total - 100) < 0.11 || inputs.length === 0
+      el.className = `text-xs font-semibold ${ok ? 'text-green-400' : 'text-red-400'}`
+    }
+
+    function getSplitRows() {
+      const rows = []
+      document.querySelectorAll('.split-row').forEach(row => {
+        const artistId = row.querySelector('.artist-select').value
+        const pct      = parseFloat(row.querySelector('.split-input').value) || 0
+        if (artistId) rows.push({ artist_id: artistId, split_percentage: pct })
+      })
+      return rows
+    }
+
+    // ── Opslaan ──────────────────────────────────────────────────────
+
+    document.getElementById('trackForm').addEventListener('submit', async e => {
       e.preventDefault()
       const id      = document.getElementById('trackId').value
       const payload = {
@@ -238,22 +361,40 @@
         label_id: document.getElementById('trackLabel').value || null,
         isrc:     document.getElementById('trackIsrc').value.trim() || null,
       }
+      const splits = getSplitRows()
 
+      let trackId = id
       let error
+
       if (id) {
-        ({ error } = await db.from('tracks').update(payload).eq('id', id))
+        ;({ error } = await db.from('tracks').update(payload).eq('id', id))
       } else {
-        ({ error } = await db.from('tracks').insert(payload))
+        const { data, error: e2 } = await db.from('tracks').insert(payload).select().single()
+        error   = e2
+        trackId = data?.id
       }
 
-      if (error) {
-        showToast(error.message || 'Er ging iets mis.', 'error')
-      } else {
-        showToast(id ? 'Track bijgewerkt.' : 'Track toegevoegd.')
-        closeModal()
-        await loadTracks()
+      if (error || !trackId) {
+        showToast(error?.message || 'Er ging iets mis.', 'error')
+        return
       }
+
+      // Splits bijwerken: verwijder bestaande en voeg nieuwe in
+      await db.from('track_artists').delete().eq('track_id', trackId)
+      if (splits.length) {
+        const { error: splitErr } = await db.from('track_artists').insert(
+          splits.map(s => ({ track_id: trackId, artist_id: s.artist_id, split_percentage: s.split_percentage }))
+        )
+        if (splitErr) showToast('Track opgeslagen, maar splits mislukt: ' + splitErr.message, 'error')
+      }
+
+      showToast(id ? 'Track bijgewerkt.' : 'Track toegevoegd.')
+      closeModal()
+      await loadRoyalties()
+      await loadTracks()
     })
+
+    // ── Verwijderen ──────────────────────────────────────────────────
 
     async function deleteTrack(id, title) {
       if (!confirm(`Weet je zeker dat je "${title}" wilt verwijderen?`)) return
@@ -262,13 +403,10 @@
         showToast('Kan niet verwijderen: ' + error.message, 'error')
       } else {
         showToast('Track verwijderd.')
+        await loadRoyalties()
         await loadTracks()
       }
     }
-
-    document.getElementById('modal').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) closeModal()
-    })
 
     loadPage()
   </script>

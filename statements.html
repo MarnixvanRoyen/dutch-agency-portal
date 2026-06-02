@@ -119,12 +119,23 @@
 
   <script src="shared.js"></script>
   <script>
-    let parsedData = null // opgeslagen parse-resultaat
+    let parsedData = null
+    let isrcToTrackId = {}  // { 'BBR184-12': 'uuid...' }
 
     async function loadPage() {
       const session = await initPage('statements')
       if (!session) return
+      await loadTrackMap()
       await loadStatements()
+    }
+
+    // Bouw een ISRC → track_id map voor automatisch koppelen
+    async function loadTrackMap() {
+      const { data } = await db.from('tracks').select('id, isrc').not('isrc', 'is', null)
+      isrcToTrackId = {}
+      ;(data || []).forEach(t => {
+        if (t.isrc) isrcToTrackId[t.isrc.trim().toLowerCase()] = t.id
+      })
     }
 
     async function loadStatements() {
@@ -208,11 +219,13 @@
           const royaltyVal = cols.royalty >= 0 ? parseFloat(row[cols.royalty]) : null
           if (isNaN(royaltyVal) && royaltyVal !== null) return // sla lege bedragen over
 
+          const isrcVal = cols.isrc >= 0 ? String(row[cols.isrc] || '').trim() || null : null
           const line = {
             label_name:  sheetName,
             artist_name: cols.artist   >= 0 ? String(row[cols.artist]   || '').trim() || null : null,
             track_title: cols.track    >= 0 ? String(row[cols.track]    || '').trim() || null : null,
-            isrc:        cols.isrc     >= 0 ? String(row[cols.isrc]     || '').trim() || null : null,
+            isrc:        isrcVal,
+            track_id:    isrcVal ? (isrcToTrackId[isrcVal.toLowerCase()] || null) : null,
             nett_royalty: royaltyVal || 0,
             period:      cols.period   >= 0 ? String(row[cols.period]   || '').trim() || null : null,
             usage_type:  cols.type     >= 0 ? String(row[cols.type]     || '').trim().toLowerCase() || null : null,
@@ -230,10 +243,14 @@
       const labelCounts = {}
       allLines.forEach(l => { labelCounts[l.label_name] = (labelCounts[l.label_name] || 0) + 1 })
 
+      const matchedLines = allLines.filter(l => l.track_id).length
       document.getElementById('previewContent').innerHTML = `
         <div class="font-medium text-white mb-2">${file.name}</div>
-        <div class="text-gray-400 mb-3">
+        <div class="text-gray-400 mb-1">
           ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#E8920A] font-semibold">${fmt(totalRoyalties)}</span>
+        </div>
+        <div class="text-xs mb-3 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
+          ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks via ISRC
         </div>
         <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
           ${Object.entries(labelCounts).map(([name, cnt]) => `

@@ -16,7 +16,7 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h1 class="text-xl font-bold">Artiesten</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Beheer alle artiesten</p>
+        <p class="text-gray-500 text-sm mt-0.5">Koppel artiesten via tracks aan labels</p>
       </div>
       <button onclick="openModal()"
         class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
@@ -28,16 +28,11 @@
       </button>
     </div>
 
-    <!-- Zoek + filter -->
-    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+    <!-- Zoek -->
+    <div class="mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op naam..."
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-full sm:w-64 placeholder-gray-600"
         oninput="filterTable()">
-      <select id="labelFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-full sm:w-auto"
-        onchange="filterTable()">
-        <option value="">Alle labels</option>
-      </select>
     </div>
 
     <!-- Tabel -->
@@ -46,9 +41,9 @@
         <thead>
           <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium">Artiest</th>
-            <th class="text-left px-5 py-3 font-medium">Label</th>
+            <th class="text-left px-5 py-3 font-medium">Tracks</th>
             <th class="text-left px-5 py-3 font-medium">E-mail</th>
-            <th class="text-right px-5 py-3 font-medium">Royalties</th>
+            <th class="text-right px-5 py-3 font-medium">Royalties (gesplitst)</th>
             <th class="text-right px-5 py-3 font-medium">Acties</th>
           </tr>
         </thead>
@@ -60,7 +55,7 @@
 
   </main>
 
-  <!-- Modal -->
+  <!-- Artiest modal -->
   <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl">
       <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Artiest toevoegen</h2>
@@ -71,13 +66,6 @@
           <input type="text" id="artistName" required
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
             placeholder="Artiestennaam">
-        </div>
-        <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
-          <select id="artistLabel"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors">
-            <option value="">— Geen label —</option>
-          </select>
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mail</label>
@@ -111,10 +99,9 @@
     </div>
   </div>
 
-  <!-- ── Rapport overlay (volledig scherm) ────────────────────────────── -->
+  <!-- ── Rapport overlay ──────────────────────────────────────────── -->
   <div id="reportOverlay" class="hidden fixed inset-0 bg-[#0d0d0d] z-50 overflow-y-auto">
 
-    <!-- Sticky header -->
     <div class="sticky top-0 bg-[#0d0d0d]/95 border-b border-[#2a2a2a] px-4 md:px-8 py-4 flex items-center gap-4 z-10">
       <button onclick="closeReport()"
         class="flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm shrink-0">
@@ -128,7 +115,7 @@
         <div id="reportName" class="text-lg font-bold text-white truncate">...</div>
       </div>
       <div class="text-right shrink-0">
-        <div class="text-gray-500 text-xs mb-0.5">Totale verdiensten</div>
+        <div class="text-gray-500 text-xs mb-0.5">Totale verdiensten (gesplitst)</div>
         <div id="reportTotal" class="text-xl font-bold text-[#E8920A]">—</div>
       </div>
       <button onclick="window.print()"
@@ -140,13 +127,11 @@
       </button>
     </div>
 
-    <!-- Inhoud -->
     <div class="p-4 md:p-8 max-w-5xl mx-auto">
 
-      <!-- Samenvatting kaarten -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Totale royalties</div>
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Totaal (na split)</div>
           <div id="summaryTotal" class="text-xl font-bold text-[#E8920A]">—</div>
         </div>
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
@@ -163,9 +148,7 @@
         </div>
       </div>
 
-      <!-- Per Nummer + Per Label -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
           <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
             <h2 class="text-white font-semibold text-sm">Verdiensten per Nummer</h2>
@@ -173,7 +156,6 @@
           </div>
           <div id="reportTracks" class="p-5 overflow-y-auto max-h-96 text-sm text-gray-500">Laden...</div>
         </div>
-
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
           <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
             <h2 class="text-white font-semibold text-sm">Verdiensten per Label</h2>
@@ -181,13 +163,11 @@
           </div>
           <div id="reportLabels" class="p-5 text-sm text-gray-500">Laden...</div>
         </div>
-
       </div>
 
-      <!-- Per Periode -->
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl">
         <div class="px-5 py-4 border-b border-[#2a2a2a]">
-          <h2 class="text-white font-semibold text-sm">Verdiensten per Periode / Statement</h2>
+          <h2 class="text-white font-semibold text-sm">Verdiensten per Periode</h2>
         </div>
         <div id="reportPeriods" class="p-5 text-sm text-gray-500">Laden...</div>
       </div>
@@ -198,50 +178,54 @@
   <script src="shared.js"></script>
   <script>
     let allArtists = []
-    let allLabels  = []
-    let royaltyByArtist = {}
+    // { artist_id: { total, stream, download } } — berekend via splits
+    let splitRoyalties = {}
 
     async function loadPage() {
       const session = await initPage('artists')
       if (!session) return
-      await Promise.all([loadLabels(), loadRoyalties()])
+      await computeSplitRoyalties()
       await loadArtists()
     }
 
-    async function loadLabels() {
-      const { data } = await db.from('labels').select('id, name').order('name')
-      allLabels = data || []
+    // Royalties berekend via track_artists splits
+    async function computeSplitRoyalties() {
+      // Haal alle track_artists op met split%
+      const { data: tas } = await db
+        .from('track_artists')
+        .select('track_id, artist_id, split_percentage')
 
-      // Vul label-filter dropdown
-      const filterSel = document.getElementById('labelFilter')
-      allLabels.forEach(l => {
-        const opt = document.createElement('option')
-        opt.value = l.id
-        opt.textContent = l.name
-        filterSel.appendChild(opt)
-      })
+      // Haal alle statement lines op
+      const { data: lines } = await db
+        .from('statement_lines')
+        .select('track_id, nett_royalty, usage_type')
 
-      // Vul modal label-dropdown
-      const modalSel = document.getElementById('artistLabel')
-      allLabels.forEach(l => {
-        const opt = document.createElement('option')
-        opt.value = l.id
-        opt.textContent = l.name
-        modalSel.appendChild(opt)
-      })
-    }
-
-    async function loadRoyalties() {
-      const { data: lines } = await db.from('statement_lines').select('artist_name, nett_royalty')
-      royaltyByArtist = {}
+      // Groepeer royalties per track
+      const royPerTrack = {}
       ;(lines || []).forEach(l => {
-        if (!l.artist_name) return
-        royaltyByArtist[l.artist_name] = (royaltyByArtist[l.artist_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+        if (!l.track_id) return
+        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
+        const amt = parseFloat(l.nett_royalty) || 0
+        royPerTrack[l.track_id].total += amt
+        if (l.usage_type === 'stream')   royPerTrack[l.track_id].stream   += amt
+        if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
+      })
+
+      // Bereken per artiest via split%
+      splitRoyalties = {}
+      ;(tas || []).forEach(ta => {
+        const roy = royPerTrack[ta.track_id]
+        if (!roy) return
+        const pct = (parseFloat(ta.split_percentage) || 0) / 100
+        if (!splitRoyalties[ta.artist_id]) splitRoyalties[ta.artist_id] = { total: 0, stream: 0, download: 0 }
+        splitRoyalties[ta.artist_id].total    += roy.total    * pct
+        splitRoyalties[ta.artist_id].stream   += roy.stream   * pct
+        splitRoyalties[ta.artist_id].download += roy.download * pct
       })
     }
 
     async function loadArtists() {
-      const { data, error } = await db.from('artists').select('*, labels(name)').order('name')
+      const { data } = await db.from('artists').select('*').order('name')
       allArtists = data || []
       renderTable(allArtists)
     }
@@ -253,41 +237,52 @@
         return
       }
       tbody.innerHTML = artists.map(a => {
-        const labelName = a.labels?.name || '—'
-        const royalty   = royaltyByArtist[a.name]
+        const roy = splitRoyalties[a.id]
         return `
           <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
             <td class="px-5 py-3.5 font-medium text-white">${a.name}</td>
-            <td class="px-5 py-3.5 text-gray-500 text-xs">${labelName}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs" id="trackCount_${a.id}">—</td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
-            <td class="px-5 py-3.5 text-right ${royalty ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
-              ${royalty ? fmt(royalty) : '—'}
+            <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
+              ${roy?.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3.5 text-right whitespace-nowrap">
-              <button onclick="openReport('${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#E8920A] text-xs mr-3 transition-colors">Rapport</button>
+              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#E8920A] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
           </tr>
         `
       }).join('')
+
+      // Track-aantallen per artiest ophalen
+      loadTrackCounts(artists)
+    }
+
+    async function loadTrackCounts(artists) {
+      const { data: tas } = await db
+        .from('track_artists')
+        .select('artist_id, track_id')
+      const countMap = {}
+      ;(tas || []).forEach(ta => {
+        countMap[ta.artist_id] = (countMap[ta.artist_id] || 0) + 1
+      })
+      artists.forEach(a => {
+        const el = document.getElementById(`trackCount_${a.id}`)
+        if (el) el.textContent = countMap[a.id] ? `${countMap[a.id]} track${countMap[a.id] > 1 ? 's' : ''}` : '—'
+      })
     }
 
     function filterTable() {
-      const q      = document.getElementById('searchInput').value.toLowerCase()
-      const labelId = document.getElementById('labelFilter').value
-      const filtered = allArtists.filter(a => {
-        const matchName  = a.name.toLowerCase().includes(q)
-        const matchLabel = !labelId || a.label_id === labelId
-        return matchName && matchLabel
-      })
-      renderTable(filtered)
+      const q = document.getElementById('searchInput').value.toLowerCase()
+      renderTable(allArtists.filter(a => a.name.toLowerCase().includes(q)))
     }
 
+    // ── Modal ────────────────────────────────────────────────────────
+
     function openModal(artist = null) {
-      document.getElementById('artistId').value    = artist?.id || ''
-      document.getElementById('artistName').value  = artist?.name || ''
-      document.getElementById('artistLabel').value = artist?.label_id || ''
+      document.getElementById('artistId').value    = artist?.id    || ''
+      document.getElementById('artistName').value  = artist?.name  || ''
       document.getElementById('artistEmail').value = artist?.email || ''
       document.getElementById('artistPhone').value = artist?.phone || ''
       document.getElementById('artistNotes').value = artist?.notes || ''
@@ -299,57 +294,48 @@
     function closeModal() { document.getElementById('modal').classList.add('hidden') }
     function editArtist(a) { openModal(a) }
 
-    document.getElementById('artistForm').addEventListener('submit', async (e) => {
+    document.getElementById('artistForm').addEventListener('submit', async e => {
       e.preventDefault()
       const id      = document.getElementById('artistId').value
       const payload = {
-        name:     document.getElementById('artistName').value.trim(),
-        label_id: document.getElementById('artistLabel').value || null,
-        email:    document.getElementById('artistEmail').value.trim() || null,
-        phone:    document.getElementById('artistPhone').value.trim() || null,
-        notes:    document.getElementById('artistNotes').value.trim() || null,
+        name:  document.getElementById('artistName').value.trim(),
+        email: document.getElementById('artistEmail').value.trim() || null,
+        phone: document.getElementById('artistPhone').value.trim() || null,
+        notes: document.getElementById('artistNotes').value.trim() || null,
       }
-
       let error
       if (id) {
-        ({ error } = await db.from('artists').update(payload).eq('id', id))
+        ;({ error } = await db.from('artists').update(payload).eq('id', id))
       } else {
-        ({ error } = await db.from('artists').insert(payload))
+        ;({ error } = await db.from('artists').insert(payload))
       }
-
-      if (error) {
-        showToast(error.message || 'Er ging iets mis.', 'error')
-      } else {
-        showToast(id ? 'Artiest bijgewerkt.' : 'Artiest toegevoegd.')
-        closeModal()
-        await loadArtists()
-      }
+      if (error) { showToast(error.message || 'Er ging iets mis.', 'error'); return }
+      showToast(id ? 'Artiest bijgewerkt.' : 'Artiest toegevoegd.')
+      closeModal()
+      await computeSplitRoyalties()
+      await loadArtists()
     })
 
     async function deleteArtist(id, name) {
       if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen?`)) return
       const { error } = await db.from('artists').delete().eq('id', id)
-      if (error) {
-        showToast('Kan niet verwijderen: ' + error.message, 'error')
-      } else {
-        showToast('Artiest verwijderd.')
-        await loadArtists()
-      }
+      if (error) { showToast('Kan niet verwijderen: ' + error.message, 'error'); return }
+      showToast('Artiest verwijderd.')
+      await computeSplitRoyalties()
+      await loadArtists()
     }
 
-    document.getElementById('modal').addEventListener('click', (e) => {
+    document.getElementById('modal').addEventListener('click', e => {
       if (e.target === e.currentTarget) closeModal()
     })
 
-    // ── Rapport ─────────────────────────────────────────────────────────
+    // ── Rapport ──────────────────────────────────────────────────────
 
-    async function openReport(artistName) {
+    async function openReport(artistId, artistName) {
       const overlay = document.getElementById('reportOverlay')
       overlay.classList.remove('hidden')
       overlay.scrollTop = 0
       document.body.style.overflow = 'hidden'
-
-      // Reset naar laadstatus
       document.getElementById('reportName').textContent  = artistName
       document.getElementById('reportTotal').textContent = '...'
       ;['summaryTotal','summaryTracks','summaryLabels','summaryPeriods'].forEach(id => {
@@ -359,8 +345,7 @@
         document.getElementById(id).innerHTML =
           '<p class="text-gray-600 text-sm py-6 text-center">Laden...</p>'
       })
-
-      await loadReport(artistName)
+      await loadReport(artistId, artistName)
     }
 
     function closeReport() {
@@ -368,15 +353,15 @@
       document.body.style.overflow = ''
     }
 
-    async function loadReport(artistName) {
-      // Haal alle statement-regels op voor deze artiest, inclusief periode
-      const { data: lines, error } = await db
-        .from('statement_lines')
-        .select('track_title, label_name, nett_royalty, statements(period, filename)')
-        .eq('artist_name', artistName)
+    async function loadReport(artistId, artistName) {
+      // Alle tracks van deze artiest ophalen
+      const { data: tas } = await db
+        .from('track_artists')
+        .select('split_percentage, tracks(id, title, isrc, labels(name))')
+        .eq('artist_id', artistId)
 
-      if (error || !lines?.length) {
-        const msg = '<p class="text-gray-600 text-sm py-6 text-center">Geen royalty-data gevonden voor deze artiest.</p>'
+      if (!tas?.length) {
+        const msg = '<p class="text-gray-600 text-sm py-6 text-center">Deze artiest staat nog niet op tracks.</p>'
         ;['reportTracks','reportLabels','reportPeriods'].forEach(id => {
           document.getElementById(id).innerHTML = msg
         })
@@ -385,42 +370,50 @@
         return
       }
 
-      // Groepeer data
+      // Royalties per track ophalen
+      const trackIds = tas.map(ta => ta.tracks?.id).filter(Boolean)
+      const { data: lines } = await db
+        .from('statement_lines')
+        .select('track_id, nett_royalty, usage_type, label_name, statements(period, filename)')
+        .in('track_id', trackIds)
+
       const byTrack  = {}
       const byLabel  = {}
       const byPeriod = {}
       let total = 0
 
-      lines.forEach(l => {
-        const royalty = parseFloat(l.nett_royalty) || 0
+      // Bouw een map: track_id → split%
+      const splitMap = {}
+      tas.forEach(ta => { if (ta.tracks?.id) splitMap[ta.tracks.id] = parseFloat(ta.split_percentage) / 100 })
+
+      ;(lines || []).forEach(l => {
+        const pct     = splitMap[l.track_id] || 0
+        const royalty = (parseFloat(l.nett_royalty) || 0) * pct
         total += royalty
 
-        const t  = l.track_title || 'Onbekend'
-        const lb = l.label_name  || 'Onbekend'
-        const p  = l.statements?.period || l.statements?.filename || 'Onbekend'
+        // Per track — gebruik title uit tas
+        const trackTitle = tas.find(ta => ta.tracks?.id === l.track_id)?.tracks?.title || l.track_id
+        byTrack[trackTitle] = (byTrack[trackTitle] || 0) + royalty
 
-        byTrack[t]   = (byTrack[t]   || 0) + royalty
-        byLabel[lb]  = (byLabel[lb]  || 0) + royalty
-        byPeriod[p]  = (byPeriod[p]  || 0) + royalty
+        const lb = l.label_name || 'Onbekend'
+        byLabel[lb] = (byLabel[lb] || 0) + royalty
+
+        const p = l.statements?.period || l.statements?.filename || 'Onbekend'
+        byPeriod[p] = (byPeriod[p] || 0) + royalty
       })
 
       const trackEntries  = Object.entries(byTrack).sort((a, b) => b[1] - a[1])
       const labelEntries  = Object.entries(byLabel).sort((a, b) => b[1] - a[1])
       const periodEntries = Object.entries(byPeriod).sort((a, b) => a[0].localeCompare(b[0]))
 
-      // Samenvatting
       document.getElementById('reportTotal').textContent    = fmt(total)
       document.getElementById('summaryTotal').textContent   = fmt(total)
       document.getElementById('summaryTracks').textContent  = trackEntries.length
       document.getElementById('summaryLabels').textContent  = labelEntries.length
       document.getElementById('summaryPeriods').textContent = periodEntries.length
+      document.getElementById('reportTrackCount').textContent = trackEntries.length + ' nummers'
+      document.getElementById('reportLabelCount').textContent = labelEntries.length + ' labels'
 
-      document.getElementById('reportTrackCount').textContent =
-        trackEntries.length + ' nummers'
-      document.getElementById('reportLabelCount').textContent =
-        labelEntries.length + ' labels'
-
-      // Blokken renderen
       renderReportBars('reportTracks', trackEntries)
       renderReportBars('reportLabels', labelEntries)
       renderReportPeriods('reportPeriods', periodEntries, total)
@@ -428,10 +421,7 @@
 
     function renderReportBars(elId, entries) {
       const el = document.getElementById(elId)
-      if (!entries.length) {
-        el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'
-        return
-      }
+      if (!entries.length) { el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'; return }
       const max = entries[0][1]
       el.innerHTML = entries.map(([name, val]) => `
         <div class="mb-3">
@@ -448,33 +438,25 @@
 
     function renderReportPeriods(elId, entries, totalAll) {
       const el = document.getElementById(elId)
-      if (!entries.length) {
-        el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'
-        return
-      }
+      if (!entries.length) { el.innerHTML = '<p class="text-gray-600 text-sm">Geen data.</p>'; return }
       const max = Math.max(...entries.map(([,v]) => v))
       el.innerHTML = `
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           ${entries.map(([period, val]) => `
             <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
-              <div class="text-gray-500 text-xs mb-2 truncate" title="${period}">${period}</div>
+              <div class="text-gray-500 text-xs mb-2 truncate">${period}</div>
               <div class="text-[#E8920A] font-bold text-base">${fmt(val)}</div>
               <div class="mt-2 h-1 bg-[#2a2a2a] rounded-full">
-                <div class="h-1 bg-[#E8920A]/60 rounded-full" style="width:${Math.max(2, val/max*100).toFixed(1)}%"></div>
+                <div class="h-1 bg-[#E8920A]/60 rounded-full" style="width:${Math.max(2,val/max*100).toFixed(1)}%"></div>
               </div>
-              <div class="text-gray-600 text-xs mt-1">
-                ${totalAll > 0 ? (val/totalAll*100).toFixed(1) + '% van totaal' : ''}
-              </div>
+              <div class="text-gray-600 text-xs mt-1">${totalAll > 0 ? (val/totalAll*100).toFixed(1) + '%' : ''}</div>
             </div>
           `).join('')}
         </div>
       `
     }
 
-    // Rapport sluiten met Escape-toets
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeReport()
-    })
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReport() })
 
     loadPage()
   </script>

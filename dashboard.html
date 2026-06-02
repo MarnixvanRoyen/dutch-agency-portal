@@ -210,19 +210,18 @@
 
   <script src="shared.js"></script>
   <script>
-    let allLines = []
-    let activeType = 'all'  // 'all' | 'stream' | 'download'
+    let allLines        = []   // statement_lines
+    let trackArtistMap  = {}   // { track_id: [{name, pct}] }
+    let artistTrackIds  = {}   // { artist_name: Set<track_id> }
+    let activeType      = 'all'
 
-    // Huidige filterwaarden (vrije tekst)
     const filterValues = { label: '', artist: '', track: '' }
-    // Beschikbare opties per filter
     const filterOpts   = { label: [], artist: [], track: [] }
 
     async function loadDashboard() {
       const session = await initPage('dashboard')
       if (!session) return
 
-      // Aantallen
       const [labelsR, artistsR, stmtsR] = await Promise.all([
         db.from('labels').select('id', { count: 'exact', head: true }),
         db.from('artists').select('id', { count: 'exact', head: true }),
@@ -232,27 +231,33 @@
       document.getElementById('statArtists').textContent    = artistsR.count ?? 0
       document.getElementById('statStatements').textContent = stmtsR.count ?? 0
 
-      // Alle statement lines ophalen (incl. usage_type)
+      // Statement lines — alleen financiële data + track koppeling
       const { data: lines } = await db
         .from('statement_lines')
-        .select('label_name, artist_name, track_title, nett_royalty, usage_type')
-
+        .select('track_id, label_name, track_title, nett_royalty, usage_type')
       allLines = lines || []
 
-      // Totaal royalties (bruto)
+      // Track_artists — voor artiestenverdeling via splits
+      const { data: tas } = await db
+        .from('track_artists')
+        .select('track_id, split_percentage, artists(name)')
+      trackArtistMap = {}
+      artistTrackIds = {}
+      ;(tas || []).forEach(ta => {
+        const name = ta.artists?.name
+        if (!name) return
+        if (!trackArtistMap[ta.track_id]) trackArtistMap[ta.track_id] = []
+        trackArtistMap[ta.track_id].push({ name, pct: parseFloat(ta.split_percentage) / 100 })
+        if (!artistTrackIds[name]) artistTrackIds[name] = new Set()
+        artistTrackIds[name].add(ta.track_id)
+      })
+
       const total = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
       document.getElementById('statRoyalties').textContent = fmt(total)
 
-      // Royalty flow kaart
       updateFlowCard(total)
-
-      // Streams vs Downloads kaart
       updateTypeCard(allLines)
-
-      // Autocomplete filters bouwen
       populateDropdowns()
-
-      // Blokken renderen
       renderBlocks(allLines)
     }
 
@@ -260,7 +265,7 @@
 
     function populateDropdowns() {
       filterOpts.label  = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
-      filterOpts.artist = [...new Set(allLines.map(l => l.artist_name).filter(Boolean))].sort()
+      filterOpts.artist = Object.keys(artistTrackIds).sort()  // alleen artiesten die in het systeem staan
       filterOpts.track  = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
 
       buildAutocomplete('wrap_label',  'label',  'Label zoeken...')
@@ -450,15 +455,21 @@
       const aq = filterValues.artist.toLowerCase()
       const tq = filterValues.track.toLowerCase()
 
+      // Artist filter: filter op track_ids waar artiest aan gekoppeld is
+      const artistTrackSet = aq
+        ? (Object.entries(artistTrackIds).find(([n]) => n.toLowerCase().includes(aq))?.[1] || new Set())
+        : null
+
       const filtered = allLines.filter(l => {
         const matchType   = activeType === 'all' || l.usage_type === activeType
         const matchLabel  = !lq || (l.label_name  || '').toLowerCase().includes(lq)
-        const matchArtist = !aq || (l.artist_name || '').toLowerCase().includes(aq)
         const matchTrack  = !tq || (l.track_title || '').toLowerCase().includes(tq)
-        return matchType && matchLabel && matchArtist && matchTrack
+        const matchArtist = !aq || (artistTrackSet && l.track_id && artistTrackSet.has(l.track_id))
+        return matchType && matchLabel && matchTrack && matchArtist
       })
 
-      // Streams/downloads kaart meebewegen met filters
+      const filteredTotal = filtered.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+      updateFlowCard(filteredTotal)
       updateTypeCard(filtered)
       renderBlocks(filtered)
     }
@@ -472,23 +483,38 @@
     // ── Blokken renderen ─────────────────────────────────────────────────
 
     function renderBlocks(lines) {
-      const byLabel  = groupBy(lines, 'label_name')
-      const byArtist = groupBy(lines, 'artist_name')
-      const byTrack  = groupBy(lines, 'track_title')
-
-      renderBlock('blockLabels',  'labelTotal',  byLabel,  12)
-      renderBlock('blockArtists', 'artistTotal', byArtist, 12)
-      renderBlock('blockTracks',  'trackTotal',  byTrack,  12)
-    }
-
-    function groupBy(lines, key) {
-      const map = {}
+      // Per Label — bruto royalties op label_name
+      const byLabel = {}
       lines.forEach(l => {
-        const k = l[key]
-        if (!k) return
-        map[k] = (map[k] || 0) + (parseFloat(l.nett_royalty) || 0)
+        const k = l.label_name; if (!k) return
+        byLabel[k] = (byLabel[k] || 0) + (parseFloat(l.nett_royalty) || 0)
       })
-      return Object.entries(map).sort((a, b) => b[1] - a[1])
+
+      // Per Track — bruto royalties op track_title
+      const byTrack = {}
+      lines.forEach(l => {
+        const k = l.track_title; if (!k) return
+        byTrack[k] = (byTrack[k] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+
+      // Per Artiest — via track_artists splits × netFactor()
+      // Alleen voor regels die aan een track gekoppeld zijn
+      const byArtist = {}
+      lines.forEach(l => {
+        if (!l.track_id) return
+        const splits = trackArtistMap[l.track_id]
+        if (!splits) return
+        const bruto = parseFloat(l.nett_royalty) || 0
+        splits.forEach(({ name, pct }) => {
+          byArtist[name] = (byArtist[name] || 0) + bruto * netFactor() * pct
+        })
+      })
+
+      const toEntries = obj => Object.entries(obj).sort((a, b) => b[1] - a[1])
+
+      renderBlock('blockLabels',  'labelTotal',  toEntries(byLabel),  12)
+      renderBlock('blockArtists', 'artistTotal', toEntries(byArtist), 12)
+      renderBlock('blockTracks',  'trackTotal',  toEntries(byTrack),  12)
     }
 
     function renderBlock(blockId, totalId, entries, topN) {

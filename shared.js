@@ -41,7 +41,7 @@ function renderNav(activePage, email) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-    <span class="text-[#FFD100] font-black text-lg tracking-tight lowercase">dj<span class="font-black">·</span>world</span>
+    <img src="djworld-logo.png" alt="DJ World" class="h-7 object-contain" onerror="this.style.display='none'">
   `
 
   // --- Overlay (donkere laag achter sidebar op mobiel) ---
@@ -59,12 +59,8 @@ function renderNav(activePage, email) {
   if (!el) return
   el.innerHTML = `
     <div class="flex flex-col h-full">
-      <div class="px-4 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="leading-none">
-            <span class="text-[#FFD100] font-black text-2xl tracking-tight lowercase">dj</span><span class="text-[#FFD100] font-black text-2xl">·</span><span class="text-[#FFD100] font-black text-2xl tracking-tight lowercase">world</span>
-          </div>
-        </div>
+      <div class="px-4 py-3 border-b border-[#2a2a2a] flex items-center justify-between">
+        <img src="djworld-logo.png" alt="DJ World" class="h-9 object-contain" onerror="this.style.display='none'">
         <button onclick="closeSidebar()" class="md:hidden text-gray-500 hover:text-white transition-colors p-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

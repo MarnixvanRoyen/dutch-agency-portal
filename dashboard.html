@@ -38,17 +38,68 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Streams vs Downloads kaart -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-white font-semibold text-sm">Streams vs Downloads</h2>
+        <span id="typeTotal" class="text-gray-500 text-xs"></span>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2 h-2 rounded-full bg-[#E8920A]"></div>
+            <span class="text-gray-400 text-xs uppercase tracking-wider">Streams</span>
+          </div>
+          <div id="streamAmount" class="text-xl font-bold text-white">—</div>
+          <div id="streamPct" class="text-gray-600 text-xs mt-0.5">—</div>
+        </div>
+        <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2 h-2 rounded-full bg-blue-400"></div>
+            <span class="text-gray-400 text-xs uppercase tracking-wider">Downloads</span>
+          </div>
+          <div id="downloadAmount" class="text-xl font-bold text-white">—</div>
+          <div id="downloadPct" class="text-gray-600 text-xs mt-0.5">—</div>
+        </div>
+      </div>
+      <!-- Ratio balk -->
+      <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+        <div id="streamBar" class="h-2 bg-[#E8920A] rounded-full transition-all duration-500" style="width:50%"></div>
+      </div>
+    </div>
+
+    <!-- Filters + type toggle -->
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Filteren op</span>
-        <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
-        <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
-        <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
-        <button onclick="resetFilters()"
-          class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
-          Reset
-        </button>
+      <div class="flex flex-col gap-3">
+        <!-- Type toggle -->
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</span>
+          <div class="flex gap-1">
+            <button onclick="setTypeFilter('all')" id="typeBtnAll"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#E8920A] text-white">
+              Alles
+            </button>
+            <button onclick="setTypeFilter('stream')" id="typeBtnStream"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              Streams
+            </button>
+            <button onclick="setTypeFilter('download')" id="typeBtnDownload"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              Downloads
+            </button>
+          </div>
+        </div>
+        <!-- Naam filters -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Naam</span>
+          <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
+          <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
+          <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
+          <button onclick="resetFilters()"
+            class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
+            Reset
+          </button>
+        </div>
       </div>
     </div>
 
@@ -95,6 +146,7 @@
   <script src="shared.js"></script>
   <script>
     let allLines = []
+    let activeType = 'all'  // 'all' | 'stream' | 'download'
 
     // Huidige filterwaarden (vrije tekst)
     const filterValues = { label: '', artist: '', track: '' }
@@ -115,16 +167,19 @@
       document.getElementById('statArtists').textContent    = artistsR.count ?? 0
       document.getElementById('statStatements').textContent = stmtsR.count ?? 0
 
-      // Alle statement lines ophalen
+      // Alle statement lines ophalen (incl. usage_type)
       const { data: lines } = await db
         .from('statement_lines')
-        .select('label_name, artist_name, track_title, nett_royalty')
+        .select('label_name, artist_name, track_title, nett_royalty, usage_type')
 
       allLines = lines || []
 
       // Totaal royalties
       const total = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
       document.getElementById('statRoyalties').textContent = fmt(total)
+
+      // Streams vs Downloads kaart
+      updateTypeCard(allLines)
 
       // Autocomplete filters bouwen
       populateDropdowns()
@@ -224,6 +279,45 @@
       }
     })
 
+    // ── Streams vs Downloads kaart ───────────────────────────────────────
+
+    function updateTypeCard(lines) {
+      const streamTotal   = lines.filter(l => l.usage_type === 'stream')
+        .reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+      const downloadTotal = lines.filter(l => l.usage_type === 'download')
+        .reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+      const grand = streamTotal + downloadTotal
+
+      document.getElementById('streamAmount').textContent   = fmt(streamTotal)
+      document.getElementById('downloadAmount').textContent = fmt(downloadTotal)
+      document.getElementById('typeTotal').textContent      = grand > 0 ? fmt(grand) + ' totaal' : ''
+
+      if (grand > 0) {
+        const pctStream   = (streamTotal / grand * 100).toFixed(1)
+        const pctDownload = (downloadTotal / grand * 100).toFixed(1)
+        document.getElementById('streamPct').textContent   = pctStream + '% van totaal'
+        document.getElementById('downloadPct').textContent = pctDownload + '% van totaal'
+        document.getElementById('streamBar').style.width  = pctStream + '%'
+      }
+    }
+
+    // ── Type toggle (Alles / Streams / Downloads) ─────────────────────
+
+    function setTypeFilter(type) {
+      activeType = type
+      // Knop-stijlen wisselen
+      ;['all','stream','download'].forEach(t => {
+        const btn = document.getElementById(`typeBtn${t.charAt(0).toUpperCase() + t.slice(1)}`)
+        if (!btn) return
+        if (t === type) {
+          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#E8920A] text-white'
+        } else {
+          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]'
+        }
+      })
+      applyFilters()
+    }
+
     // ── Filter toepassen ─────────────────────────────────────────────────
 
     function applyFilters() {
@@ -231,15 +325,22 @@
       const aq = filterValues.artist.toLowerCase()
       const tq = filterValues.track.toLowerCase()
 
-      const filtered = allLines.filter(l =>
-        (!lq || (l.label_name  || '').toLowerCase().includes(lq)) &&
-        (!aq || (l.artist_name || '').toLowerCase().includes(aq)) &&
-        (!tq || (l.track_title || '').toLowerCase().includes(tq))
-      )
+      const filtered = allLines.filter(l => {
+        const matchType   = activeType === 'all' || l.usage_type === activeType
+        const matchLabel  = !lq || (l.label_name  || '').toLowerCase().includes(lq)
+        const matchArtist = !aq || (l.artist_name || '').toLowerCase().includes(aq)
+        const matchTrack  = !tq || (l.track_title || '').toLowerCase().includes(tq)
+        return matchType && matchLabel && matchArtist && matchTrack
+      })
+
+      // Streams/downloads kaart meebewegen met filters
+      updateTypeCard(filtered)
       renderBlocks(filtered)
     }
 
     function resetFilters() {
+      activeType = 'all'
+      setTypeFilter('all')
       ;['label', 'artist', 'track'].forEach(clearFilter)
     }
 

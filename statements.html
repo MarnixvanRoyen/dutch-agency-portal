@@ -160,11 +160,13 @@
     function detectCols(headers) {
       const h = headers.map(x => String(x || '').toLowerCase().trim())
       return {
-        artist:  h.findIndex(x => x.includes('artist') || x.includes('artiest') || x.includes('performer') || x.includes('uitvoerder')),
-        track:   h.findIndex(x => x.includes('track') || x.includes('titel') || x.includes('title') || x.includes('song') || x.includes('werk')),
-        isrc:    h.findIndex(x => x.includes('isrc')),
-        royalty: h.findIndex(x => x.includes('royalt') || x.includes('bedrag') || x.includes('nett') || x.includes('amount') || x.includes('net ') || x === 'net'),
-        period:  h.findIndex(x => x.includes('period') || x.includes('kwartaal') || x.includes('quarter')),
+        artist:   h.findIndex(x => x.includes('artist') || x.includes('artiest') || x.includes('performer') || x.includes('uitvoerder')),
+        track:    h.findIndex(x => x === 'trackname' || x.includes('track') || x.includes('titel') || x.includes('title') || x.includes('song') || x.includes('werk')),
+        isrc:     h.findIndex(x => x.includes('isrc') || x === 'catalognumber' || x.includes('catalog')),
+        royalty:  h.findIndex(x => x.includes('royalt') || x.includes('bedrag') || x.includes('nett') || x.includes('amount') || x.includes('net ') || x === 'net'),
+        period:   h.findIndex(x => x.includes('period') || x.includes('kwartaal') || x.includes('quarter')),
+        type:     h.findIndex(x => x === 'deliverytype' || x.includes('delivery') || x === 'type' || x.includes('usagetype') || x.includes('transaction')),
+        quantity: h.findIndex(x => x === 'quantity' || x.includes('aantal') || x === 'qty' || x.includes('count')),
       }
     }
 
@@ -208,11 +210,13 @@
 
           const line = {
             label_name:  sheetName,
-            artist_name: cols.artist >= 0  ? String(row[cols.artist] || '').trim()  || null : null,
-            track_title: cols.track >= 0   ? String(row[cols.track]  || '').trim()  || null : null,
-            isrc:        cols.isrc >= 0    ? String(row[cols.isrc]   || '').trim()  || null : null,
+            artist_name: cols.artist   >= 0 ? String(row[cols.artist]   || '').trim() || null : null,
+            track_title: cols.track    >= 0 ? String(row[cols.track]    || '').trim() || null : null,
+            isrc:        cols.isrc     >= 0 ? String(row[cols.isrc]     || '').trim() || null : null,
             nett_royalty: royaltyVal || 0,
-            period:      cols.period >= 0  ? String(row[cols.period] || '').trim()  || null : null,
+            period:      cols.period   >= 0 ? String(row[cols.period]   || '').trim() || null : null,
+            usage_type:  cols.type     >= 0 ? String(row[cols.type]     || '').trim().toLowerCase() || null : null,
+            quantity:    cols.quantity >= 0 ? (parseInt(row[cols.quantity]) || null) : null,
             raw_data:    Object.fromEntries(headers.map((h, i) => [h, row[i]])),
           }
           allLines.push(line)

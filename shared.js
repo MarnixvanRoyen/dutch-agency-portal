@@ -41,7 +41,7 @@ function renderNav(activePage, email) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-    <img src="djworld-logo.png" alt="DJ World" class="h-7 object-contain" onerror="this.style.display='none'">
+    <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ World" class="h-7 object-contain" onerror="this.style.display='none'">
   `
 
   // --- Overlay (donkere laag achter sidebar op mobiel) ---
@@ -60,7 +60,7 @@ function renderNav(activePage, email) {
   el.innerHTML = `
     <div class="flex flex-col h-full">
       <div class="px-4 py-3 border-b border-[#2a2a2a] flex items-center justify-between">
-        <img src="djworld-logo.png" alt="DJ World" class="h-9 object-contain" onerror="this.style.display='none'">
+        <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ World" class="h-9 object-contain" onerror="this.style.display='none'">
         <button onclick="closeSidebar()" class="md:hidden text-gray-500 hover:text-white transition-colors p-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

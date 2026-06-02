@@ -18,6 +18,41 @@
       <p class="text-gray-500 text-sm mt-0.5">Overzicht DJ·World</p>
     </div>
 
+    <!-- Filters + type toggle -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
+      <div class="flex flex-col gap-3">
+        <!-- Type toggle -->
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</span>
+          <div class="flex gap-1">
+            <button onclick="setTypeFilter('all')" id="typeBtnAll"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold">
+              Alles
+            </button>
+            <button onclick="setTypeFilter('stream')" id="typeBtnStream"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              Streams
+            </button>
+            <button onclick="setTypeFilter('download')" id="typeBtnDownload"
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              Downloads
+            </button>
+          </div>
+        </div>
+        <!-- Naam filters -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Naam</span>
+          <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
+          <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
+          <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
+          <button onclick="resetFilters()"
+            class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Stat cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
@@ -130,41 +165,6 @@
       <!-- Ratio balk -->
       <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
         <div id="streamBar" class="h-2 bg-[#FFD100] rounded-full transition-all duration-500" style="width:50%"></div>
-      </div>
-    </div>
-
-    <!-- Filters + type toggle -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
-      <div class="flex flex-col gap-3">
-        <!-- Type toggle -->
-        <div class="flex items-center gap-2">
-          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</span>
-          <div class="flex gap-1">
-            <button onclick="setTypeFilter('all')" id="typeBtnAll"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold">
-              Alles
-            </button>
-            <button onclick="setTypeFilter('stream')" id="typeBtnStream"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
-              Streams
-            </button>
-            <button onclick="setTypeFilter('download')" id="typeBtnDownload"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
-              Downloads
-            </button>
-          </div>
-        </div>
-        <!-- Naam filters -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Naam</span>
-          <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
-          <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
-          <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
-          <button onclick="resetFilters()"
-            class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
-            Reset
-          </button>
-        </div>
       </div>
     </div>
 

@@ -129,10 +129,13 @@
 
     <div class="p-4 md:p-8 max-w-5xl mx-auto">
 
+      <!-- Commissie flow (gevuld door JS) -->
+      <div id="reportCommissieFlow"></div>
+
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Totaal (na split)</div>
-          <div id="summaryTotal" class="text-xl font-bold text-[#FFD100]">—</div>
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Netto aandeel</div>
+          <div id="summaryTotal" class="text-xl font-bold text-green-400">—</div>
         </div>
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
           <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Nummers</div>
@@ -211,16 +214,18 @@
         if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
       })
 
-      // Bereken per artiest via split%
+      // Bereken per artiest via split% EN commissies
+      // Formule: bruto × netFactor() × split%
       splitRoyalties = {}
       ;(tas || []).forEach(ta => {
         const roy = royPerTrack[ta.track_id]
         if (!roy) return
-        const pct = (parseFloat(ta.split_percentage) || 0) / 100
+        const pct    = (parseFloat(ta.split_percentage) || 0) / 100
+        const factor = netFactor()   // (1 - aggregator%) × (1 - djworld%)
         if (!splitRoyalties[ta.artist_id]) splitRoyalties[ta.artist_id] = { total: 0, stream: 0, download: 0 }
-        splitRoyalties[ta.artist_id].total    += roy.total    * pct
-        splitRoyalties[ta.artist_id].stream   += roy.stream   * pct
-        splitRoyalties[ta.artist_id].download += roy.download * pct
+        splitRoyalties[ta.artist_id].total    += roy.total    * factor * pct
+        splitRoyalties[ta.artist_id].stream   += roy.stream   * factor * pct
+        splitRoyalties[ta.artist_id].download += roy.download * factor * pct
       })
     }
 
@@ -386,21 +391,29 @@
       const splitMap = {}
       tas.forEach(ta => { if (ta.tracks?.id) splitMap[ta.tracks.id] = parseFloat(ta.split_percentage) / 100 })
 
-      ;(lines || []).forEach(l => {
-        const pct     = splitMap[l.track_id] || 0
-        const royalty = (parseFloat(l.nett_royalty) || 0) * pct
-        total += royalty
+      let brutoTotal = 0
 
-        // Per track — gebruik title uit tas
+      ;(lines || []).forEach(l => {
+        const pct        = splitMap[l.track_id] || 0
+        const bruto      = parseFloat(l.nett_royalty) || 0
+        const netRoyalty = bruto * netFactor() * pct
+        brutoTotal += bruto * pct   // bruto aandeel (vóór DJ commissies)
+        total      += netRoyalty    // netto aandeel (ná commissies)
+
         const trackTitle = tas.find(ta => ta.tracks?.id === l.track_id)?.tracks?.title || l.track_id
-        byTrack[trackTitle] = (byTrack[trackTitle] || 0) + royalty
+        byTrack[trackTitle] = (byTrack[trackTitle] || 0) + netRoyalty
 
         const lb = l.label_name || 'Onbekend'
-        byLabel[lb] = (byLabel[lb] || 0) + royalty
+        byLabel[lb] = (byLabel[lb] || 0) + netRoyalty
 
         const p = l.statements?.period || l.statements?.filename || 'Onbekend'
-        byPeriod[p] = (byPeriod[p] || 0) + royalty
+        byPeriod[p] = (byPeriod[p] || 0) + netRoyalty
       })
+
+      // Commissie-breakdown berekenen
+      const aggAmt    = brutoTotal * COMMISSIONS.aggregatorPct / 100
+      const rest1     = brutoTotal - aggAmt
+      const djAmt     = rest1 * COMMISSIONS.djworldPct / 100
 
       const trackEntries  = Object.entries(byTrack).sort((a, b) => b[1] - a[1])
       const labelEntries  = Object.entries(byLabel).sort((a, b) => b[1] - a[1])
@@ -413,6 +426,31 @@
       document.getElementById('summaryPeriods').textContent = periodEntries.length
       document.getElementById('reportTrackCount').textContent = trackEntries.length + ' nummers'
       document.getElementById('reportLabelCount').textContent = labelEntries.length + ' labels'
+
+      // Toon commissie-flow boven de blokken
+      const flowEl = document.getElementById('reportCommissieFlow')
+      if (flowEl) {
+        flowEl.innerHTML = `
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+              <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Bruto aandeel</div>
+              <div class="text-white font-bold text-base">${fmt(brutoTotal)}</div>
+            </div>
+            <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+              <div class="text-red-400 text-xs uppercase tracking-wider mb-1">Aggregator ${COMMISSIONS.aggregatorPct}%</div>
+              <div class="text-red-400 font-bold text-base">-${fmt(aggAmt)}</div>
+            </div>
+            <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+              <div class="text-[#FFD100] text-xs uppercase tracking-wider mb-1">DJ·World ${COMMISSIONS.djworldPct}%</div>
+              <div class="text-[#FFD100] font-bold text-base">-${fmt(djAmt)}</div>
+            </div>
+            <div class="bg-[#0d0d0d] rounded-xl p-4 border border-green-500/20">
+              <div class="text-green-400 text-xs uppercase tracking-wider mb-1">Jouw netto</div>
+              <div class="text-green-400 font-bold text-base">${fmt(total)}</div>
+            </div>
+          </div>
+        `
+      }
 
       renderReportBars('reportTracks', trackEntries)
       renderReportBars('reportLabels', labelEntries)

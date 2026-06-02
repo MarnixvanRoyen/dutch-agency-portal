@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — Dutch Agency</title>
+  <title>Dashboard — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -15,7 +15,7 @@
 
     <div class="mb-6">
       <h1 class="text-xl font-bold text-white">Dashboard</h1>
-      <p class="text-gray-500 text-sm mt-0.5">Overzicht Dutch Agency</p>
+      <p class="text-gray-500 text-sm mt-0.5">Overzicht DJ·World</p>
     </div>
 
     <!-- Stat cards -->
@@ -34,7 +34,7 @@
       </div>
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
         <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Totaal Royalties</div>
-        <div id="statRoyalties" class="text-3xl font-bold text-[#E8920A]">—</div>
+        <div id="statRoyalties" class="text-3xl font-bold text-[#FFD100]">—</div>
       </div>
     </div>
 
@@ -47,7 +47,7 @@
       <div class="grid grid-cols-2 gap-4 mb-4">
         <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-2 h-2 rounded-full bg-[#E8920A]"></div>
+            <div class="w-2 h-2 rounded-full bg-[#FFD100]"></div>
             <span class="text-gray-400 text-xs uppercase tracking-wider">Streams</span>
           </div>
           <div id="streamAmount" class="text-xl font-bold text-white">—</div>
@@ -64,7 +64,7 @@
       </div>
       <!-- Ratio balk -->
       <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-        <div id="streamBar" class="h-2 bg-[#E8920A] rounded-full transition-all duration-500" style="width:50%"></div>
+        <div id="streamBar" class="h-2 bg-[#FFD100] rounded-full transition-all duration-500" style="width:50%"></div>
       </div>
     </div>
 
@@ -76,7 +76,7 @@
           <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</span>
           <div class="flex gap-1">
             <button onclick="setTypeFilter('all')" id="typeBtnAll"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#E8920A] text-white">
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold">
               Alles
             </button>
             <button onclick="setTypeFilter('stream')" id="typeBtnStream"
@@ -110,7 +110,7 @@
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
         <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Label</h2>
-          <span id="labelTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+          <span id="labelTotal" class="text-[#FFD100] text-xs font-semibold"></span>
         </div>
         <div id="blockLabels" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -121,7 +121,7 @@
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
         <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Artiest</h2>
-          <span id="artistTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+          <span id="artistTotal" class="text-[#FFD100] text-xs font-semibold"></span>
         </div>
         <div id="blockArtists" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -132,7 +132,7 @@
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
         <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Track</h2>
-          <span id="trackTotal" class="text-[#E8920A] text-xs font-semibold"></span>
+          <span id="trackTotal" class="text-[#FFD100] text-xs font-semibold"></span>
         </div>
         <div id="blockTracks" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -205,7 +205,7 @@
       wrap.innerHTML = `
         <input type="text" id="input_${key}"
           placeholder="${placeholder}" autocomplete="off" spellcheck="false"
-          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 pr-8 text-sm focus:outline-none focus:border-[#E8920A] transition-colors placeholder-gray-600"
+          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 pr-8 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
           oninput="onFilterInput('${key}')"
           onfocus="showDropdown('${key}')">
         <button id="clear_${key}" onclick="clearFilter('${key}')"
@@ -242,7 +242,7 @@
       dd.innerHTML = matches.slice(0, 40).map(o => {
         const hl = escaped
           ? o.replace(new RegExp(`(${escaped})`, 'gi'),
-              '<span style="color:#E8920A;font-weight:600">$1</span>')
+              '<span style="color:#FFD100;font-weight:600">$1</span>')
           : o
         const safeVal = o.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
         return `<button type="button"
@@ -310,7 +310,7 @@
         const btn = document.getElementById(`typeBtn${t.charAt(0).toUpperCase() + t.slice(1)}`)
         if (!btn) return
         if (t === type) {
-          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#E8920A] text-white'
+          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold'
         } else {
           btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]'
         }
@@ -385,10 +385,10 @@
         <div class="mb-2.5">
           <div class="flex justify-between items-baseline mb-1">
             <span class="text-white text-xs truncate max-w-[60%]" title="${name}">${name}</span>
-            <span class="text-[#E8920A] text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
+            <span class="text-[#FFD100] text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
           </div>
           <div class="h-1 bg-[#2a2a2a] rounded-full">
-            <div class="h-1 bg-[#E8920A] rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
+            <div class="h-1 bg-[#FFD100] rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
           </div>
         </div>
       `).join('')

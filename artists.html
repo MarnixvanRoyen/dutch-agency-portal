@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artiesten — Dutch Agency</title>
+  <title>Artiesten — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -19,7 +19,7 @@
         <p class="text-gray-500 text-sm mt-0.5">Koppel artiesten via tracks aan labels</p>
       </div>
       <button onclick="openModal()"
-        class="flex items-center gap-2 bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -31,7 +31,7 @@
     <!-- Zoek -->
     <div class="mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op naam..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors w-full sm:w-64 placeholder-gray-600"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-64 placeholder-gray-600"
         oninput="filterTable()">
     </div>
 
@@ -64,25 +64,25 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Naam *</label>
           <input type="text" id="artistName" required
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
             placeholder="Artiestennaam">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mail</label>
           <input type="email" id="artistEmail"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
             placeholder="artiest@email.nl">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Telefoonnummer</label>
           <input type="text" id="artistPhone"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
             placeholder="+31 6 00000000">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Notities</label>
           <textarea id="artistNotes" rows="2"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#E8920A] transition-colors resize-none"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors resize-none"
             placeholder="Optionele notities..."></textarea>
         </div>
         <div class="flex gap-3 pt-1">
@@ -91,7 +91,7 @@
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#E8920A] hover:bg-[#d4830a] text-white font-semibold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold font-semibold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -116,7 +116,7 @@
       </div>
       <div class="text-right shrink-0">
         <div class="text-gray-500 text-xs mb-0.5">Totale verdiensten (gesplitst)</div>
-        <div id="reportTotal" class="text-xl font-bold text-[#E8920A]">—</div>
+        <div id="reportTotal" class="text-xl font-bold text-[#FFD100]">—</div>
       </div>
       <button onclick="window.print()"
         class="hidden md:flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white px-3 py-2 rounded-lg text-xs transition-colors shrink-0">
@@ -132,7 +132,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
           <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Totaal (na split)</div>
-          <div id="summaryTotal" class="text-xl font-bold text-[#E8920A]">—</div>
+          <div id="summaryTotal" class="text-xl font-bold text-[#FFD100]">—</div>
         </div>
         <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
           <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Nummers</div>
@@ -243,11 +243,11 @@
             <td class="px-5 py-3.5 font-medium text-white">${a.name}</td>
             <td class="px-5 py-3.5 text-gray-500 text-xs" id="trackCount_${a.id}">—</td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
-            <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#E8920A] font-semibold' : 'text-gray-600'}">
+            <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#FFD100] font-semibold' : 'text-gray-600'}">
               ${roy?.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3.5 text-right whitespace-nowrap">
-              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#E8920A] text-xs mr-3 transition-colors">Rapport</button>
+              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -427,10 +427,10 @@
         <div class="mb-3">
           <div class="flex justify-between items-baseline mb-1.5">
             <span class="text-white text-xs truncate max-w-[65%]" title="${name}">${name}</span>
-            <span class="text-[#E8920A] text-xs font-bold ml-2 whitespace-nowrap">${fmt(val)}</span>
+            <span class="text-[#FFD100] text-xs font-bold ml-2 whitespace-nowrap">${fmt(val)}</span>
           </div>
           <div class="h-1.5 bg-[#2a2a2a] rounded-full">
-            <div class="h-1.5 bg-[#E8920A] rounded-full" style="width:${Math.max(2, val/max*100).toFixed(1)}%"></div>
+            <div class="h-1.5 bg-[#FFD100] rounded-full" style="width:${Math.max(2, val/max*100).toFixed(1)}%"></div>
           </div>
         </div>
       `).join('')
@@ -445,9 +445,9 @@
           ${entries.map(([period, val]) => `
             <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
               <div class="text-gray-500 text-xs mb-2 truncate">${period}</div>
-              <div class="text-[#E8920A] font-bold text-base">${fmt(val)}</div>
+              <div class="text-[#FFD100] font-bold text-base">${fmt(val)}</div>
               <div class="mt-2 h-1 bg-[#2a2a2a] rounded-full">
-                <div class="h-1 bg-[#E8920A]/60 rounded-full" style="width:${Math.max(2,val/max*100).toFixed(1)}%"></div>
+                <div class="h-1 bg-[#FFD100]/60 rounded-full" style="width:${Math.max(2,val/max*100).toFixed(1)}%"></div>
               </div>
               <div class="text-gray-600 text-xs mt-1">${totalAll > 0 ? (val/totalAll*100).toFixed(1) + '%' : ''}</div>
             </div>

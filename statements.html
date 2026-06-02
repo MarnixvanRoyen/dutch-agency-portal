@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Statements — Dutch Agency</title>
+  <title>Statements — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -27,13 +27,13 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Periode (bijv. Q1 2025)</label>
           <input type="text" id="period"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
             placeholder="Q1 2025">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Excel bestand</label>
           <input type="file" id="fileInput" accept=".xlsx,.xls"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#E8920A] transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-[#E8920A] file:text-white file:font-medium hover:file:bg-[#d4830a] file:cursor-pointer cursor-pointer">
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-[#FFD100] file:text-white file:font-medium hover:file:bg-[#c9aa00] file:cursor-pointer cursor-pointer">
         </div>
       </div>
 
@@ -44,7 +44,7 @@
           <span id="progressPct">0%</span>
         </div>
         <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-          <div id="progressBar" class="h-2 bg-[#E8920A] rounded-full transition-all duration-300" style="width:0%"></div>
+          <div id="progressBar" class="h-2 bg-[#FFD100] rounded-full transition-all duration-300" style="width:0%"></div>
         </div>
       </div>
 
@@ -59,7 +59,7 @@
           Controleren
         </button>
         <button onclick="uploadStatement()" id="uploadBtn" disabled
-          class="bg-[#E8920A] hover:bg-[#d4830a] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Opslaan in database
         </button>
       </div>
@@ -155,7 +155,7 @@
           <td class="px-5 py-3.5 text-white font-medium">${s.filename}</td>
           <td class="px-5 py-3.5 text-gray-500">${s.period || '—'}</td>
           <td class="px-5 py-3.5 text-right text-gray-400">${s.line_count || 0}</td>
-          <td class="px-5 py-3.5 text-right text-[#E8920A] font-semibold">${fmt(s.total_royalties)}</td>
+          <td class="px-5 py-3.5 text-right text-[#FFD100] font-semibold">${fmt(s.total_royalties)}</td>
           <td class="px-5 py-3.5 text-right text-gray-500 text-xs">${fmtDate(s.uploaded_at)}</td>
           <td class="px-5 py-3.5 text-right">
             <button onclick="viewDetail('${s.id}', '${s.filename.replace(/'/g, "\\'")}')"
@@ -247,7 +247,7 @@
       document.getElementById('previewContent').innerHTML = `
         <div class="font-medium text-white mb-2">${file.name}</div>
         <div class="text-gray-400 mb-1">
-          ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#E8920A] font-semibold">${fmt(totalRoyalties)}</span>
+          ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#FFD100] font-semibold">${fmt(totalRoyalties)}</span>
         </div>
         <div class="text-xs mb-3 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
           ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks via ISRC
@@ -344,7 +344,7 @@
           <td class="px-4 py-2 text-white">${l.artist_name || '—'}</td>
           <td class="px-4 py-2 text-gray-300">${l.track_title || '—'}</td>
           <td class="px-4 py-2 text-gray-500">${l.isrc || '—'}</td>
-          <td class="px-4 py-2 text-right text-[#E8920A] font-medium">${fmt(l.nett_royalty)}</td>
+          <td class="px-4 py-2 text-right text-[#FFD100] font-medium">${fmt(l.nett_royalty)}</td>
         </tr>
       `).join('')
     }

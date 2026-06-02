@@ -1,5 +1,5 @@
 // ============================================================
-// Dutch Agency Portal — Gedeelde configuratie
+// DJ·World Portal — Gedeelde configuratie
 // ============================================================
 
 const SUPABASE_URL = 'https://agurvyolmndhefsafboi.supabase.co'
@@ -41,7 +41,7 @@ function renderNav(activePage, email) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-    <span class="text-[#E8920A] font-bold text-sm tracking-widest uppercase">Dutch Agency</span>
+    <span class="text-[#FFD100] font-black text-lg tracking-tight lowercase">dj<span class="font-black">·</span>world</span>
   `
 
   // --- Overlay (donkere laag achter sidebar op mobiel) ---
@@ -59,10 +59,11 @@ function renderNav(activePage, email) {
   if (!el) return
   el.innerHTML = `
     <div class="flex flex-col h-full">
-      <div class="p-5 border-b border-[#2a2a2a] flex items-center justify-between">
-        <div>
-          <div class="text-[#E8920A] font-bold text-base tracking-widest uppercase">Dutch Agency</div>
-          <div class="text-gray-600 text-xs mt-0.5">Rob Boskamp BV</div>
+      <div class="px-4 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="leading-none">
+            <span class="text-[#FFD100] font-black text-2xl tracking-tight lowercase">dj</span><span class="text-[#FFD100] font-black text-2xl">·</span><span class="text-[#FFD100] font-black text-2xl tracking-tight lowercase">world</span>
+          </div>
         </div>
         <button onclick="closeSidebar()" class="md:hidden text-gray-500 hover:text-white transition-colors p-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +84,7 @@ function renderNav(activePage, email) {
         ${NAV_LINKS.map(l => `
           <a href="${l.href}" onclick="closeSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
             activePage === l.id
-              ? 'bg-[#E8920A]/15 text-[#E8920A] font-medium'
+              ? 'bg-[#FFD100]/15 text-[#FFD100] font-medium'
               : 'text-gray-500 hover:text-white hover:bg-[#2a2a2a]'
           }">
             ${l.icon}
@@ -148,7 +149,7 @@ function fmtDate(dateStr) {
 function showToast(msg, type = 'success') {
   const t = document.createElement('div')
   t.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl text-sm font-medium shadow-xl z-50 transition-all ${
-    type === 'success' ? 'bg-[#E8920A] text-white' : 'bg-red-600 text-white'
+    type === 'success' ? 'bg-[#FFD100] text-black font-bold' : 'bg-red-600 text-white'
   }`
   t.textContent = msg
   document.body.appendChild(t)

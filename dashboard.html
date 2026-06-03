@@ -501,10 +501,13 @@
         byLabel[k] = (byLabel[k] || 0) + (parseFloat(l.nett_royalty) || 0)
       })
 
-      // Per Track — bruto royalties op track_title
+      // Per Track — track_title als sleutel, CatalogNumber als fallback (met waarschuwing)
       const byTrack = {}
+      const trackHasNoTitle = new Set()
       lines.forEach(l => {
-        const k = l.track_title; if (!k) return
+        const k = l.track_title || (l.isrc ? `⚠️ ${l.isrc}` : null)
+        if (!k) return
+        if (!l.track_title && l.isrc) trackHasNoTitle.add(k)
         byTrack[k] = (byTrack[k] || 0) + (parseFloat(l.nett_royalty) || 0)
       })
 
@@ -525,10 +528,10 @@
 
       renderBlock('blockLabels',  'labelTotal',  toEntries(byLabel),  12)
       renderBlock('blockArtists', 'artistTotal', toEntries(byArtist), 12)
-      renderBlock('blockTracks',  'trackTotal',  toEntries(byTrack),  12)
+      renderBlock('blockTracks',  'trackTotal',  toEntries(byTrack),  12, trackHasNoTitle)
     }
 
-    function renderBlock(blockId, totalId, entries, topN) {
+    function renderBlock(blockId, totalId, entries, topN, warnSet = new Set()) {
       const el      = document.getElementById(blockId)
       const totalEl = document.getElementById(totalId)
       const total   = entries.reduce((s, [, v]) => s + v, 0)
@@ -543,17 +546,19 @@
       const top = entries.slice(0, topN)
       const max = top[0][1]
 
-      el.innerHTML = top.map(([name, val]) => `
+      el.innerHTML = top.map(([name, val]) => {
+        const isWarn = warnSet.has(name)
+        return `
         <div class="mb-2.5">
           <div class="flex justify-between items-baseline mb-1">
-            <span class="text-white text-xs truncate max-w-[60%]" title="${name}">${name}</span>
+            <span class="${isWarn ? 'text-amber-400' : 'text-white'} text-xs truncate max-w-[60%]" title="${isWarn ? 'Geen tracknaam — CatalogNumber als identifier' : name}">${name}</span>
             <span class="text-[#FFD100] text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
           </div>
           <div class="h-1 bg-[#2a2a2a] rounded-full">
-            <div class="h-1 bg-[#FFD100] rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
+            <div class="h-1 ${isWarn ? 'bg-amber-400' : 'bg-[#FFD100]'} rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
           </div>
-        </div>
-      `).join('')
+        </div>`
+      }).join('')
 
       if (entries.length > topN) {
         el.innerHTML += `<p class="text-gray-600 text-xs mt-2">+ ${entries.length - topN} meer</p>`

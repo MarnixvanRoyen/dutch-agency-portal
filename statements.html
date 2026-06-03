@@ -259,15 +259,25 @@
       const labelCounts = {}
       allLines.forEach(l => { labelCounts[l.label_name] = (labelCounts[l.label_name] || 0) + 1 })
 
-      const matchedLines = allLines.filter(l => l.track_id).length
+      const matchedLines   = allLines.filter(l => l.track_id).length
+      const noTitleLines   = allLines.filter(l => l.isrc && !l.track_title)
+      const noTitleCount   = noTitleLines.length
+
       document.getElementById('previewContent').innerHTML = `
         <div class="font-medium text-white mb-2">${file.name}</div>
         <div class="text-gray-400 mb-1">
           ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#FFD100] font-semibold">${fmt(totalRoyalties)}</span>
         </div>
-        <div class="text-xs mb-3 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
-          ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks via ISRC
+        <div class="text-xs mb-2 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
+          ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks
         </div>
+        ${noTitleCount > 0 ? `
+        <div class="text-xs mb-3 text-amber-400">
+          ⚠️ ${noTitleCount} regel(s) hebben een CatalogNumber maar geen tracknaam — worden opgeslagen zonder titel.
+          <div class="mt-1 text-gray-500 max-h-20 overflow-y-auto">
+            ${[...new Set(noTitleLines.map(l => l.isrc))].map(c => `<span class="inline-block mr-2">${c}</span>`).join('')}
+          </div>
+        </div>` : ''}
         <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
           ${Object.entries(labelCounts).map(([name, cnt]) => `
             <div class="text-xs text-gray-500">${name} <span class="text-gray-600">(${cnt})</span></div>

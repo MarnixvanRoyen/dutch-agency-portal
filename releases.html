@@ -43,9 +43,7 @@
         onchange="filterTable()">
         <option value="">Alle types</option>
         <option value="single">Single</option>
-        <option value="ep">EP</option>
-        <option value="album">Album</option>
-        <option value="compilation">Compilatie</option>
+        <option value="compilation">Verzameling</option>
         <option value="unknown">Onbekend</option>
       </select>
     </div>
@@ -166,8 +164,8 @@
     let currentPage  = 0
     const PAGE_SIZE  = 50
 
-    const TYPE_LABELS = { single: 'Single', ep: 'EP', album: 'Album', compilation: 'Compilatie', unknown: 'Onbekend' }
-    const TYPE_COLORS = { single: 'text-blue-400', ep: 'text-purple-400', album: 'text-green-400', compilation: 'text-orange-400', unknown: 'text-gray-500' }
+    const TYPE_LABELS = { single: 'Single', compilation: 'Verzameling', unknown: 'Onbekend' }
+    const TYPE_COLORS = { single: 'text-blue-400', compilation: 'text-orange-400', unknown: 'text-gray-500' }
 
     async function loadPage() {
       const session = await initPage('releases')

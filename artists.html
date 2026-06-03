@@ -6,6 +6,7 @@
   <title>Artiesten — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
 
@@ -137,6 +138,9 @@
 
     <div class="p-4 md:p-8 max-w-5xl mx-auto">
 
+      <!-- Alles binnen dit div wordt gecaptured als screenshot -->
+      <div id="reportCapture">
+
       <!-- Commissie flow (gevuld door JS) -->
       <div id="reportCommissieFlow"></div>
 
@@ -183,6 +187,7 @@
         <div id="reportPeriods" class="p-5 text-sm text-gray-500">Laden...</div>
       </div>
 
+      </div><!-- einde #reportCapture -->
     </div>
   </div>
 
@@ -610,46 +615,60 @@
 
     function emailReport() {
       if (!currentReportData) return
+      if (!currentReportEmail) { showToast('Geen emailadres bekend voor deze artiest.', 'error'); return }
 
       const { name, total, trackEntries, labelEntries, periodEntries } = currentReportData
-      const to      = currentReportEmail || ''
-      const cc      = 'info@dj-world.nl'
-      const subject = `Royalty Rapport — ${name}`
+      const periods = periodEntries.map(([p]) => p).join(', ') || '—'
 
-      const trackLines  = trackEntries.slice(0, 20)
-        .map(([t, v]) => `  ${t}: ${fmt(v)}`).join('\n')
-      const labelLines  = labelEntries
-        .map(([l, v]) => `  ${l}: ${fmt(v)}`).join('\n')
+      const col = (label, value, width = 32) => `${label.padEnd(width)}${value}`
+      const divider = '─'.repeat(48)
+
+      const trackLines = trackEntries.slice(0, 15)
+        .map(([t, v]) => col('  ' + (t.length > 28 ? t.slice(0,26)+'..' : t), fmt(v)))
+        .join('\n')
+      const moreTrack = trackEntries.length > 15 ? `\n  ... and ${trackEntries.length - 15} more tracks` : ''
+
+      const labelLines = labelEntries
+        .map(([l, v]) => col('  ' + l, fmt(v)))
+        .join('\n')
+
       const periodLines = periodEntries
-        .map(([p, v]) => `  ${p}: ${fmt(v)}`).join('\n')
+        .map(([p, v]) => col('  ' + p, fmt(v)))
+        .join('\n')
 
       const body = [
-        `Beste ${name},`,
+        `Beste ${name} / Dear ${name},`,
         '',
-        `Hieronder vind je een overzicht van je royalty verdiensten.`,
+        `Hierbij ontvang je jouw royalty-overzicht voor de periode: ${periods}.`,
+        `Please find below your royalty statement for the period: ${periods}.`,
         '',
-        `Netto aandeel: ${fmt(total)}`,
+        divider,
+        col('NETTO AANDEEL / NET EARNINGS:', fmt(total)),
+        divider,
         '',
-        '— Verdiensten per nummer —',
+        '── Per nummer / Per track ──────────────────',
         trackLines,
-        trackEntries.length > 20 ? `  ... en ${trackEntries.length - 20} meer` : '',
+        moreTrack,
         '',
-        '— Verdiensten per label —',
+        '── Per label ───────────────────────────────',
         labelLines,
         '',
-        '— Verdiensten per periode —',
+        '── Per periode / Per period ────────────────',
         periodLines,
         '',
-        'Met vriendelijke groet,',
+        divider,
+        '',
+        'Heb je vragen? Neem gerust contact op.',
+        'Any questions? Feel free to reach out.',
+        '',
+        'Met vriendelijke groet / Kind regards,',
+        'Rob Boskamp',
         'DJ·World',
+        'info@dj-world.nl',
       ].join('\n')
 
-      const mailto = `mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-
-      if (!to) {
-        showToast('Geen emailadres bekend voor deze artiest.', 'error')
-        return
-      }
+      const subject = `Royalty Statement — ${name} — ${periods}`
+      const mailto  = `mailto:${encodeURIComponent(currentReportEmail)}?cc=${encodeURIComponent('info@dj-world.nl')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
       window.location.href = mailto
     }
 

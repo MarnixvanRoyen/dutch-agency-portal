@@ -372,8 +372,9 @@
       const artAmt = rest1 - dAmt
       const artPct = bruto > 0 ? (artAmt / bruto * 100) : 0
 
+      const djWorldPctOfTotal = bruto > 0 ? (dAmt / bruto * 100) : (100 - aPct) * dPct / 100
       document.getElementById('flowAggregatorPct').textContent = aPct + '%'
-      document.getElementById('flowDJWorldPct').textContent    = dPct + '%'
+      document.getElementById('flowDJWorldPct').textContent    = djWorldPctOfTotal.toFixed(1) + '%'
       document.getElementById('flowArtistPct').textContent     = artPct.toFixed(1) + '%'
       document.getElementById('flowAggregatorAmt').textContent = fmt(aAmt)
       document.getElementById('flowDJWorldAmt').textContent    = fmt(dAmt)
@@ -398,9 +399,10 @@
       const aPct = parseFloat(document.getElementById('inputAggregator').value) || 0
       const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
       const rest1  = 100 - aPct
-      const artPct = rest1 * (1 - dPct / 100)
+      const djPctOfTotal = rest1 * dPct / 100
+      const artPct = rest1 - djPctOfTotal
       document.getElementById('flowAggregatorPct').textContent = aPct + '%'
-      document.getElementById('flowDJWorldPct').textContent    = dPct + '%'
+      document.getElementById('flowDJWorldPct').textContent    = djPctOfTotal.toFixed(1) + '%'
       document.getElementById('flowArtistPct').textContent     = artPct.toFixed(1) + '%'
       document.getElementById('barAggregator').style.width = aPct + '%'
       document.getElementById('barDJWorld').style.width    = (rest1 * dPct / 100) + '%'

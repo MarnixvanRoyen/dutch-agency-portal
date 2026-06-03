@@ -40,6 +40,7 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium w-8"></th>
             <th class="text-left px-5 py-3 font-medium">Artiest</th>
             <th class="text-left px-5 py-3 font-medium">Tracks</th>
             <th class="text-left px-5 py-3 font-medium">E-mail</th>
@@ -188,8 +189,9 @@
   <script src="shared.js"></script>
   <script>
     let allArtists = []
-    // { artist_id: { total, stream, download } } — berekend via splits
-    let splitRoyalties = {}
+    let splitRoyalties  = {}   // { artist_id: { total, stream, download } }
+    let tracksByArtist  = {}   // { artist_id: [{title, catalog, royalty}] }
+    let expandedArtists = new Set()
 
     async function loadPage() {
       const session = await initPage('artists')
@@ -200,10 +202,10 @@
 
     // Royalties berekend via track_artists splits
     async function computeSplitRoyalties() {
-      // Haal alle track_artists op met split%
+      // Haal alle track_artists op met split% + track info
       const { data: tas } = await db
         .from('track_artists')
-        .select('track_id, artist_id, split_percentage')
+        .select('track_id, artist_id, split_percentage, tracks(id, title, releases(catalog_number))')
 
       // Haal alle statement lines op
       const { data: lines } = await db
@@ -222,17 +224,29 @@
       })
 
       // Bereken per artiest via split% EN commissies
-      // Formule: bruto × netFactor() × split%
       splitRoyalties = {}
+      tracksByArtist  = {}
       ;(tas || []).forEach(ta => {
         const roy = royPerTrack[ta.track_id]
         if (!roy) return
         const pct    = (parseFloat(ta.split_percentage) || 0) / 100
-        const factor = netFactor()   // (1 - aggregator%) × (1 - djworld%)
+        const factor = netFactor()
         if (!splitRoyalties[ta.artist_id]) splitRoyalties[ta.artist_id] = { total: 0, stream: 0, download: 0 }
         splitRoyalties[ta.artist_id].total    += roy.total    * factor * pct
         splitRoyalties[ta.artist_id].stream   += roy.stream   * factor * pct
         splitRoyalties[ta.artist_id].download += roy.download * factor * pct
+
+        // Track-breakdown per artiest opslaan
+        if (!tracksByArtist[ta.artist_id]) tracksByArtist[ta.artist_id] = {}
+        const trackKey = ta.track_id
+        if (!tracksByArtist[ta.artist_id][trackKey]) {
+          tracksByArtist[ta.artist_id][trackKey] = {
+            title:   ta.tracks?.title || null,
+            catalog: ta.tracks?.releases?.catalog_number || '—',
+            royalty: 0
+          }
+        }
+        tracksByArtist[ta.artist_id][trackKey].royalty += roy.total * factor * pct
       })
     }
 
@@ -249,22 +263,67 @@
         return
       }
       tbody.innerHTML = artists.map(a => {
-        const roy = splitRoyalties[a.id]
-        return `
-          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+        const roy        = splitRoyalties[a.id]
+        const isExpanded = expandedArtists.has(a.id)
+        const tracks     = tracksByArtist[a.id]
+          ? Object.values(tracksByArtist[a.id]).sort((x, y) => y.royalty - x.royalty)
+          : []
+
+        const mainRow = `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors cursor-pointer" onclick="toggleArtist('${a.id}')">
+            <td class="px-5 py-3.5 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </td>
             <td class="px-5 py-3.5 font-medium text-white">${a.name}</td>
-            <td class="px-5 py-3.5 text-gray-500 text-xs" id="trackCount_${a.id}">—</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs">${tracks.length || '—'}</td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
             <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#FFD100] font-semibold' : 'text-gray-600'}">
               ${roy?.total ? fmt(roy.total) : '—'}
             </td>
-            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+            <td class="px-5 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
               <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${(a.email || '').replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
           </tr>
         `
+
+        const expandRow = isExpanded ? `
+          <tr class="border-t border-[#2a2a2a]/50 bg-[#161616]">
+            <td></td>
+            <td colspan="5" class="px-5 py-3">
+              ${!tracks.length
+                ? '<p class="text-gray-600 text-xs py-2">Geen tracks met royalties.</p>'
+                : `<table class="w-full text-xs">
+                    <thead>
+                      <tr class="text-gray-600 uppercase">
+                        <th class="text-left pb-2 font-medium">Track</th>
+                        <th class="text-left pb-2 font-medium">Catalogus</th>
+                        <th class="text-right pb-2 font-medium">Netto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${tracks.map(t => `
+                        <tr class="border-t border-[#2a2a2a]/50">
+                          <td class="py-1.5 ${t.title ? 'text-gray-300' : 'text-amber-400'} pr-4">
+                            ${t.title || `⚠️ ${t.catalog}`}
+                          </td>
+                          <td class="py-1.5 text-gray-600 font-mono pr-4">${t.catalog}</td>
+                          <td class="py-1.5 text-right ${t.royalty ? 'text-[#FFD100]' : 'text-gray-600'}">
+                            ${t.royalty ? fmt(t.royalty) : '—'}
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>`
+              }
+            </td>
+          </tr>
+        ` : ''
+
+        return mainRow + expandRow
       }).join('')
 
       // Track-aantallen per artiest ophalen
@@ -342,6 +401,18 @@
     })
 
     // ── Rapport ──────────────────────────────────────────────────────
+
+    function toggleArtist(artistId) {
+      if (expandedArtists.has(artistId)) {
+        expandedArtists.delete(artistId)
+      } else {
+        expandedArtists.add(artistId)
+      }
+      renderTable(allArtists.filter(a => {
+        const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
+        return !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+      }))
+    }
 
     let currentReportEmail = ''
     let currentReportData  = null  // { name, total, tracks, labels, periods }

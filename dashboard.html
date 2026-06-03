@@ -370,9 +370,8 @@
       const rest1 = bruto - aAmt
       const dAmt  = rest1 * dPct / 100
       const artAmt = rest1 - dAmt
-      const artPct = bruto > 0 ? (artAmt / bruto * 100) : 0
-
       const djWorldPctOfTotal = bruto > 0 ? (dAmt / bruto * 100) : (100 - aPct) * dPct / 100
+      const artPct = bruto > 0 ? (artAmt / bruto * 100) : (100 - aPct) * (1 - dPct / 100)
       document.getElementById('flowAggregatorPct').textContent = aPct + '%'
       document.getElementById('flowDJWorldPct').textContent    = djWorldPctOfTotal.toFixed(1) + '%'
       document.getElementById('flowArtistPct').textContent     = artPct.toFixed(1) + '%'

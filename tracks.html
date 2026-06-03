@@ -43,6 +43,11 @@
         <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
         Zonder naam
       </button>
+      <button id="multiArtistBtn" onclick="toggleMultiArtist()"
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
+        Mogelijk meerdere artiesten
+      </button>
     </div>
 
     <!-- Tabel -->
@@ -144,7 +149,9 @@
     let allReleases    = []
     let royaltyByTrack = {}
     let filtered       = []
-    let filterNoTitle  = false
+    let filterNoTitle    = false
+    let filterMultiArtist = false
+    const MULTI_ARTIST_RE = / & | and | feat\.?| vs\.? |, /i
     let currentPage    = 0
     const PAGE_SIZE    = 50
 
@@ -284,6 +291,15 @@
       filterTable()
     }
 
+    function toggleMultiArtist() {
+      filterMultiArtist = !filterMultiArtist
+      const btn = document.getElementById('multiArtistBtn')
+      btn.className = filterMultiArtist
+        ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-purple-400 text-purple-400 rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+      filterTable()
+    }
+
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
@@ -291,8 +307,10 @@
         const catalog     = t.releases?.catalog_number || ''
         const matchSearch = !q || (t.title || '').toLowerCase().includes(q) || catalog.toLowerCase().includes(q)
         const matchLabel  = !labelId || t.releases?.label_id === labelId
-        const matchNoTitle = !filterNoTitle || !t.title
-        return matchSearch && matchLabel && matchNoTitle
+        const matchNoTitle    = !filterNoTitle || !t.title
+        const artistNames     = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
+        const matchMultiArtist = !filterMultiArtist || MULTI_ARTIST_RE.test(artistNames)
+        return matchSearch && matchLabel && matchNoTitle && matchMultiArtist
       })
       currentPage = 0
       renderTable()

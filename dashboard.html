@@ -74,11 +74,11 @@
     </div>
 
     <!-- Royalty flow kaart -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-6 max-w-xl">
-      <div class="flex items-center justify-between mb-4">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-3 mb-6">
+      <div class="flex items-center justify-between mb-3">
         <h2 class="text-white font-semibold text-sm">Royalty verdeling</h2>
         <button onclick="toggleCommissieEdit()" id="commissieBtnEdit"
-          class="text-gray-400 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1.5 rounded-lg transition-colors">
+          class="text-gray-400 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1 rounded-lg transition-colors">
           Aanpassen
         </button>
       </div>
@@ -86,19 +86,19 @@
       <!-- Visuele flow -->
       <div id="commissieFlow" class="grid grid-cols-3 gap-3 mb-1">
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Aggregator</div>
-          <div id="flowAggregatorPct" class="text-2xl font-bold text-red-400">30%</div>
-          <div id="flowAggregatorAmt" class="text-gray-400 text-xs mt-0.5">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">Aggregator</div>
+          <div id="flowAggregatorPct" class="text-xl font-bold text-red-400">30%</div>
+          <div id="flowAggregatorAmt" class="text-gray-400 text-xs">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ·World</div>
-          <div id="flowDJWorldPct" class="text-2xl font-bold text-[#FFD100]">50%</div>
-          <div id="flowDJWorldAmt" class="text-gray-400 text-xs mt-0.5">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">DJ·World</div>
+          <div id="flowDJWorldPct" class="text-xl font-bold text-[#FFD100]">50%</div>
+          <div id="flowDJWorldAmt" class="text-gray-400 text-xs">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
-          <div id="flowArtistPct" class="text-2xl font-bold text-green-400">—%</div>
-          <div id="flowArtistAmt" class="text-gray-400 text-xs mt-0.5">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">Voor artiesten</div>
+          <div id="flowArtistPct" class="text-xl font-bold text-green-400">—%</div>
+          <div id="flowArtistAmt" class="text-gray-400 text-xs">—</div>
         </div>
       </div>
 

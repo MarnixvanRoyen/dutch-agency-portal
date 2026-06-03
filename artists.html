@@ -362,7 +362,7 @@
       // Alle tracks van deze artiest ophalen
       const { data: tas } = await db
         .from('track_artists')
-        .select('split_percentage, tracks(id, title, isrc, labels(name))')
+        .select('split_percentage, tracks(id, title, releases(catalog_number, labels(name)))')
         .eq('artist_id', artistId)
 
       if (!tas?.length) {

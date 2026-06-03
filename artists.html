@@ -476,8 +476,9 @@
       ;(lines || []).forEach(l => {
         const pct        = splitMap[l.track_id] || 0
         const bruto      = parseFloat(l.nett_royalty) || 0
-        const netRoyalty = bruto * (1 - COMMISSIONS.djworldPct / 100) * pct
-        brutoTotal += bruto * pct
+        const naAggregator = bruto * (1 - COMMISSIONS.aggregatorPct / 100) * pct
+        const netRoyalty   = naAggregator * (1 - COMMISSIONS.djworldPct / 100)
+        brutoTotal += naAggregator   // na aggregator = wat DJ·World ontvangt
         total      += netRoyalty
         if (l.usage_type === 'stream')   streamTotal   += netRoyalty
         if (l.usage_type === 'download') downloadTotal += netRoyalty

@@ -118,6 +118,13 @@
         <div class="text-gray-500 text-xs mb-0.5">Totale verdiensten (gesplitst)</div>
         <div id="reportTotal" class="text-xl font-bold text-[#FFD100]">—</div>
       </div>
+      <button id="emailReportBtn" onclick="emailReport()"
+        class="hidden md:flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white px-3 py-2 rounded-lg text-xs transition-colors shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Mailen
+      </button>
       <button onclick="window.print()"
         class="hidden md:flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white px-3 py-2 rounded-lg text-xs transition-colors shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -252,7 +259,7 @@
               ${roy?.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3.5 text-right whitespace-nowrap">
-              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
+              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${(a.email || '').replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -336,7 +343,11 @@
 
     // ── Rapport ──────────────────────────────────────────────────────
 
-    async function openReport(artistId, artistName) {
+    let currentReportEmail = ''
+    let currentReportData  = null  // { name, total, tracks, labels, periods }
+
+    async function openReport(artistId, artistName, artistEmail = '') {
+      currentReportEmail = artistEmail
       const overlay = document.getElementById('reportOverlay')
       overlay.classList.remove('hidden')
       overlay.scrollTop = 0
@@ -419,6 +430,12 @@
       const labelEntries  = Object.entries(byLabel).sort((a, b) => b[1] - a[1])
       const periodEntries = Object.entries(byPeriod).sort((a, b) => a[0].localeCompare(b[0]))
 
+      // Opslaan voor email-functie
+      currentReportData = {
+        name: document.getElementById('reportName').textContent,
+        total, trackEntries, labelEntries, periodEntries
+      }
+
       document.getElementById('reportTotal').textContent    = fmt(total)
       document.getElementById('summaryTotal').textContent   = fmt(total)
       document.getElementById('summaryTracks').textContent  = trackEntries.length
@@ -495,6 +512,51 @@
     }
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReport() })
+
+    function emailReport() {
+      if (!currentReportData) return
+
+      const { name, total, trackEntries, labelEntries, periodEntries } = currentReportData
+      const to      = currentReportEmail || ''
+      const cc      = 'info@dj-world.nl'
+      const subject = `Royalty Rapport — ${name}`
+
+      const trackLines  = trackEntries.slice(0, 20)
+        .map(([t, v]) => `  ${t}: ${fmt(v)}`).join('\n')
+      const labelLines  = labelEntries
+        .map(([l, v]) => `  ${l}: ${fmt(v)}`).join('\n')
+      const periodLines = periodEntries
+        .map(([p, v]) => `  ${p}: ${fmt(v)}`).join('\n')
+
+      const body = [
+        `Beste ${name},`,
+        '',
+        `Hieronder vind je een overzicht van je royalty verdiensten.`,
+        '',
+        `Netto aandeel: ${fmt(total)}`,
+        '',
+        '— Verdiensten per nummer —',
+        trackLines,
+        trackEntries.length > 20 ? `  ... en ${trackEntries.length - 20} meer` : '',
+        '',
+        '— Verdiensten per label —',
+        labelLines,
+        '',
+        '— Verdiensten per periode —',
+        periodLines,
+        '',
+        'Met vriendelijke groet,',
+        'DJ·World',
+      ].join('\n')
+
+      const mailto = `mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+      if (!to) {
+        showToast('Geen emailadres bekend voor deze artiest.', 'error')
+        return
+      }
+      window.location.href = mailto
+    }
 
     loadPage()
   </script>

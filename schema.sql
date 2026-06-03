@@ -1,6 +1,6 @@
 -- ============================================================
--- Dutch Agency Portal — Schema v2 (Track-centrisch)
--- Voer dit uit in Supabase SQL Editor (eenmalig, lege database)
+-- Dutch Agency Portal — Schema v3
+-- Voer dit uit in Supabase SQL Editor (lege database)
 -- ============================================================
 
 -- Labels
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.labels (
   created_at  timestamptz   DEFAULT now()
 );
 
--- Artiesten (koppeling aan label loopt via tracks)
+-- Artiesten
 CREATE TABLE IF NOT EXISTS public.artists (
   id         uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
   name       text          NOT NULL,
@@ -21,17 +21,26 @@ CREATE TABLE IF NOT EXISTS public.artists (
   created_at timestamptz   DEFAULT now()
 );
 
--- Tracks (centrale entiteit)
+-- Releases (CatalogNumber niveau — kan 1 of meerdere tracks bevatten)
+CREATE TABLE IF NOT EXISTS public.releases (
+  id             uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+  catalog_number text         NOT NULL,
+  label_id       uuid         REFERENCES public.labels(id) ON DELETE SET NULL,
+  release_type   text         DEFAULT 'unknown',  -- 'single', 'ep', 'album', 'compilation'
+  created_at     timestamptz  DEFAULT now(),
+  UNIQUE(catalog_number)
+);
+
+-- Tracks (individuele nummers, gekoppeld aan een release)
+-- title mag null zijn → zichtbaar als ⚠️ in dashboard
 CREATE TABLE IF NOT EXISTS public.tracks (
   id         uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
-  title      text          NOT NULL,
-  label_id   uuid          REFERENCES public.labels(id) ON DELETE SET NULL,
-  isrc       text,
+  title      text,
+  release_id uuid          REFERENCES public.releases(id) ON DELETE CASCADE,
   created_at timestamptz   DEFAULT now()
 );
 
 -- Koppeling Track <-> Artiest met split-percentage
--- Splits per track tellen op tot 100%
 CREATE TABLE IF NOT EXISTS public.track_artists (
   id               uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
   track_id         uuid          NOT NULL REFERENCES public.tracks(id) ON DELETE CASCADE,
@@ -51,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.statements (
 );
 
 -- Individuele royalty-regels
--- track_id ingevuld als ISRC matcht met bekende track
+-- track_id ingevuld als catalog_number + track_title matcht
 CREATE TABLE IF NOT EXISTS public.statement_lines (
   id           uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
   statement_id uuid          REFERENCES public.statements(id) ON DELETE CASCADE,
@@ -59,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.statement_lines (
   label_name   text,
   artist_name  text,
   track_title  text,
-  isrc         text,
+  isrc         text,          -- catalog_number van de release
   usage_type   text,
   quantity     integer,
   nett_royalty numeric(12,4) DEFAULT 0,
@@ -67,25 +76,19 @@ CREATE TABLE IF NOT EXISTS public.statement_lines (
   raw_data     jsonb
 );
 
--- ── Row Level Security ──────────────────────────────────────
+-- ── RLS uitgeschakeld (intern portaal) ────────────────────────
+ALTER TABLE public.labels          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artists         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.releases        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracks          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.track_artists   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statements      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statement_lines DISABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.labels          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.artists         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tracks          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.track_artists   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.statements      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.statement_lines ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY auth_only ON public.labels          FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY auth_only ON public.artists         FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY auth_only ON public.tracks          FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY auth_only ON public.track_artists   FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY auth_only ON public.statements      FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY auth_only ON public.statement_lines FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-GRANT ALL ON public.labels          TO authenticated;
-GRANT ALL ON public.artists         TO authenticated;
-GRANT ALL ON public.tracks          TO authenticated;
-GRANT ALL ON public.track_artists   TO authenticated;
-GRANT ALL ON public.statements      TO authenticated;
-GRANT ALL ON public.statement_lines TO authenticated;
+GRANT ALL ON public.labels          TO anon;
+GRANT ALL ON public.artists         TO anon;
+GRANT ALL ON public.releases        TO anon;
+GRANT ALL ON public.tracks          TO anon;
+GRANT ALL ON public.track_artists   TO anon;
+GRANT ALL ON public.statements      TO anon;
+GRANT ALL ON public.statement_lines TO anon;

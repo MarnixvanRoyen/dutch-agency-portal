@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Releases — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
+
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-xl font-bold">Releases</h1>
+        <p class="text-gray-500 text-sm mt-0.5">CatalogNumbers — single, EP, album of compilatie</p>
+      </div>
+      <button onclick="openReleaseModal()"
+        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span class="hidden sm:inline">Release toevoegen</span>
+        <span class="sm:hidden">Toevoegen</span>
+      </button>
+    </div>
+
+    <!-- Zoek + filter -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+      <input type="text" id="searchInput" placeholder="Zoek op catalogusnummer..."
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-72 placeholder-gray-600"
+        oninput="filterTable()">
+      <select id="labelFilter"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        onchange="filterTable()">
+        <option value="">Alle labels</option>
+      </select>
+      <select id="typeFilter"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        onchange="filterTable()">
+        <option value="">Alle types</option>
+        <option value="single">Single</option>
+        <option value="ep">EP</option>
+        <option value="album">Album</option>
+        <option value="compilation">Compilatie</option>
+        <option value="unknown">Onbekend</option>
+      </select>
+    </div>
+
+    <!-- Tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium w-8"></th>
+            <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
+            <th class="text-left px-5 py-3 font-medium">Label</th>
+            <th class="text-left px-5 py-3 font-medium">Type</th>
+            <th class="text-right px-5 py-3 font-medium">Tracks</th>
+            <th class="text-right px-5 py-3 font-medium">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="releasesTable">
+          <tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginering -->
+    <div class="flex items-center justify-between mt-4 text-sm text-gray-500">
+      <span id="pageInfo"></span>
+      <div class="flex gap-2">
+        <button id="prevBtn" onclick="prevPage()"
+          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">← Vorige</button>
+        <button id="nextBtn" onclick="nextPage()"
+          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">Volgende →</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Release modal ──────────────────────────────────────────── -->
+  <div id="releaseModal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
+      <h2 id="releaseModalTitle" class="text-white font-semibold text-base mb-5">Release toevoegen</h2>
+      <form id="releaseForm" class="space-y-4">
+        <input type="hidden" id="releaseId">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
+          <input type="text" id="releaseCatalog" required
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="bijv. BBR184-12">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
+            <select id="releaseLabel"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              <option value="">— Geen label —</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Type</label>
+            <select id="releaseType"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              <option value="single">Single</option>
+              <option value="ep">EP</option>
+              <option value="album">Album</option>
+              <option value="compilation">Compilatie</option>
+              <option value="unknown">Onbekend</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeReleaseModal()"
+            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            Annuleren
+          </button>
+          <button type="submit"
+            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Track modal (binnen een release) ──────────────────────── -->
+  <div id="trackModal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
+      <h2 id="trackModalTitle" class="text-white font-semibold text-base mb-1">Track toevoegen</h2>
+      <p id="trackModalSub" class="text-gray-500 text-xs mb-5"></p>
+      <form id="trackForm" class="space-y-4">
+        <input type="hidden" id="trackId">
+        <input type="hidden" id="trackReleaseId">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Tracknaam</label>
+          <input type="text" id="trackTitle"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="Leeg laten → ⚠️ onbekende track">
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeTrackModal()"
+            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            Annuleren
+          </button>
+          <button type="submit"
+            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    let allReleases  = []
+    let allLabels    = []
+    let tracksByRelease = {}   // { release_id: [{id, title}] }
+    let filtered     = []
+    let expandedRows = new Set()
+    let currentPage  = 0
+    const PAGE_SIZE  = 50
+
+    const TYPE_LABELS = { single: 'Single', ep: 'EP', album: 'Album', compilation: 'Compilatie', unknown: 'Onbekend' }
+    const TYPE_COLORS = { single: 'text-blue-400', ep: 'text-purple-400', album: 'text-green-400', compilation: 'text-orange-400', unknown: 'text-gray-500' }
+
+    async function loadPage() {
+      const session = await initPage('releases')
+      if (!session) return
+      await loadLabels()
+      await loadReleases()
+    }
+
+    async function loadLabels() {
+      const { data } = await db.from('labels').select('id, name').order('name')
+      allLabels = data || []
+      const filterSel = document.getElementById('labelFilter')
+      const modalSel  = document.getElementById('releaseLabel')
+      allLabels.forEach(l => {
+        filterSel.add(new Option(l.name, l.id))
+        modalSel.add(new Option(l.name, l.id))
+      })
+    }
+
+    async function loadReleases() {
+      // Releases laden met label-naam en track-telling
+      let all = []
+      let from = 0
+      const size = 1000
+      while (true) {
+        const { data, error } = await db
+          .from('releases')
+          .select('id, catalog_number, release_type, label_id, labels(name)')
+          .order('catalog_number')
+          .range(from, from + size - 1)
+        if (error || !data || data.length === 0) break
+        all.push(...data)
+        if (data.length < size) break
+        from += size
+      }
+      allReleases = all
+
+      // Track count per release
+      const { data: tracks } = await db.from('tracks').select('id, title, release_id')
+      tracksByRelease = {}
+      ;(tracks || []).forEach(t => {
+        if (!tracksByRelease[t.release_id]) tracksByRelease[t.release_id] = []
+        tracksByRelease[t.release_id].push({ id: t.id, title: t.title })
+      })
+
+      filtered = allReleases
+      currentPage = 0
+      renderTable()
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('releasesTable')
+      const start = currentPage * PAGE_SIZE
+      const page  = filtered.slice(start, start + PAGE_SIZE)
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Geen releases gevonden.</td></tr>'
+        document.getElementById('pageInfo').textContent = ''
+        return
+      }
+
+      tbody.innerHTML = page.map(r => {
+        const tracks     = tracksByRelease[r.id] || []
+        const labelName  = r.labels?.name || '—'
+        const typeLabel  = TYPE_LABELS[r.release_type] || r.release_type || '—'
+        const typeColor  = TYPE_COLORS[r.release_type] || 'text-gray-500'
+        const isExpanded = expandedRows.has(r.id)
+        const trackCount = tracks.length
+        const hasNoName  = tracks.some(t => !t.title)
+
+        const mainRow = `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors cursor-pointer" onclick="toggleExpand('${r.id}')">
+            <td class="px-5 py-3 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </td>
+            <td class="px-5 py-3 text-white font-mono text-xs font-medium">${r.catalog_number}</td>
+            <td class="px-5 py-3 text-gray-400 text-xs">${labelName}</td>
+            <td class="px-5 py-3 text-xs ${typeColor}">${typeLabel}</td>
+            <td class="px-5 py-3 text-right text-xs ${hasNoName ? 'text-amber-400' : 'text-gray-400'}">
+              ${trackCount} ${hasNoName ? '⚠️' : ''}
+            </td>
+            <td class="px-5 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+              <button onclick="openTrackModal('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
+                class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">+ Track</button>
+              <button onclick="editRelease(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
+              <button onclick="deleteRelease('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
+                class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+            </td>
+          </tr>
+        `
+
+        const expandedRow = isExpanded ? `
+          <tr id="expand_${r.id}" class="border-t border-[#2a2a2a]/50 bg-[#161616]">
+            <td></td>
+            <td colspan="5" class="px-5 py-3">
+              ${tracks.length === 0
+                ? '<p class="text-gray-600 text-xs">Geen tracks — klik "+ Track" om toe te voegen.</p>'
+                : `<div class="space-y-1">
+                    ${tracks.map(t => `
+                      <div class="flex items-center justify-between py-1">
+                        <span class="${t.title ? 'text-gray-300' : 'text-amber-400'} text-xs">
+                          ${t.title ? t.title : '⚠️ Geen naam'}
+                        </span>
+                        <div class="flex gap-3">
+                          <button onclick="editTrack(${JSON.stringify(t).replace(/"/g, '&quot;')}, '${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
+                            class="text-gray-600 hover:text-white text-xs transition-colors">Bewerken</button>
+                          <button onclick="deleteTrack('${t.id}', '${(t.title || 'onbekend').replace(/'/g, "\\'")}')"
+                            class="text-gray-600 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>`
+              }
+            </td>
+          </tr>
+        ` : ''
+
+        return mainRow + expandedRow
+      }).join('')
+
+      const total = filtered.length
+      const end   = Math.min(start + PAGE_SIZE, total)
+      document.getElementById('pageInfo').textContent = `${start + 1}–${end} van ${total} releases`
+      document.getElementById('prevBtn').disabled = currentPage === 0
+      document.getElementById('nextBtn').disabled = end >= total
+    }
+
+    function toggleExpand(releaseId) {
+      if (expandedRows.has(releaseId)) {
+        expandedRows.delete(releaseId)
+      } else {
+        expandedRows.add(releaseId)
+      }
+      renderTable()
+    }
+
+    function filterTable() {
+      const q       = document.getElementById('searchInput').value.toLowerCase()
+      const labelId = document.getElementById('labelFilter').value
+      const type    = document.getElementById('typeFilter').value
+      filtered = allReleases.filter(r => {
+        const matchQ     = !q || r.catalog_number.toLowerCase().includes(q)
+        const matchLabel = !labelId || r.label_id === labelId
+        const matchType  = !type || r.release_type === type
+        return matchQ && matchLabel && matchType
+      })
+      currentPage = 0
+      renderTable()
+    }
+
+    function prevPage() { if (currentPage > 0) { currentPage--; renderTable() } }
+    function nextPage() { if ((currentPage + 1) * PAGE_SIZE < filtered.length) { currentPage++; renderTable() } }
+
+    // ── Release modal ────────────────────────────────────────────
+
+    function openReleaseModal(release = null) {
+      document.getElementById('releaseId').value      = release?.id    || ''
+      document.getElementById('releaseCatalog').value = release?.catalog_number || ''
+      document.getElementById('releaseLabel').value   = release?.label_id || ''
+      document.getElementById('releaseType').value    = release?.release_type || 'single'
+      document.getElementById('releaseModalTitle').textContent = release ? 'Release bewerken' : 'Release toevoegen'
+      document.getElementById('releaseModal').classList.remove('hidden')
+      setTimeout(() => document.getElementById('releaseCatalog').focus(), 50)
+    }
+
+    function closeReleaseModal() {
+      document.getElementById('releaseModal').classList.add('hidden')
+    }
+
+    function editRelease(r) { openReleaseModal(r) }
+
+    document.getElementById('releaseModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeReleaseModal()
+    })
+
+    document.getElementById('releaseForm').addEventListener('submit', async e => {
+      e.preventDefault()
+      const id = document.getElementById('releaseId').value
+      const payload = {
+        catalog_number: document.getElementById('releaseCatalog').value.trim(),
+        label_id:       document.getElementById('releaseLabel').value || null,
+        release_type:   document.getElementById('releaseType').value,
+      }
+      let error
+      if (id) {
+        ;({ error } = await db.from('releases').update(payload).eq('id', id))
+      } else {
+        ;({ error } = await db.from('releases').insert(payload))
+      }
+      if (error) { showToast(error.message, 'error'); return }
+      showToast(id ? 'Release bijgewerkt.' : 'Release toegevoegd.')
+      closeReleaseModal()
+      await loadReleases()
+    })
+
+    async function deleteRelease(id, catalog) {
+      if (!confirm(`Weet je zeker dat je release "${catalog}" wilt verwijderen?\nAlle bijbehorende tracks worden ook verwijderd.`)) return
+      const { error } = await db.from('releases').delete().eq('id', id)
+      if (error) { showToast('Kan niet verwijderen: ' + error.message, 'error'); return }
+      showToast('Release verwijderd.')
+      expandedRows.delete(id)
+      await loadReleases()
+    }
+
+    // ── Track modal ──────────────────────────────────────────────
+
+    function openTrackModal(releaseId, catalogNumber, track = null) {
+      document.getElementById('trackId').value        = track?.id    || ''
+      document.getElementById('trackReleaseId').value = releaseId
+      document.getElementById('trackTitle').value     = track?.title || ''
+      document.getElementById('trackModalTitle').textContent = track ? 'Track bewerken' : 'Track toevoegen'
+      document.getElementById('trackModalSub').textContent   = catalogNumber
+      document.getElementById('trackModal').classList.remove('hidden')
+      setTimeout(() => document.getElementById('trackTitle').focus(), 50)
+    }
+
+    function closeTrackModal() {
+      document.getElementById('trackModal').classList.add('hidden')
+    }
+
+    function editTrack(track, releaseId, catalogNumber) {
+      openTrackModal(releaseId, catalogNumber, track)
+    }
+
+    document.getElementById('trackModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeTrackModal()
+    })
+
+    document.getElementById('trackForm').addEventListener('submit', async e => {
+      e.preventDefault()
+      const id        = document.getElementById('trackId').value
+      const releaseId = document.getElementById('trackReleaseId').value
+      const title     = document.getElementById('trackTitle').value.trim() || null
+      let error
+      if (id) {
+        ;({ error } = await db.from('tracks').update({ title }).eq('id', id))
+      } else {
+        ;({ error } = await db.from('tracks').insert({ title, release_id: releaseId }))
+      }
+      if (error) { showToast(error.message, 'error'); return }
+      showToast(id ? 'Track bijgewerkt.' : 'Track toegevoegd.')
+      closeTrackModal()
+      expandedRows.add(releaseId)
+      await loadReleases()
+    })
+
+    async function deleteTrack(id, title) {
+      if (!confirm(`Weet je zeker dat je track "${title}" wilt verwijderen?`)) return
+      const { error } = await db.from('tracks').delete().eq('id', id)
+      if (error) { showToast('Kan niet verwijderen: ' + error.message, 'error'); return }
+      showToast('Track verwijderd.')
+      await loadReleases()
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

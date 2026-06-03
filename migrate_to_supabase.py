@@ -12,7 +12,7 @@ import os
 
 # ── Configuratie ──────────────────────────────────────────
 SUPABASE_URL = 'https://agurvyolmndhefsafboi.supabase.co'
-SUPABASE_KEY = 'PLAK_HIER_JE_SERVICE_ROLE_KEY'  # Haal op uit Supabase → Settings → API
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')  # Geef mee via: SUPABASE_KEY="..." python3 migrate_to_supabase.py
 
 # Pad naar de SQLite database (relatief aan dit script)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'dutch_agency.db')

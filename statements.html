@@ -120,8 +120,8 @@
   <script src="shared.js"></script>
   <script>
     let parsedData = null
-    let isrcToTrackId  = {}  // { 'BBR184-12': 'uuid...' }
-    let titleToTrackId = {}  // { 'finally summer': 'uuid...' }
+    // catalogMap: { 'bbr184-12': { release_id, tracks: [{id, titleLower}] } }
+    let catalogMap = {}
 
     async function loadPage() {
       const session = await initPage('statements')
@@ -130,14 +130,36 @@
       await loadStatements()
     }
 
-    // Laad ALLE tracks — match eerst op CatalogNumber, fallback op titel
+    // Laad releases + tracks — match op CatalogNumber → release, dan op titel → track
     async function loadTrackMap() {
-      const { data } = await db.from('tracks').select('id, title, isrc')
-      isrcToTrackId  = {}
-      titleToTrackId = {}
-      ;(data || []).forEach(t => {
-        if (t.isrc) isrcToTrackId[t.isrc.trim().toLowerCase()] = t.id
-        if (t.title) titleToTrackId[t.title.trim().toLowerCase()] = t.id
+      // Haal alle releases op
+      let releases = [], from = 0
+      while (true) {
+        const { data } = await db.from('releases').select('id, catalog_number').range(from, from + 999)
+        if (!data || data.length === 0) break
+        releases.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      // Haal alle tracks op
+      let tracks = []
+      from = 0
+      while (true) {
+        const { data } = await db.from('tracks').select('id, title, release_id').range(from, from + 999)
+        if (!data || data.length === 0) break
+        tracks.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      // Bouw catalogMap
+      catalogMap = {}
+      releases.forEach(r => {
+        catalogMap[r.catalog_number.toLowerCase()] = { release_id: r.id, tracks: [] }
+      })
+      tracks.forEach(t => {
+        // Zoek release voor deze track
+        const entry = Object.values(catalogMap).find(e => e.release_id === t.release_id)
+        if (entry) entry.tracks.push({ id: t.id, titleLower: (t.title || '').toLowerCase() })
       })
     }
 
@@ -227,13 +249,19 @@
           const isrcKey      = isrcVal    ? isrcVal.toLowerCase()    : null
           const titleKey     = trackTitle ? trackTitle.toLowerCase() : null
 
-          // Match: eerst op CatalogNumber, dan op titel
-          const isrcMatch  = isrcKey  ? isrcToTrackId[isrcKey]   : null
-          const titleMatch = titleKey ? titleToTrackId[titleKey]  : null
-          const track_id   = isrcMatch || titleMatch || null
-
-          // Vlag: track gevonden via titel, maar CatalogNumber is nieuw → update nodig
-          const needsIsrcUpdate = !isrcMatch && !!titleMatch && !!isrcVal
+          // Match: zoek release op CatalogNumber, dan track op titel binnen die release
+          let track_id = null
+          if (isrcKey && catalogMap[isrcKey]) {
+            const entry = catalogMap[isrcKey]
+            if (titleKey) {
+              // Zoek exacte titel-match binnen de release
+              const match = entry.tracks.find(t => t.titleLower === titleKey)
+              if (match) track_id = match.id
+            } else if (entry.tracks.length === 1) {
+              // Enige track binnen deze release → direct koppelen
+              track_id = entry.tracks[0].id
+            }
+          }
 
           const line = {
             label_name:  sheetName,
@@ -246,7 +274,6 @@
             usage_type:  cols.type     >= 0 ? String(row[cols.type]     || '').trim().toLowerCase() || null : null,
             quantity:    cols.quantity >= 0 ? (parseInt(row[cols.quantity]) || null) : null,
             raw_data:    Object.fromEntries(headers.map((h, i) => [h, row[i]])),
-            _needsIsrcUpdate: needsIsrcUpdate,  // tijdelijk veld, niet opgeslagen in DB
           }
           allLines.push(line)
           totalRoyalties += royaltyVal || 0
@@ -315,26 +342,10 @@
         return
       }
 
-      // CatalogNumbers bijwerken voor tracks die via titel gematcht zijn
-      const isrcUpdates = {}  // track_id -> isrc
-      lines.forEach(l => {
-        if (l._needsIsrcUpdate && l.track_id && l.isrc && !isrcUpdates[l.track_id]) {
-          isrcUpdates[l.track_id] = l.isrc
-        }
-      })
-      for (const [trackId, isrc] of Object.entries(isrcUpdates)) {
-        await db.from('tracks').update({ isrc }).eq('id', trackId)
-        // Voeg toe aan lokale map zodat volgende regels ook direct matchen
-        isrcToTrackId[isrc.toLowerCase()] = trackId
-      }
-      if (Object.keys(isrcUpdates).length > 0) {
-        showToast(`${Object.keys(isrcUpdates).length} track(s) bijgewerkt met CatalogNumber.`)
-      }
-
-      // Regels in batches van 500 opslaan (verwijder tijdelijk _needsIsrcUpdate veld)
+      // Regels in batches van 500 opslaan
       const batchSize = 500
       for (let i = 0; i < lines.length; i += batchSize) {
-        const batch = lines.slice(i, i + batchSize).map(({ _needsIsrcUpdate, ...l }) => ({ ...l, statement_id: stmt.id }))
+        const batch = lines.slice(i, i + batchSize).map(l => ({ ...l, statement_id: stmt.id }))
         const { error } = await db.from('statement_lines').insert(batch)
         if (error) {
           showToast('Fout bij opslaan regels: ' + error.message, 'error')

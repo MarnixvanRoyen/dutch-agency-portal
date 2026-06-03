@@ -16,10 +16,10 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h1 class="text-xl font-bold">Tracks</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Catalogus — koppel artiesten en splits per track</p>
+        <p class="text-gray-500 text-sm mt-0.5">Alle tracks — koppel artiesten en splits</p>
       </div>
       <button onclick="openModal()"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -30,14 +30,19 @@
 
     <!-- Zoek + filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
-      <input type="text" id="searchInput" placeholder="Zoek op titel of ISRC..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-72 placeholder-gray-600"
+      <input type="text" id="searchInput" placeholder="Zoek op titel of catalogusnummer..."
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-80 placeholder-gray-600"
         oninput="filterTable()">
       <select id="labelFilter"
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
+      <button id="noTitleBtn" onclick="toggleNoTitle()"
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+        Zonder naam
+      </button>
     </div>
 
     <!-- Tabel -->
@@ -46,8 +51,8 @@
         <thead>
           <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium">Track</th>
+            <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
             <th class="text-left px-5 py-3 font-medium">Label</th>
-            <th class="text-left px-5 py-3 font-medium">ISRC</th>
             <th class="text-left px-5 py-3 font-medium">Artiesten</th>
             <th class="text-right px-5 py-3 font-medium">Streams</th>
             <th class="text-right px-5 py-3 font-medium">Downloads</th>
@@ -81,26 +86,26 @@
       <form id="trackForm" class="space-y-4">
         <input type="hidden" id="trackId">
 
-        <!-- Basis info -->
+        <!-- Titel -->
         <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Titel *</label>
-          <input type="text" id="trackTitle" required
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Titel</label>
+          <input type="text" id="trackTitle"
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-            placeholder="Track titel">
+            placeholder="Leeg laten → ⚠️ onbekende track">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
-            <select id="trackLabel"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
-              <option value="">— Geen label —</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">ISRC / Catalogus</label>
-            <input type="text" id="trackIsrc"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-              placeholder="bijv. BBR184-12">
+
+        <!-- Release (autocomplete) -->
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Release (CatalogNumber) *</label>
+          <input type="hidden" id="trackReleaseId">
+          <div class="relative">
+            <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
+              placeholder="Zoek catalogusnummer..."
+              oninput="filterReleases()" onfocus="showReleaseDropdown()">
+            <div id="releaseDropdown"
+              class="hidden absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 max-h-52 overflow-y-auto">
+            </div>
           </div>
         </div>
 
@@ -123,7 +128,7 @@
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold font-semibold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -133,20 +138,20 @@
 
   <script src="shared.js"></script>
   <script>
-    let allTracks   = []
-    let allLabels   = []
-    let allArtists  = []
-    let royaltyByTrack = {}   // { track_id: { total, stream, download } }
-    let filtered    = []
-    let currentPage = 0
-    const PAGE_SIZE = 50
-
-    // ── Laden ────────────────────────────────────────────────────────
+    let allTracks      = []
+    let allLabels      = []
+    let allArtists     = []
+    let allReleases    = []
+    let royaltyByTrack = {}
+    let filtered       = []
+    let filterNoTitle  = false
+    let currentPage    = 0
+    const PAGE_SIZE    = 50
 
     async function loadPage() {
       const session = await initPage('tracks')
       if (!session) return
-      await Promise.all([loadLabels(), loadArtists(), loadRoyalties()])
+      await Promise.all([loadLabels(), loadArtists(), loadReleases(), loadRoyalties()])
       await loadTracks()
     }
 
@@ -154,11 +159,7 @@
       const { data } = await db.from('labels').select('id, name').order('name')
       allLabels = data || []
       const filterSel = document.getElementById('labelFilter')
-      const modalSel  = document.getElementById('trackLabel')
-      allLabels.forEach(l => {
-        filterSel.add(new Option(l.name, l.id))
-        modalSel.add(new Option(l.name, l.id))
-      })
+      allLabels.forEach(l => filterSel.add(new Option(l.name, l.id)))
     }
 
     async function loadArtists() {
@@ -166,33 +167,52 @@
       allArtists = data || []
     }
 
+    async function loadReleases() {
+      let all = [], from = 0
+      while (true) {
+        const { data } = await db.from('releases')
+          .select('id, catalog_number, label_id, labels(name)')
+          .order('catalog_number')
+          .range(from, from + 999)
+        if (!data || data.length === 0) break
+        all.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      allReleases = all
+    }
+
     async function loadRoyalties() {
-      const { data: lines } = await db
-        .from('statement_lines')
-        .select('track_id, usage_type, nett_royalty')
+      const { data: lines } = await db.from('statement_lines').select('track_id, usage_type, nett_royalty')
       royaltyByTrack = {}
       ;(lines || []).forEach(l => {
         if (!l.track_id) return
         if (!royaltyByTrack[l.track_id]) royaltyByTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
         const amt = parseFloat(l.nett_royalty) || 0
-        royaltyByTrack[l.track_id].total  += amt
+        royaltyByTrack[l.track_id].total += amt
         if (l.usage_type === 'stream')   royaltyByTrack[l.track_id].stream   += amt
         if (l.usage_type === 'download') royaltyByTrack[l.track_id].download += amt
       })
     }
 
     async function loadTracks() {
-      const { data } = await db
-        .from('tracks')
-        .select('*, labels(name), track_artists(split_percentage, artists(id, name))')
-        .order('title')
-      allTracks = data || []
+      let all = [], from = 0
+      while (true) {
+        const { data } = await db
+          .from('tracks')
+          .select('id, title, release_id, releases(id, catalog_number, label_id, labels(name)), track_artists(split_percentage, artists(id, name))')
+          .order('title')
+          .range(from, from + 999)
+        if (!data || data.length === 0) break
+        all.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      allTracks = all
       filtered  = allTracks
       currentPage = 0
       renderTable()
     }
-
-    // ── Tabel renderen ───────────────────────────────────────────────
 
     function renderTable() {
       const tbody = document.getElementById('tracksTable')
@@ -206,18 +226,24 @@
       }
 
       tbody.innerHTML = page.map(t => {
-        const label  = t.labels?.name || '—'
-        const roy    = royaltyByTrack[t.id] || { total: 0, stream: 0, download: 0 }
+        const catalog = t.releases?.catalog_number || '—'
+        const label   = t.releases?.labels?.name   || '—'
+        const roy     = royaltyByTrack[t.id] || { total: 0, stream: 0, download: 0 }
+        const noTitle = !t.title
         const artists = (t.track_artists || [])
           .sort((a, b) => b.split_percentage - a.split_percentage)
           .map(ta => `${ta.artists?.name || '?'} <span class="text-gray-600">${ta.split_percentage}%</span>`)
           .join(', ')
 
+        const safeT = JSON.stringify(t).replace(/'/g, "\\'")
+
         return `
           <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
-            <td class="px-5 py-3 text-white font-medium">${t.title}</td>
+            <td class="px-5 py-3 ${noTitle ? 'text-amber-400' : 'text-white'} font-medium">
+              ${noTitle ? `<span title="Geen tracknaam">⚠️ <span class="font-mono text-xs">${catalog}</span></span>` : t.title}
+            </td>
+            <td class="px-5 py-3 text-gray-500 text-xs font-mono">${catalog}</td>
             <td class="px-5 py-3 text-gray-500 text-xs">${label}</td>
-            <td class="px-5 py-3 text-gray-500 text-xs font-mono">${t.isrc || '—'}</td>
             <td class="px-5 py-3 text-xs text-gray-400 max-w-[200px]">
               ${artists || '<span class="text-gray-600">—</span>'}
             </td>
@@ -232,7 +258,7 @@
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap">
               <button onclick='editTrack(${JSON.stringify(t)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
-              <button onclick="deleteTrack('${t.id}', '${t.title.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+              <button onclick="deleteTrack('${t.id}', '${(t.title || catalog).replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
           </tr>
         `
@@ -245,13 +271,24 @@
       document.getElementById('nextBtn').disabled = end >= total
     }
 
+    function toggleNoTitle() {
+      filterNoTitle = !filterNoTitle
+      const btn = document.getElementById('noTitleBtn')
+      btn.className = filterNoTitle
+        ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-amber-400 text-amber-400 rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+      filterTable()
+    }
+
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
       filtered = allTracks.filter(t => {
-        const matchTitle = t.title.toLowerCase().includes(q) || (t.isrc || '').toLowerCase().includes(q)
-        const matchLabel = !labelId || t.label_id === labelId
-        return matchTitle && matchLabel
+        const catalog     = t.releases?.catalog_number || ''
+        const matchSearch = !q || (t.title || '').toLowerCase().includes(q) || catalog.toLowerCase().includes(q)
+        const matchLabel  = !labelId || t.releases?.label_id === labelId
+        const matchNoTitle = !filterNoTitle || !t.title
+        return matchSearch && matchLabel && matchNoTitle
       })
       currentPage = 0
       renderTable()
@@ -260,25 +297,23 @@
     function prevPage() { if (currentPage > 0) { currentPage--; renderTable() } }
     function nextPage() { if ((currentPage + 1) * PAGE_SIZE < filtered.length) { currentPage++; renderTable() } }
 
-    // ── Modal openen/sluiten ─────────────────────────────────────────
+    // ── Modal ────────────────────────────────────────────────────
 
     function openModal(track = null) {
-      document.getElementById('trackId').value    = track?.id    || ''
-      document.getElementById('trackTitle').value = track?.title || ''
-      document.getElementById('trackLabel').value = track?.label_id || ''
-      document.getElementById('trackIsrc').value  = track?.isrc  || ''
+      document.getElementById('trackId').value        = track?.id    || ''
+      document.getElementById('trackTitle').value     = track?.title || ''
+      document.getElementById('trackReleaseId').value = track?.release_id || ''
+      document.getElementById('releaseSearch').value  = track?.releases?.catalog_number || ''
       document.getElementById('modalTitle').textContent = track ? 'Track bewerken' : 'Track toevoegen'
 
-      // Splits laden
-      const existingSplits = track?.track_artists || []
-      buildSplitRows(existingSplits)
-
+      buildSplitRows(track?.track_artists || [])
       document.getElementById('modal').classList.remove('hidden')
       setTimeout(() => document.getElementById('trackTitle').focus(), 50)
     }
 
     function closeModal() {
       document.getElementById('modal').classList.add('hidden')
+      document.getElementById('releaseDropdown').classList.add('hidden')
     }
 
     function editTrack(t) { openModal(t) }
@@ -287,14 +322,52 @@
       if (e.target === e.currentTarget) closeModal()
     })
 
-    // ── Artiest splits in modal ──────────────────────────────────────
+    // Release autocomplete
+    function filterReleases() {
+      document.getElementById('trackReleaseId').value = ''
+      showReleaseDropdown()
+    }
+
+    function showReleaseDropdown() {
+      const q  = (document.getElementById('releaseSearch').value || '').toLowerCase()
+      const dd = document.getElementById('releaseDropdown')
+      const matches = q
+        ? allReleases.filter(r => r.catalog_number.toLowerCase().includes(q)).slice(0, 40)
+        : allReleases.slice(0, 40)
+      if (!matches.length) { dd.classList.add('hidden'); return }
+      dd.classList.remove('hidden')
+      dd.innerHTML = matches.map(r => {
+        const label = r.labels?.name || ''
+        const hl = q
+          ? r.catalog_number.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+              '<span style="color:#FFD100;font-weight:600">$1</span>')
+          : r.catalog_number
+        return `<button type="button"
+          onmousedown="selectRelease('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}'); event.preventDefault()"
+          class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] hover:text-white transition-colors">
+          ${hl} <span class="text-gray-600 text-xs ml-1">${label}</span>
+        </button>`
+      }).join('')
+    }
+
+    function selectRelease(id, catalog) {
+      document.getElementById('trackReleaseId').value = id
+      document.getElementById('releaseSearch').value  = catalog
+      document.getElementById('releaseDropdown').classList.add('hidden')
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#releaseSearch, #releaseDropdown')) {
+        document.getElementById('releaseDropdown').classList.add('hidden')
+      }
+    })
+
+    // ── Splits ───────────────────────────────────────────────────
 
     function buildSplitRows(existingSplits) {
       const container = document.getElementById('splitRows')
       container.innerHTML = ''
-      if (existingSplits.length === 0) {
-        addSplitRow()
-      } else {
+      if (existingSplits.length === 0) { addSplitRow() } else {
         existingSplits.forEach(ta => addSplitRow(ta.artists?.id, ta.split_percentage))
       }
       updateSplitTotal()
@@ -304,15 +377,12 @@
       const container = document.getElementById('splitRows')
       const div = document.createElement('div')
       div.className = 'flex gap-2 items-center split-row'
-
       const options = allArtists.map(a =>
         `<option value="${a.id}" ${a.id === artistId ? 'selected' : ''}>${a.name}</option>`
       ).join('')
-
       div.innerHTML = `
         <select class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors artist-select" onchange="updateSplitTotal()">
-          <option value="">— Artiest —</option>
-          ${options}
+          <option value="">— Artiest —</option>${options}
         </select>
         <div class="flex items-center gap-1 shrink-0">
           <input type="number" min="0" max="100" step="0.01" value="${pct !== '' ? pct : 100}"
@@ -327,10 +397,7 @@
       updateSplitTotal()
     }
 
-    function removeSplitRow(btn) {
-      btn.closest('.split-row').remove()
-      updateSplitTotal()
-    }
+    function removeSplitRow(btn) { btn.closest('.split-row').remove(); updateSplitTotal() }
 
     function updateSplitTotal() {
       const inputs = document.querySelectorAll('.split-input')
@@ -351,35 +418,30 @@
       return rows
     }
 
-    // ── Opslaan ──────────────────────────────────────────────────────
+    // ── Opslaan ──────────────────────────────────────────────────
 
     document.getElementById('trackForm').addEventListener('submit', async e => {
       e.preventDefault()
-      const id      = document.getElementById('trackId').value
+      const id        = document.getElementById('trackId').value
+      const releaseId = document.getElementById('trackReleaseId').value
+      if (!releaseId) { showToast('Selecteer een release.', 'error'); return }
+
       const payload = {
-        title:    document.getElementById('trackTitle').value.trim(),
-        label_id: document.getElementById('trackLabel').value || null,
-        isrc:     document.getElementById('trackIsrc').value.trim() || null,
+        title:      document.getElementById('trackTitle').value.trim() || null,
+        release_id: releaseId,
       }
       const splits = getSplitRows()
-
-      let trackId = id
-      let error
+      let trackId = id, error
 
       if (id) {
         ;({ error } = await db.from('tracks').update(payload).eq('id', id))
       } else {
         const { data, error: e2 } = await db.from('tracks').insert(payload).select().single()
-        error   = e2
-        trackId = data?.id
+        error = e2; trackId = data?.id
       }
 
-      if (error || !trackId) {
-        showToast(error?.message || 'Er ging iets mis.', 'error')
-        return
-      }
+      if (error || !trackId) { showToast(error?.message || 'Er ging iets mis.', 'error'); return }
 
-      // Splits bijwerken: verwijder bestaande en voeg nieuwe in
       await db.from('track_artists').delete().eq('track_id', trackId)
       if (splits.length) {
         const { error: splitErr } = await db.from('track_artists').insert(
@@ -394,18 +456,15 @@
       await loadTracks()
     })
 
-    // ── Verwijderen ──────────────────────────────────────────────────
+    // ── Verwijderen ──────────────────────────────────────────────
 
     async function deleteTrack(id, title) {
       if (!confirm(`Weet je zeker dat je "${title}" wilt verwijderen?`)) return
       const { error } = await db.from('tracks').delete().eq('id', id)
-      if (error) {
-        showToast('Kan niet verwijderen: ' + error.message, 'error')
-      } else {
-        showToast('Track verwijderd.')
-        await loadRoyalties()
-        await loadTracks()
-      }
+      if (error) { showToast('Kan niet verwijderen: ' + error.message, 'error'); return }
+      showToast('Track verwijderd.')
+      await loadRoyalties()
+      await loadTracks()
     }
 
     loadPage()

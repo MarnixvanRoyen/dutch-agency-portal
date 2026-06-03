@@ -238,7 +238,7 @@
       while (true) {
         const { data: page, error: pageErr } = await db
           .from('statement_lines')
-          .select('track_id, label_name, track_title, nett_royalty, usage_type')
+          .select('track_id, label_name, track_title, isrc, nett_royalty, usage_type')
           .range(from, from + pageSize - 1)
         if (pageErr || !page || page.length === 0) break
         allLines.push(...page)

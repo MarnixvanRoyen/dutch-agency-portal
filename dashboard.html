@@ -56,29 +56,29 @@
     <!-- Stat cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Labels</div>
+        <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Labels</div>
         <div id="statLabels" class="text-3xl font-bold">—</div>
       </div>
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Artiesten</div>
+        <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Artiesten</div>
         <div id="statArtists" class="text-3xl font-bold">—</div>
       </div>
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Statements</div>
+        <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Statements</div>
         <div id="statStatements" class="text-3xl font-bold">—</div>
       </div>
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-        <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Bruto Royalties</div>
+        <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Bruto Royalties</div>
         <div id="statRoyalties" class="text-3xl font-bold text-[#FFD100]">—</div>
       </div>
     </div>
 
     <!-- Royalty flow kaart -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-6">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-6 max-w-xl">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-white font-semibold text-sm">Royalty verdeling</h2>
         <button onclick="toggleCommissieEdit()" id="commissieBtnEdit"
-          class="text-gray-500 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1.5 rounded-lg transition-colors">
+          class="text-gray-400 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1.5 rounded-lg transition-colors">
           Aanpassen
         </button>
       </div>
@@ -86,19 +86,19 @@
       <!-- Visuele flow -->
       <div id="commissieFlow" class="grid grid-cols-3 gap-3 mb-1">
         <div class="text-center">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Aggregator</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Aggregator</div>
           <div id="flowAggregatorPct" class="text-2xl font-bold text-red-400">30%</div>
-          <div id="flowAggregatorAmt" class="text-gray-600 text-xs mt-0.5">—</div>
+          <div id="flowAggregatorAmt" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">DJ·World</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ·World</div>
           <div id="flowDJWorldPct" class="text-2xl font-bold text-[#FFD100]">50%</div>
-          <div id="flowDJWorldAmt" class="text-gray-600 text-xs mt-0.5">—</div>
+          <div id="flowDJWorldAmt" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
           <div id="flowArtistPct" class="text-2xl font-bold text-green-400">—%</div>
-          <div id="flowArtistAmt" class="text-gray-600 text-xs mt-0.5">—</div>
+          <div id="flowArtistAmt" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
       </div>
 
@@ -151,7 +151,7 @@
             <span class="text-gray-400 text-xs uppercase tracking-wider">Streams</span>
           </div>
           <div id="streamAmount" class="text-xl font-bold text-white">—</div>
-          <div id="streamPct" class="text-gray-600 text-xs mt-0.5">—</div>
+          <div id="streamPct" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
         <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
           <div class="flex items-center gap-2 mb-2">
@@ -159,7 +159,7 @@
             <span class="text-gray-400 text-xs uppercase tracking-wider">Downloads</span>
           </div>
           <div id="downloadAmount" class="text-xl font-bold text-white">—</div>
-          <div id="downloadPct" class="text-gray-600 text-xs mt-0.5">—</div>
+          <div id="downloadPct" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
       </div>
       <!-- Ratio balk -->

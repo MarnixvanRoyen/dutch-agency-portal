@@ -213,7 +213,8 @@
         tracksByRelease[t.release_id].push({ id: t.id, title: t.title })
       })
 
-      filtered = allReleases
+      // Standaard: alleen releases met meerdere tracks tonen
+      filtered = allReleases.filter(r => (tracksByRelease[r.id] || []).length > 1)
       currentPage = 0
       renderTable()
     }
@@ -312,10 +313,11 @@
       const labelId = document.getElementById('labelFilter').value
       const type    = document.getElementById('typeFilter').value
       filtered = allReleases.filter(r => {
-        const matchQ     = !q || r.catalog_number.toLowerCase().includes(q)
-        const matchLabel = !labelId || r.label_id === labelId
-        const matchType  = !type || r.release_type === type
-        return matchQ && matchLabel && matchType
+        const matchQ      = !q || r.catalog_number.toLowerCase().includes(q)
+        const matchLabel  = !labelId || r.label_id === labelId
+        const matchType   = !type || r.release_type === type
+        const matchMulti  = (tracksByRelease[r.id] || []).length > 1
+        return matchQ && matchLabel && matchType && matchMulti
       })
       currentPage = 0
       renderTable()

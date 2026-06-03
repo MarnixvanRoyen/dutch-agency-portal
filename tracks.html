@@ -200,7 +200,7 @@
       while (true) {
         const { data } = await db
           .from('tracks')
-          .select('id, title, release_id, releases(id, catalog_number, label_id, labels(name)), track_artists(split_percentage, artists(id, name))')
+          .select('id, title, release_id, releases(id, catalog_number, release_type, label_id, labels(name)), track_artists(split_percentage, artists(id, name))')
           .order('title')
           .range(from, from + 999)
         if (!data || data.length === 0) break
@@ -226,21 +226,25 @@
       }
 
       tbody.innerHTML = page.map(t => {
-        const catalog = t.releases?.catalog_number || '—'
-        const label   = t.releases?.labels?.name   || '—'
-        const roy     = royaltyByTrack[t.id] || { total: 0, stream: 0, download: 0 }
-        const noTitle = !t.title
-        const artists = (t.track_artists || [])
+        const catalog      = t.releases?.catalog_number || '—'
+        const label        = t.releases?.labels?.name   || '—'
+        const isCompilation = t.releases?.release_type === 'compilation'
+        const roy          = royaltyByTrack[t.id] || { total: 0, stream: 0, download: 0 }
+        const noTitle      = !t.title
+        const artists      = (t.track_artists || [])
           .sort((a, b) => b.split_percentage - a.split_percentage)
           .map(ta => `${ta.artists?.name || '?'} <span class="text-gray-600">${ta.split_percentage}%</span>`)
           .join(', ')
 
-        const safeT = JSON.stringify(t).replace(/'/g, "\\'")
-
         return `
           <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
-            <td class="px-5 py-3 ${noTitle ? 'text-amber-400' : 'text-white'} font-medium">
-              ${noTitle ? `<span title="Geen tracknaam">⚠️ <span class="font-mono text-xs">${catalog}</span></span>` : t.title}
+            <td class="px-5 py-3 font-medium">
+              <div class="flex items-center gap-2">
+                <span class="${noTitle ? 'text-amber-400' : 'text-white'}">
+                  ${noTitle ? `<span title="Geen tracknaam">⚠️ <span class="font-mono text-xs">${catalog}</span></span>` : t.title}
+                </span>
+                ${isCompilation ? `<span class="text-xs px-1.5 py-0.5 rounded bg-orange-400/15 text-orange-400 whitespace-nowrap">verzameling</span>` : ''}
+              </div>
             </td>
             <td class="px-5 py-3 text-gray-500 text-xs font-mono">${catalog}</td>
             <td class="px-5 py-3 text-gray-500 text-xs">${label}</td>

@@ -42,9 +42,10 @@
         <!-- Naam filters -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap hidden sm:inline">Naam</span>
-          <div id="wrap_label"  class="relative w-full sm:flex-1"></div>
-          <div id="wrap_artist" class="relative w-full sm:flex-1"></div>
-          <div id="wrap_track"  class="relative w-full sm:flex-1"></div>
+          <div id="wrap_label"     class="relative w-full sm:flex-1"></div>
+          <div id="wrap_artist"   class="relative w-full sm:flex-1"></div>
+          <div id="wrap_track"    class="relative w-full sm:flex-1"></div>
+          <div id="wrap_statement" class="relative w-full sm:flex-1"></div>
           <button onclick="resetFilters()"
             class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
             Reset
@@ -215,8 +216,9 @@
     let artistTrackIds  = {}   // { artist_name: Set<track_id> }
     let activeType      = 'all'
 
-    const filterValues = { label: '', artist: '', track: '' }
-    const filterOpts   = { label: [], artist: [], track: [] }
+    const filterValues = { label: '', artist: '', track: '', statement: '' }
+    const filterOpts   = { label: [], artist: [], track: [], statement: [] }
+    let statementIdMap = {}  // { period/filename → statement_id }
 
     async function loadDashboard() {
       const session = await initPage('dashboard')
@@ -238,7 +240,7 @@
       while (true) {
         const { data: page, error: pageErr } = await db
           .from('statement_lines')
-          .select('track_id, label_name, track_title, isrc, nett_royalty, usage_type')
+          .select('track_id, label_name, track_title, isrc, nett_royalty, usage_type, statement_id, statements(period, filename)')
           .range(from, from + pageSize - 1)
         if (pageErr || !page || page.length === 0) break
         allLines.push(...page)
@@ -273,13 +275,23 @@
     // ── Autocomplete bouwen ──────────────────────────────────────────────
 
     function populateDropdowns() {
-      filterOpts.label  = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
-      filterOpts.artist = Object.keys(artistTrackIds).sort()  // alleen artiesten die in het systeem staan
-      filterOpts.track  = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
+      filterOpts.label     = [...new Set(allLines.map(l => l.label_name).filter(Boolean))].sort()
+      filterOpts.artist    = Object.keys(artistTrackIds).sort()
+      filterOpts.track     = [...new Set(allLines.map(l => l.track_title).filter(Boolean))].sort()
 
-      buildAutocomplete('wrap_label',  'label',  'Label zoeken...')
-      buildAutocomplete('wrap_artist', 'artist', 'Artiest zoeken...')
-      buildAutocomplete('wrap_track',  'track',  'Track zoeken...')
+      // Statement opties: period of filename als label
+      statementIdMap = {}
+      allLines.forEach(l => {
+        if (!l.statement_id) return
+        const label = l.statements?.period || l.statements?.filename || l.statement_id
+        statementIdMap[label] = l.statement_id
+      })
+      filterOpts.statement = Object.keys(statementIdMap).sort()
+
+      buildAutocomplete('wrap_label',     'label',     'Label zoeken...')
+      buildAutocomplete('wrap_artist',    'artist',    'Artiest zoeken...')
+      buildAutocomplete('wrap_track',     'track',     'Track zoeken...')
+      buildAutocomplete('wrap_statement', 'statement', 'Statement zoeken...')
     }
 
     function buildAutocomplete(wrapperId, key, placeholder) {
@@ -353,8 +365,8 @@
 
     // Sluit alle dropdowns bij klik buiten filterblok
     document.addEventListener('click', e => {
-      if (!e.target.closest('#wrap_label, #wrap_artist, #wrap_track')) {
-        ;['label', 'artist', 'track'].forEach(k => {
+      if (!e.target.closest('#wrap_label, #wrap_artist, #wrap_track, #wrap_statement')) {
+        ;['label', 'artist', 'track', 'statement'].forEach(k => {
           const dd = document.getElementById(`dd_${k}`)
           if (dd) dd.classList.add('hidden')
         })
@@ -464,18 +476,23 @@
       const lq = filterValues.label.toLowerCase()
       const aq = filterValues.artist.toLowerCase()
       const tq = filterValues.track.toLowerCase()
+      const sq = filterValues.statement
 
       // Artist filter: filter op track_ids waar artiest aan gekoppeld is
       const artistTrackSet = aq
         ? (Object.entries(artistTrackIds).find(([n]) => n.toLowerCase().includes(aq))?.[1] || new Set())
         : null
 
+      // Statement filter: zoek bijbehorend statement_id
+      const stmtId = sq ? statementIdMap[sq] : null
+
       const filtered = allLines.filter(l => {
-        const matchType   = activeType === 'all' || l.usage_type === activeType
-        const matchLabel  = !lq || (l.label_name  || '').toLowerCase().includes(lq)
-        const matchTrack  = !tq || (l.track_title || '').toLowerCase().includes(tq)
-        const matchArtist = !aq || (artistTrackSet && l.track_id && artistTrackSet.has(l.track_id))
-        return matchType && matchLabel && matchTrack && matchArtist
+        const matchType      = activeType === 'all' || l.usage_type === activeType
+        const matchLabel     = !lq || (l.label_name  || '').toLowerCase().includes(lq)
+        const matchTrack     = !tq || (l.track_title || '').toLowerCase().includes(tq)
+        const matchArtist    = !aq || (artistTrackSet && l.track_id && artistTrackSet.has(l.track_id))
+        const matchStatement = !sq || l.statement_id === stmtId
+        return matchType && matchLabel && matchTrack && matchArtist && matchStatement
       })
 
       const filteredTotal = filtered.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
@@ -487,7 +504,7 @@
     function resetFilters() {
       activeType = 'all'
       setTypeFilter('all')
-      ;['label', 'artist', 'track'].forEach(clearFilter)
+      ;['label', 'artist', 'track', 'statement'].forEach(clearFilter)
     }
 
     // ── Blokken renderen ─────────────────────────────────────────────────

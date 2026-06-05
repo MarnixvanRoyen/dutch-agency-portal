@@ -30,7 +30,7 @@
 
     <!-- Zoek + filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
-      <input type="text" id="searchInput" placeholder="Zoek op titel of catalogusnummer..."
+      <input type="text" id="searchInput" placeholder="Zoek op titel, artiest of catalogusnummer..."
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-80 placeholder-gray-600"
         oninput="filterTable()">
       <select id="labelFilter"
@@ -343,10 +343,10 @@
       const labelId = document.getElementById('labelFilter').value
       filtered = allTracks.filter(t => {
         const catalog     = t.releases?.catalog_number || ''
-        const matchSearch = !q || (t.title || '').toLowerCase().includes(q) || catalog.toLowerCase().includes(q)
+        const artistNames = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
+        const matchSearch = !q || (t.title || '').toLowerCase().includes(q) || catalog.toLowerCase().includes(q) || artistNames.toLowerCase().includes(q)
         const matchLabel  = !labelId || t.releases?.label_id === labelId
         const matchNoTitle     = !filterNoTitle || !t.title
-        const artistNames      = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
         const matchMultiArtist = !filterMultiArtist || MULTI_ARTIST_RE.test(artistNames)
         const matchConflict    = !filterConflict || conflictTrackIds.has(t.id)
         return matchSearch && matchLabel && matchNoTitle && matchMultiArtist && matchConflict

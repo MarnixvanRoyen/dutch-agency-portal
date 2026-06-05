@@ -29,11 +29,15 @@
       </button>
     </div>
 
-    <!-- Zoek -->
-    <div class="mb-4">
+    <!-- Zoek + statement filter -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op naam..."
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-64 placeholder-gray-600"
         oninput="filterTable()">
+      <select id="statementFilter" onchange="onStatementFilter()"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto">
+        <option value="">Alle statements</option>
+      </select>
     </div>
 
     <!-- Tabel -->
@@ -193,16 +197,34 @@
 
   <script src="shared.js"></script>
   <script>
-    let allArtists = []
-    let splitRoyalties  = {}   // { artist_id: { total, stream, download } }
-    let tracksByArtist  = {}   // { artist_id: [{title, catalog, royalty}] }
+    let allArtists      = []
+    let allLines        = []   // alle statement_lines (gecached)
+    let allStatements   = []   // [{id, label}]
+    let splitRoyalties  = {}
+    let tracksByArtist  = {}
     let expandedArtists = new Set()
 
     async function loadPage() {
       const session = await initPage('artists')
       if (!session) return
+      await loadStatements()
       await computeSplitRoyalties()
       await loadArtists()
+    }
+
+    async function loadStatements() {
+      const { data } = await db.from('statements').select('id, period, filename').order('uploaded_at', { ascending: false })
+      allStatements = (data || []).map(s => ({ id: s.id, label: s.period || s.filename }))
+      const sel = document.getElementById('statementFilter')
+      allStatements.forEach(s => sel.add(new Option(s.label, s.id)))
+    }
+
+    async function onStatementFilter() {
+      await computeSplitRoyalties()
+      renderTable(allArtists.filter(a => {
+        const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
+        return !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+      }))
     }
 
     // Royalties berekend via track_artists splits
@@ -212,10 +234,11 @@
         .from('track_artists')
         .select('track_id, artist_id, split_percentage, tracks(id, title, releases(catalog_number))')
 
-      // Haal alle statement lines op
-      const { data: lines } = await db
-        .from('statement_lines')
-        .select('track_id, nett_royalty, usage_type')
+      // Haal alle statement lines op (gecached, of gefilterd op statement)
+      const selectedStmt = document.getElementById('statementFilter')?.value || ''
+      let query = db.from('statement_lines').select('track_id, nett_royalty, usage_type, statement_id')
+      if (selectedStmt) query = query.eq('statement_id', selectedStmt)
+      const { data: lines } = await query
 
       // Groepeer royalties per track
       const royPerTrack = {}

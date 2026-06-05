@@ -104,19 +104,13 @@
             placeholder="Leeg laten → ⚠️ onbekende track">
         </div>
 
-        <!-- Release (autocomplete) -->
+        <!-- CatalogNumber -->
         <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Release (CatalogNumber) *</label>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
           <input type="hidden" id="trackReleaseId">
-          <div class="relative">
-            <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
-              placeholder="Zoek catalogusnummer..."
-              oninput="filterReleases()" onfocus="showReleaseDropdown()">
-            <div id="releaseDropdown"
-              class="hidden absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 max-h-52 overflow-y-auto">
-            </div>
-          </div>
+          <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
+            placeholder="bijv. BBR184-12">
         </div>
 
         <!-- Artiesten & splits -->
@@ -380,54 +374,9 @@
 
     function closeModal() {
       document.getElementById('modal').classList.add('hidden')
-      document.getElementById('releaseDropdown').classList.add('hidden')
     }
 
     function editTrack(t) { openModal(t) }
-
-    document.getElementById('modal').addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeModal()
-    })
-
-    // Release autocomplete
-    function filterReleases() {
-      document.getElementById('trackReleaseId').value = ''
-      showReleaseDropdown()
-    }
-
-    function showReleaseDropdown() {
-      const q  = (document.getElementById('releaseSearch').value || '').toLowerCase()
-      const dd = document.getElementById('releaseDropdown')
-      const matches = q
-        ? allReleases.filter(r => r.catalog_number.toLowerCase().includes(q)).slice(0, 40)
-        : allReleases.slice(0, 40)
-      if (!matches.length) { dd.classList.add('hidden'); return }
-      dd.classList.remove('hidden')
-      dd.innerHTML = matches.map(r => {
-        const label = r.labels?.name || ''
-        const hl = q
-          ? r.catalog_number.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-              '<span style="color:#FFD100;font-weight:600">$1</span>')
-          : r.catalog_number
-        return `<button type="button"
-          onmousedown="selectRelease('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}'); event.preventDefault()"
-          class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] hover:text-white transition-colors">
-          ${hl} <span class="text-gray-600 text-xs ml-1">${label}</span>
-        </button>`
-      }).join('')
-    }
-
-    function selectRelease(id, catalog) {
-      document.getElementById('trackReleaseId').value = id
-      document.getElementById('releaseSearch').value  = catalog
-      document.getElementById('releaseDropdown').classList.add('hidden')
-    }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#releaseSearch, #releaseDropdown')) {
-        document.getElementById('releaseDropdown').classList.add('hidden')
-      }
-    })
 
     // ── Splits ───────────────────────────────────────────────────
 
@@ -490,8 +439,25 @@
     document.getElementById('trackForm').addEventListener('submit', async e => {
       e.preventDefault()
       const id        = document.getElementById('trackId').value
-      const releaseId = document.getElementById('trackReleaseId').value
-      if (!releaseId) { showToast('Selecteer een release.', 'error'); return }
+      const catalogInput = document.getElementById('releaseSearch').value.trim()
+      if (!catalogInput) { showToast('Voer een catalogusnummer in.', 'error'); return }
+
+      // Release opzoeken of aanmaken op basis van catalogusnummer
+      let releaseId = document.getElementById('trackReleaseId').value
+      if (!releaseId) {
+        const { data: existing } = await db.from('releases')
+          .select('id').ilike('catalog_number', catalogInput).maybeSingle()
+        if (existing) {
+          releaseId = existing.id
+          showToast(`Catalogusnummer ${catalogInput} bestaat al — track toegevoegd aan bestaande release.`)
+        } else {
+          const { data: newRelease, error: rErr } = await db.from('releases')
+            .insert({ catalog_number: catalogInput, release_type: 'single' }).select().single()
+          if (rErr) { showToast('Fout bij aanmaken release: ' + rErr.message, 'error'); return }
+          releaseId = newRelease.id
+          await loadReleases()
+        }
+      }
 
       const payload = {
         title:      document.getElementById('trackTitle').value.trim() || null,

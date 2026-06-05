@@ -303,8 +303,15 @@
     }
 
     async function loadArtists() {
-      const { data } = await db.from('artists').select('*, persons(id, first_name, last_name, email)').order('name')
-      allArtists = data || []
+      const { data, error } = await db.from('artists').select('*').order('name')
+      if (error) { showToast('Fout bij laden artiesten: ' + error.message, 'error'); return }
+      // Koppel persons in JS (voorkomt afhankelijkheid van Supabase schema-cache)
+      const personMap = {}
+      allPersons.forEach(p => { personMap[p.id] = p })
+      allArtists = (data || []).map(a => ({
+        ...a,
+        persons: a.person_id ? personMap[a.person_id] || null : null
+      }))
       detectAttention()
       document.getElementById('artistCount').textContent = `(${allArtists.length})`
       restoreFilters()

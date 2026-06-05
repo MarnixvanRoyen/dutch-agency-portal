@@ -234,11 +234,20 @@
         .from('track_artists')
         .select('track_id, artist_id, split_percentage, tracks(id, title, releases(catalog_number))')
 
-      // Haal alle statement lines op (gecached, of gefilterd op statement)
+      // Haal alle statement lines op met paginering
       const selectedStmt = document.getElementById('statementFilter')?.value || ''
-      let query = db.from('statement_lines').select('track_id, nett_royalty, usage_type, statement_id')
-      if (selectedStmt) query = query.eq('statement_id', selectedStmt)
-      const { data: lines } = await query
+      let lines = [], from = 0
+      while (true) {
+        let query = db.from('statement_lines')
+          .select('track_id, nett_royalty, usage_type, statement_id')
+          .range(from, from + 999)
+        if (selectedStmt) query = query.eq('statement_id', selectedStmt)
+        const { data } = await query
+        if (!data || data.length === 0) break
+        lines.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
 
       // Groepeer royalties per track
       const royPerTrack = {}

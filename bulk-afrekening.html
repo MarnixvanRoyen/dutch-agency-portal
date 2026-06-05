@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Afrekening — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-3xl">
+
+    <div class="mb-6">
+      <h1 class="text-xl font-bold">Bulk Afrekening</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Genereer voor alle personen tegelijk een PDF over een selectie statements</p>
+    </div>
+
+    <!-- Stap 1: Statements -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+      <h2 class="text-sm font-semibold text-white mb-1">Stap 1 — Selecteer statements</h2>
+      <p class="text-gray-500 text-xs mb-4">Kies de periodes die meegenomen worden in de afrekening</p>
+      <div id="stmtList" class="space-y-2">
+        <p class="text-gray-600 text-sm">Laden...</p>
+      </div>
+      <div class="mt-3 flex gap-3">
+        <button onclick="selectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
+        <button onclick="deselectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+      </div>
+    </div>
+
+    <!-- Stap 2: Personen -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+      <h2 class="text-sm font-semibold text-white mb-1">Stap 2 — Personen</h2>
+      <p class="text-gray-500 text-xs mb-4">Alle personen met gekoppelde artiesten</p>
+      <div id="personList" class="space-y-1.5">
+        <p class="text-gray-600 text-sm">Laden...</p>
+      </div>
+    </div>
+
+    <!-- Actieknoppen -->
+    <div class="flex gap-3 mb-6">
+      <button id="btnGenereer" onclick="startBulk('pdf')"
+        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-3 rounded-lg text-sm transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Genereer alle PDF's (ZIP)
+      </button>
+      <button id="btnEmail" disabled title="Domein nog niet geverifieerd in Resend"
+        class="flex items-center gap-2 border border-[#2a2a2a] text-gray-600 px-5 py-3 rounded-lg text-sm cursor-not-allowed opacity-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Verstuur per email (binnenkort)
+      </button>
+    </div>
+
+    <!-- Voortgang -->
+    <div id="progressSection" class="hidden bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white" id="progressTitle">Bezig...</h2>
+        <span id="progressCount" class="text-gray-500 text-xs"></span>
+      </div>
+      <div class="w-full bg-[#2a2a2a] rounded-full h-2 mb-4">
+        <div id="progressBar" class="bg-[#FFD100] h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div id="progressLog" class="space-y-1 max-h-48 overflow-y-auto text-xs text-gray-400"></div>
+    </div>
+
+  </main>
+
+  <!-- Verborgen render-div voor PDF generatie -->
+  <div id="pdfRender" style="position:fixed;left:-9999px;top:0;width:820px;background:#fff;padding:20px;font-family:Arial,sans-serif;font-size:10pt;color:#111"></div>
+
+  <script src="shared.js"></script>
+  <script>
+    let allStatements = []
+    let allPersons    = []
+
+    async function loadPage() {
+      const session = await initPage('bulk')
+      if (!session) return
+      await Promise.all([loadStatements(), loadPersons()])
+    }
+
+    async function loadStatements() {
+      const { data } = await db.from('statements').select('id, period, filename').order('uploaded_at', { ascending: false })
+      allStatements = data || []
+      const list = document.getElementById('stmtList')
+      if (!allStatements.length) { list.innerHTML = '<p class="text-gray-600 text-sm">Geen statements beschikbaar.</p>'; return }
+      list.innerHTML = allStatements.map(s => `
+        <label class="flex items-center gap-3 p-2.5 bg-[#0d0d0d] rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
+          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-[#FFD100]" checked>
+          <span class="text-white text-sm">${s.period || s.filename}</span>
+        </label>
+      `).join('')
+    }
+
+    async function loadPersons() {
+      const { data: persons } = await db.from('persons').select('*').order('last_name')
+      const { data: artists } = await db.from('artists').select('id, name, person_id')
+      const byPerson = {}
+      ;(artists || []).forEach(a => {
+        if (!a.person_id) return
+        if (!byPerson[a.person_id]) byPerson[a.person_id] = []
+        byPerson[a.person_id].push(a)
+      })
+      allPersons = (persons || []).map(p => ({ ...p, artists: byPerson[p.id] || [] }))
+
+      const list = document.getElementById('personList')
+      if (!allPersons.length) { list.innerHTML = '<p class="text-gray-600 text-sm">Geen personen gevonden.</p>'; return }
+      list.innerHTML = allPersons.map(p => {
+        const hasArtists = p.artists.length > 0
+        const hasEmail   = !!p.email
+        return `
+          <div class="flex items-center justify-between py-2 border-b border-[#2a2a2a]/50 last:border-0">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" value="${p.id}" class="personCheck w-4 h-4 accent-[#FFD100]" ${hasArtists ? 'checked' : 'disabled'}>
+              <div>
+                <span class="text-sm ${hasArtists ? 'text-white' : 'text-gray-600'}">${p.first_name} ${p.last_name}</span>
+                <span class="text-gray-600 text-xs ml-2">${p.artists.length} artiest${p.artists.length !== 1 ? 'en' : ''}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              ${hasEmail
+                ? `<span class="text-gray-400">${p.email}</span>`
+                : `<span class="text-gray-600 italic">geen email</span>`}
+            </div>
+          </div>
+        `
+      }).join('')
+    }
+
+    function selectAllStatements()   { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = true) }
+    function deselectAllStatements() { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = false) }
+
+    function log(msg, type = 'normal') {
+      const el = document.getElementById('progressLog')
+      const colors = { normal: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', info: 'text-[#FFD100]' }
+      el.innerHTML += `<div class="${colors[type]}">${msg}</div>`
+      el.scrollTop = el.scrollHeight
+    }
+
+    function setProgress(current, total) {
+      const pct = total > 0 ? Math.round(current / total * 100) : 0
+      document.getElementById('progressBar').style.width = pct + '%'
+      document.getElementById('progressCount').textContent = `${current} / ${total}`
+    }
+
+    async function startBulk(mode) {
+      const selectedStmtIds  = [...document.querySelectorAll('.stmtCheck:checked')].map(c => c.value)
+      const selectedPersonIds = [...document.querySelectorAll('.personCheck:checked')].map(c => c.value)
+
+      if (!selectedStmtIds.length)   { showToast('Selecteer minimaal één statement.', 'error'); return }
+      if (!selectedPersonIds.length) { showToast('Selecteer minimaal één persoon.', 'error'); return }
+
+      const persons = allPersons.filter(p => selectedPersonIds.includes(p.id))
+
+      // Voortgang tonen
+      document.getElementById('progressSection').classList.remove('hidden')
+      document.getElementById('progressTitle').textContent = 'PDF\'s genereren...'
+      document.getElementById('progressLog').innerHTML = ''
+      setProgress(0, persons.length)
+      document.getElementById('btnGenereer').disabled = true
+
+      // Alle data in één keer ophalen
+      log('Data ophalen...', 'info')
+      const allArtistIds = persons.flatMap(p => p.artists.map(a => a.id))
+
+      const { data: tas } = await db
+        .from('track_artists')
+        .select('artist_id, split_percentage, tracks(id, title, releases(catalog_number))')
+        .in('artist_id', allArtistIds)
+
+      const allTrackIds = (tas || []).map(ta => ta.tracks?.id).filter(Boolean)
+
+      let lines = [], from = 0
+      while (allTrackIds.length) {
+        const { data: page } = await db
+          .from('statement_lines')
+          .select('track_id, nett_royalty, usage_type')
+          .in('statement_id', selectedStmtIds)
+          .in('track_id', allTrackIds)
+          .range(from, from + 999)
+        if (!page || page.length === 0) break
+        lines.push(...page)
+        if (page.length < 1000) break
+        from += 1000
+      }
+
+      const { data: stmts } = await db.from('statements').select('id, period, filename').in('id', selectedStmtIds)
+      const periods = (stmts || []).map(s => s.period || s.filename)
+
+      // Royalties per track
+      const royPerTrack = {}
+      lines.forEach(l => {
+        if (!l.track_id) return
+        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
+        const amt = parseFloat(l.nett_royalty) || 0
+        royPerTrack[l.track_id].total    += amt
+        if (l.usage_type === 'stream')   royPerTrack[l.track_id].stream   += amt
+        if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
+      })
+
+      log(`Data geladen — ${lines.length} regels voor ${allTrackIds.length} tracks`, 'info')
+
+      // ZIP aanmaken
+      const zip  = new JSZip()
+      const djPct = COMMISSIONS.djworldPct / 100
+      const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const eur = v => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 4 }).format(v)
+
+      for (let i = 0; i < persons.length; i++) {
+        const p = persons[i]
+        const fullName = `${p.first_name} ${p.last_name}`
+        log(`${fullName} — HTML bouwen...`)
+
+        const artistIds = p.artists.map(a => a.id)
+        const pTas = (tas || []).filter(ta => artistIds.includes(ta.artist_id))
+
+        // Per artiest breakdown
+        const artistBreakdown = {}
+        pTas.forEach(ta => {
+          const aid = ta.artist_id
+          if (!ta.tracks?.id) return
+          const roy = royPerTrack[ta.tracks.id]
+          if (!roy) return
+          const splitPct = (parseFloat(ta.split_percentage) || 0) / 100
+          const gross = roy.total * splitPct
+          const djAmt = gross * djPct
+          const net   = gross - djAmt
+          if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, dj: 0, net: 0 }
+          artistBreakdown[aid].tracks.push({
+            title: ta.tracks.title || `⚠️ ${ta.tracks.releases?.catalog_number || '?'}`,
+            splitPct: ta.split_percentage,
+            stream: roy.stream * splitPct,
+            download: roy.download * splitPct,
+            gross, djAmt, net
+          })
+          artistBreakdown[aid].gross += gross
+          artistBreakdown[aid].dj   += djAmt
+          artistBreakdown[aid].net  += net
+        })
+
+        const grandGross = Object.values(artistBreakdown).reduce((s, a) => s + a.gross, 0)
+        const grandDJ    = Object.values(artistBreakdown).reduce((s, a) => s + a.dj,    0)
+        const grandNet   = Object.values(artistBreakdown).reduce((s, a) => s + a.net,   0)
+
+        // HTML opbouwen (zelfde stijl als afrekening.html)
+        const html = `
+          <div style="font-family:Arial,sans-serif;font-size:10pt;color:#111;max-width:780px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #111">
+              <div style="font-size:18pt;font-weight:bold;color:#111">DJ·World</div>
+              <div style="text-align:right;font-size:9.5pt;line-height:1.5">
+                <div style="font-weight:bold;font-size:11pt">${fullName}</div>
+                ${p.street      ? `<div>${p.street}</div>` : ''}
+                ${p.postal_code || p.city ? `<div>${[p.postal_code, p.city].filter(Boolean).join(' ')}</div>` : ''}
+                ${p.email ? `<div style="margin-top:3px">${p.email}</div>` : ''}
+                ${p.iban  ? `<div style="font-family:monospace;font-size:8pt">${p.iban}</div>` : ''}
+              </div>
+            </div>
+
+            <div style="font-size:14pt;font-weight:bold;margin-bottom:3px">Royalty Afrekening</div>
+            <div style="font-size:8.5pt;color:#555;margin-bottom:14px">Datum: ${today} &nbsp;·&nbsp; Periode: ${periods.join(', ')}</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+              <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Bruto inkomsten</div>
+                <div style="font-size:11pt;font-weight:bold">${eur(grandGross)}</div>
+              </div>
+              <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">DJ·World ${COMMISSIONS.djworldPct}%</div>
+                <div style="font-size:11pt;font-weight:bold;color:#b88a00">-${eur(grandDJ)}</div>
+              </div>
+              <div style="border:1px solid #333;border-radius:5px;padding:8px 12px;background:#f9f9f9">
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Jouw netto</div>
+                <div style="font-size:11pt;font-weight:bold;color:#1a7a3a">${eur(grandNet)}</div>
+              </div>
+            </div>
+
+            ${p.artists.map(a => {
+              const ab = artistBreakdown[a.id]
+              if (!ab) return `<div style="margin-bottom:12px"><div style="font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:6px">${a.name} <span style="font-weight:normal;color:#999;font-size:8.5pt">— geen royalties</span></div></div>`
+              return `
+                <div style="margin-bottom:14px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:6px">
+                    <div style="font-weight:bold;font-size:10.5pt">${a.name}</div>
+                    <div style="color:#1a7a3a;font-weight:bold;font-size:9.5pt">${eur(ab.net)}</div>
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;font-size:8pt">
+                    <thead>
+                      <tr style="background:#f2f2f2">
+                        <th style="text-align:left;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Track</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Split</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Streams</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Downloads</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Bruto</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#b88a00;border-bottom:1px solid #ddd">DJ·World</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#1a7a3a;border-bottom:1px solid #ddd">Netto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${ab.tracks.sort((x,y) => y.net - x.net).map(t => `
+                        <tr>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee">${t.title}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#777">${t.splitPct}%</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#555">${eur(t.stream)}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#555">${eur(t.download)}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right">${eur(t.gross)}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#b88a00">-${eur(t.djAmt)}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#1a7a3a;font-weight:bold">${eur(t.net)}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="background:#fafafa;font-weight:bold">
+                        <td colspan="4" style="padding:4px 6px">Totaal ${a.name}</td>
+                        <td style="padding:4px 6px;text-align:right">${eur(ab.gross)}</td>
+                        <td style="padding:4px 6px;text-align:right;color:#b88a00">-${eur(ab.dj)}</td>
+                        <td style="padding:4px 6px;text-align:right;color:#1a7a3a">${eur(ab.net)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>`
+            }).join('')}
+
+            <div style="margin-top:14px;padding-top:10px;border-top:1px solid #ccc;display:flex;justify-content:space-between;font-size:8.5pt;color:#777">
+              <span>DJ·World · info@dj-world.nl</span>
+              <span>Totaal netto: <strong style="color:#1a7a3a">${eur(grandNet)}</strong></span>
+            </div>
+          </div>
+        `
+
+        // HTML in render div zetten
+        const renderEl = document.getElementById('pdfRender')
+        renderEl.innerHTML = html
+
+        log(`${fullName} — PDF genereren...`)
+
+        try {
+          const pdfBlob = await html2pdf().set({
+            margin:      [10, 12, 10, 12],
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          }).from(renderEl).outputPdf('blob')
+
+          const filename = `Afrekening_${fullName.replace(/\s+/g, '_')}_${periods.join('-').replace(/\s+/g, '')}.pdf`
+          zip.file(filename, pdfBlob)
+          log(`${fullName} — ✓ klaar`, 'success')
+        } catch (err) {
+          log(`${fullName} — ✗ mislukt: ${err.message}`, 'error')
+        }
+
+        setProgress(i + 1, persons.length)
+      }
+
+      renderEl.innerHTML = ''
+      log('ZIP aanmaken en downloaden...', 'info')
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(zipBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Afrekenigen_${periods.join('-')}_${new Date().toISOString().slice(0,10)}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+
+      document.getElementById('progressTitle').textContent = '✓ Klaar!'
+      document.getElementById('btnGenereer').disabled = false
+      log('Alle PDF\'s gedownload als ZIP.', 'success')
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

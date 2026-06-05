@@ -309,7 +309,7 @@
               ${roy.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap">
-              <button onclick="openContract('${(t.title || '').replace(/'/g, "\\'")}', '${(t.track_artists?.[0]?.artists?.name || '').replace(/'/g, "\\'")}', '${(t.releases?.labels?.name || '').replace(/'/g, "\\'")}', '${catalog.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-green-400 text-xs mr-3 transition-colors">Contract</button>
+              <button onclick="openContract(${JSON.stringify(t)})" class="text-gray-500 hover:text-green-400 text-xs mr-3 transition-colors">Contract</button>
               <button onclick='editTrack(${JSON.stringify(t)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteTrack('${t.id}', '${(t.title || catalog).replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -508,8 +508,17 @@
 
     // ── Contract genereren ───────────────────────────────────────
 
-    function openContract(track, artist, label, catalog) {
-      const params = new URLSearchParams({ track, artist, label, catalog })
+    function openContract(t) {
+      const artists = (t.track_artists || [])
+        .sort((a, b) => b.split_percentage - a.split_percentage)
+        .map(ta => `${ta.artists?.name || '?'}:${ta.split_percentage}`)
+        .join('|')
+      const params = new URLSearchParams({
+        track:   t.title || '',
+        artists: artists,
+        label:   t.releases?.labels?.name || '',
+        catalog: t.releases?.catalog_number || ''
+      })
       window.open(`contract.html?${params.toString()}`, '_blank')
     }
 

@@ -209,43 +209,84 @@
       <div class="sig-line"></div>
       <div class="sig-date">Date: <span id="sigDate1"></span></div>
     </div>
-    <div class="sig-block">
-      <div class="name" id="sigArtist"></div>
-      <div class="org">artist: <span id="sigArtistRole"></span></div>
-      <div class="sig-line"></div>
-      <div class="sig-date">Date: <span id="sigDate2"></span></div>
-    </div>
+    <!-- Artiest handtekeningen worden dynamisch toegevoegd via JS -->
   </div>
 
   <script>
-    // URL parameters lezen
     const params  = new URLSearchParams(window.location.search)
-    const artist  = params.get('artist')  || '—'
     const track   = params.get('track')   || '—'
     const label   = params.get('label')   || '—'
     const catalog = params.get('catalog') || ''
 
+    // Artiesten: "Naam:pct|Naam:pct"
+    const artistsRaw = params.get('artists') || ''
+    const artists = artistsRaw ? artistsRaw.split('|').map(a => {
+      const [name, pct] = a.split(':')
+      return { name: name || '—', pct: parseFloat(pct) || 0 }
+    }) : []
+    const artistNames = artists.map(a => a.name).join(', ') || '—'
+    const primaryArtist = artists[0]?.name || '—'
+
     const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-    // Invullen
-    document.getElementById('artistName').textContent    = artist
-    document.getElementById('artistDisplay').textContent = artist
-    document.getElementById('fromLine').textContent      = `DJ-World / ${label}`
-    document.getElementById('contractDate').textContent  = today
-    document.getElementById('labelCell').textContent     = label
-    document.getElementById('productCell').textContent   = `Single(s): ${track}${catalog ? ' (' + catalog + ')' : ''}`
-    document.getElementById('artistNameCell').textContent = artist
-    document.getElementById('sigArtist').textContent     = artist
-    document.getElementById('sigArtistRole').textContent = artist
-    document.getElementById('sigDate1').textContent      = today
-    document.getElementById('sigDate2').textContent      = today
-    document.getElementById('printTitle').textContent    = `Deal Memo — ${artist} — ${track}`
+    // Header
+    document.getElementById('artistName').textContent   = artistNames
+    document.getElementById('fromLine').textContent     = `DJ-World / ${label}`
+    document.getElementById('contractDate').textContent = today
+    document.getElementById('labelCell').textContent    = label
+    document.getElementById('productCell').textContent  = `Single(s): ${track}${catalog ? ' (' + catalog + ')' : ''}`
+    document.getElementById('sigDate1').textContent     = today
+    document.getElementById('sigDate2').textContent     = today
+    document.getElementById('printTitle').textContent   = `Deal Memo — ${artistNames} — ${track}`
+
+    // Artist display met splits
+    const artistDisplay = document.getElementById('artistDisplay')
+    if (artists.length > 1) {
+      artistDisplay.innerHTML = artists.map(a =>
+        `${a.name} <span style="font-weight:normal;font-size:9pt">(${a.pct}%)</span>`
+      ).join(', ')
+    } else {
+      artistDisplay.textContent = artistNames
+    }
+
+    // Released under Artistname
+    document.getElementById('artistNameCell').textContent = artistNames
 
     // Tracklist
-    const tracksList = document.getElementById('tracksList')
     const li = document.createElement('li')
     li.textContent = track + ' (all mixes/edits)'
-    tracksList.appendChild(li)
+    document.getElementById('tracksList').appendChild(li)
+
+    // Splits tabel toevoegen als er meerdere artiesten zijn
+    if (artists.length > 1) {
+      const table = document.querySelector('.terms-table')
+      const splitRow = document.createElement('tr')
+      splitRow.innerHTML = `
+        <td>Split verdeling:</td>
+        <td>${artists.map(a => `<strong>${a.name}</strong>: ${a.pct}%`).join(' / ')}</td>
+      `
+      // Invoegen na "Released under the Artistname"
+      const artistNameRow = document.getElementById('artistNameCell').closest('tr')
+      artistNameRow.parentNode.insertBefore(splitRow, artistNameRow.nextSibling)
+    }
+
+    // Handtekening per artiest
+    const sigContainer = document.querySelector('.signatures')
+    // Verwijder bestaande artiest-blok
+    const sigArtistBlock = document.getElementById('sigArtist')?.closest('.sig-block')
+    if (sigArtistBlock) sigArtistBlock.remove()
+
+    artists.forEach(a => {
+      const div = document.createElement('div')
+      div.className = 'sig-block'
+      div.innerHTML = `
+        <div class="name">${a.name}</div>
+        <div class="org">artist${artists.length > 1 ? ' (' + a.pct + '%)' : ''}</div>
+        <div class="sig-line"></div>
+        <div class="sig-date">Date: ${today}</div>
+      `
+      sigContainer.appendChild(div)
+    })
   </script>
 </body>
 </html>

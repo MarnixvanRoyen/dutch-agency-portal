@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Royalty Afrekening — DJ·World</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -163,7 +164,7 @@
   <div id="printBar">
     <span id="printTitle">Royalty Afrekening</span>
     <div class="btns">
-      <button class="btn-print" onclick="window.print()">🖨️ Afdrukken / PDF</button>
+      <button class="btn-print" onclick="downloadPdf()">⬇️ Download PDF</button>
       <button class="btn-close" onclick="window.close(); setTimeout(()=>{ if(!window.closed) window.history.back() },300)">Sluiten</button>
     </div>
   </div>
@@ -362,6 +363,18 @@
 
       document.getElementById('loadingMsg').style.display = 'none'
       document.getElementById('doc').style.display = 'block'
+    }
+
+    function downloadPdf() {
+      const name    = document.getElementById('printTitle').textContent.replace('Afrekening — ', '').replace(/\s+/g, '_')
+      const element = document.getElementById('doc')
+      html2pdf().set({
+        margin:     [10, 12, 10, 12],
+        filename:   `Afrekening_${name}.pdf`,
+        image:      { type: 'jpeg', quality: 0.98 },
+        html2canvas:{ scale: 2, useCORS: true },
+        jsPDF:      { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(element).save()
     }
 
     buildDoc()

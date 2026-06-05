@@ -302,6 +302,7 @@
               ${roy.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap">
+              <button onclick="openContract('${(t.title || '').replace(/'/g, "\\'")}', '${(t.track_artists?.[0]?.artists?.name || '').replace(/'/g, "\\'")}', '${(t.releases?.labels?.name || '').replace(/'/g, "\\'")}', '${catalog.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-green-400 text-xs mr-3 transition-colors">Contract</button>
               <button onclick='editTrack(${JSON.stringify(t)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteTrack('${t.id}', '${(t.title || catalog).replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -521,6 +522,13 @@
       await loadRoyalties()
       await loadTracks()
     })
+
+    // ── Contract genereren ───────────────────────────────────────
+
+    function openContract(track, artist, label, catalog) {
+      const params = new URLSearchParams({ track, artist, label, catalog })
+      window.open(`contract.html?${params.toString()}`, '_blank')
+    }
 
     // ── Verwijderen ──────────────────────────────────────────────
 

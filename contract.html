@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deal Memo — DJ·World</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11pt;
+      color: #000;
+      background: #fff;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Print knop — verdwijnt bij afdrukken */
+    #printBar {
+      background: #1e1e1e;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: -20px -20px 20px -20px;
+      font-size: 13px;
+    }
+    #printBar button {
+      background: #FFD100;
+      color: #000;
+      border: none;
+      font-weight: bold;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    @media print {
+      #printBar { display: none; }
+      body { padding: 0; }
+    }
+
+    .header-box {
+      border: 1px solid #000;
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      font-size: 10pt;
+    }
+
+    .logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      margin: 16px 0;
+      min-height: 80px;
+    }
+    .logos img {
+      max-height: 70px;
+      max-width: 140px;
+      object-fit: contain;
+    }
+
+    .from-line {
+      font-size: 10pt;
+      margin-bottom: 6px;
+    }
+    .from-line strong { font-weight: bold; }
+
+    .date-line, .pages-line {
+      font-size: 10pt;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .divider { border-top: 1px solid #000; margin: 10px 0; }
+
+    .deal-memo-title {
+      text-align: center;
+      font-weight: bold;
+      margin: 16px 0 8px;
+      font-size: 11pt;
+    }
+
+    .artist-block {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 11pt;
+    }
+    .artist-block .tracks-list {
+      font-weight: normal;
+      margin-top: 4px;
+    }
+    .artist-block .tracks-list ol {
+      list-style: decimal;
+      display: inline-block;
+      text-align: left;
+      padding-left: 20px;
+    }
+
+    .dear { margin: 16px 0 8px; }
+    .intro { margin-bottom: 16px; line-height: 1.5; }
+
+    .terms-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 10pt;
+    }
+    .terms-table td {
+      padding: 3px 6px;
+      vertical-align: top;
+    }
+    .terms-table td:first-child {
+      width: 50%;
+      color: #333;
+    }
+    .terms-table td:last-child {
+      font-weight: bold;
+    }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 32px;
+    }
+    .sig-block .name { font-weight: bold; margin-bottom: 2px; }
+    .sig-block .org  { margin-bottom: 20px; }
+    .sig-line {
+      border-bottom: 1px solid #000;
+      height: 50px;
+      margin-bottom: 6px;
+    }
+    .sig-date { font-size: 10pt; }
+  </style>
+</head>
+<body>
+
+  <div id="printBar">
+    <span id="printTitle">Deal Memo</span>
+    <div style="display:flex;gap:10px">
+      <button onclick="window.print()">🖨️ Afdrukken / PDF</button>
+      <button onclick="window.close()" style="background:#2a2a2a;color:#fff">Sluiten</button>
+    </div>
+  </div>
+
+  <!-- Aan/To header -->
+  <div class="header-box">
+    <div>Aan / To:</div>
+    <div>T.a.v. / Attn.: &nbsp;<span id="artistName" style="font-weight:bold"></span></div>
+  </div>
+
+  <!-- Logos -->
+  <div class="logos">
+    <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png"
+         alt="DJ·World" onerror="this.style.display='none'">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- From / Date -->
+  <div class="from-line"><strong>From:</strong> &nbsp;<span id="fromLine"></span></div>
+  <div class="date-line"><strong>Datum / Date:</strong> &nbsp;<span id="contractDate"></span></div>
+  <div class="pages-line"><strong>Aantal pagina's (incl. deze pagina) / Number of pages (incl. this page):</strong> 1</div>
+
+  <div class="divider"></div>
+
+  <!-- Deal Memo -->
+  <div class="deal-memo-title">Deal Memo</div>
+
+  <div class="artist-block">
+    Artist: <span id="artistDisplay"></span>
+    <div class="tracks-list">
+      <ol id="tracksList"></ol>
+    </div>
+  </div>
+
+  <div class="dear">Dear,</div>
+  <div class="intro">Under mentioned you'll find the main terms for our deal re. above mentioned track(s).</div>
+
+  <!-- Terms tabel -->
+  <table class="terms-table">
+    <tr><td>Form of Agreement:</td>          <td>Exclusive license</td></tr>
+    <tr><td>Label:</td>                       <td id="labelCell"></td></tr>
+    <tr><td>Product:</td>                     <td id="productCell"></td></tr>
+    <tr><td>Territory:</td>                   <td>World</td></tr>
+    <tr><td>Term:</td>                        <td>Lifetime</td></tr>
+    <tr><td>Format:</td>                      <td>All formats. Now known or later invented.</td></tr>
+    <tr><td>Buy out/buy off Single(s):</td>   <td>x euro per track ( x euro total ex vat)</td></tr>
+    <tr><td>Option:</td>                      <td>1 follow up single</td></tr>
+    <tr><td>Release Commitment:</td>          <td><strong>Within 4 months after signing</strong></td></tr>
+    <tr><td>Compilation(s) &amp; 3rd party use/downloads/streaming:</td><td>50/50 on all net income</td></tr>
+    <tr><td>Publishing (if available):</td>   <td>Laura Songs / High Fashion</td></tr>
+    <tr><td>Released under the Artistname:</td><td id="artistNameCell"></td></tr>
+    <tr><td>Master-rights / Master-owner:</td><td>DJ-World</td></tr>
+    <tr><td>Accounting:</td>                  <td>2 times per year (March / September)<br>
+      <span style="font-weight:normal;font-size:9pt">(statements are only provided when above 25 euro, but are available on request)</span></td></tr>
+  </table>
+
+  <!-- Handtekeningen -->
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="name">Rob Boskamp</div>
+      <div class="org">DJ-World</div>
+      <div class="sig-line"></div>
+      <div class="sig-date">Date: <span id="sigDate1"></span></div>
+    </div>
+    <div class="sig-block">
+      <div class="name" id="sigArtist"></div>
+      <div class="org">artist: <span id="sigArtistRole"></span></div>
+      <div class="sig-line"></div>
+      <div class="sig-date">Date: <span id="sigDate2"></span></div>
+    </div>
+  </div>
+
+  <script>
+    // URL parameters lezen
+    const params  = new URLSearchParams(window.location.search)
+    const artist  = params.get('artist')  || '—'
+    const track   = params.get('track')   || '—'
+    const label   = params.get('label')   || '—'
+    const catalog = params.get('catalog') || ''
+
+    const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+    // Invullen
+    document.getElementById('artistName').textContent    = artist
+    document.getElementById('artistDisplay').textContent = artist
+    document.getElementById('fromLine').textContent      = `DJ-World / ${label}`
+    document.getElementById('contractDate').textContent  = today
+    document.getElementById('labelCell').textContent     = label
+    document.getElementById('productCell').textContent   = `Single(s): ${track}${catalog ? ' (' + catalog + ')' : ''}`
+    document.getElementById('artistNameCell').textContent = artist
+    document.getElementById('sigArtist').textContent     = artist
+    document.getElementById('sigArtistRole').textContent = artist
+    document.getElementById('sigDate1').textContent      = today
+    document.getElementById('sigDate2').textContent      = today
+    document.getElementById('printTitle').textContent    = `Deal Memo — ${artist} — ${track}`
+
+    // Tracklist
+    const tracksList = document.getElementById('tracksList')
+    const li = document.createElement('li')
+    li.textContent = track + ' (all mixes/edits)'
+    tracksList.appendChild(li)
+  </script>
+</body>
+</html>

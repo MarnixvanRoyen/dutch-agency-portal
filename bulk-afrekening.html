@@ -40,6 +40,10 @@
       <div id="personList" class="space-y-1.5">
         <p class="text-gray-600 text-sm">Laden...</p>
       </div>
+      <div class="mt-3 flex gap-3">
+        <button onclick="selectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
+        <button onclick="deselectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+      </div>
     </div>
 
     <!-- Actieknoppen -->
@@ -138,6 +142,8 @@
 
     function selectAllStatements()   { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = true) }
     function deselectAllStatements() { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = false) }
+    function selectAllPersons()      { document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => c.checked = true) }
+    function deselectAllPersons()    { document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => c.checked = false) }
 
     function log(msg, type = 'normal') {
       const el = document.getElementById('progressLog')

@@ -43,8 +43,33 @@
     #printBar .btn-close  { background: #2a2a2a; color: #fff; }
 
     @media print {
+      @page { margin: 10mm 12mm; size: A4 portrait; }
       #printBar { display: none; }
-      body { padding: 0; }
+      body { padding: 0; font-size: 8pt; max-width: 100%; }
+
+      .doc-header { margin-bottom: 10px; padding-bottom: 8px; }
+      .doc-header img { max-height: 36px; }
+      .doc-header .address-block { font-size: 7.5pt; }
+      .doc-header .address-block .name { font-size: 8.5pt; }
+
+      .doc-title { font-size: 11pt; }
+      .doc-meta  { font-size: 7.5pt; margin-bottom: 8px; }
+
+      .summary-grid { gap: 6px; margin-bottom: 10px; }
+      .summary-box  { padding: 5px 8px; }
+      .summary-box .label { font-size: 6pt; }
+      .summary-box .value { font-size: 9pt; }
+
+      .artist-section { margin-bottom: 10px; }
+      .artist-heading { padding-bottom: 3px; margin-bottom: 5px; }
+      .artist-heading h2 { font-size: 8.5pt; }
+
+      table { font-size: 7.5pt; }
+      th { padding: 3px 5px; font-size: 6.5pt; }
+      td { padding: 2.5px 5px; }
+
+      .doc-footer { margin-top: 10px; padding-top: 6px; font-size: 7.5pt; }
+
       .page-break { page-break-before: always; }
     }
 

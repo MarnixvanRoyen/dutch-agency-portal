@@ -242,7 +242,7 @@
       filtered = allReleases.filter(r => (tracksByRelease[r.id] || []).length > 1)
       document.getElementById('releaseCount').textContent = `(${filtered.length})`
       currentPage = 0
-      renderTable()
+      restoreReleaseFilters()
     }
 
     function renderTable() {
@@ -334,6 +334,15 @@
       document.getElementById('nextBtn').disabled = end >= total
     }
 
+    function restoreReleaseFilters() {
+      const q       = getFilter('releases', 'q', '')
+      const labelId = getFilter('releases', 'labelId', '')
+      document.getElementById('searchInput').value = q
+      document.getElementById('labelFilter').value = labelId
+      if (q || labelId) filterTable()
+      else renderTable()
+    }
+
     function toggleExpand(releaseId) {
       if (expandedRows.has(releaseId)) {
         expandedRows.delete(releaseId)
@@ -346,6 +355,8 @@
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
+      saveFilter('releases', 'q', q)
+      saveFilter('releases', 'labelId', labelId)
       filtered = allReleases.filter(r => {
         const matchQ     = !q || r.catalog_number.toLowerCase().includes(q)
         const matchLabel = !labelId || r.label_id === labelId

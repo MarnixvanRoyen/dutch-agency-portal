@@ -259,7 +259,8 @@
       document.getElementById('trackCount').textContent = `(${allTracks.length})`
       filtered  = allTracks
       currentPage = 0
-      renderTable()
+      restoreFilters()
+      if (filtered === allTracks) renderTable()
     }
 
     function renderTable() {
@@ -354,6 +355,13 @@
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
+      // Opslaan
+      saveFilter('tracks', 'q', q)
+      saveFilter('tracks', 'labelId', labelId)
+      saveFilter('tracks', 'noTitle', filterNoTitle)
+      saveFilter('tracks', 'multi', filterMultiArtist)
+      saveFilter('tracks', 'conflict', filterConflict)
+
       filtered = allTracks.filter(t => {
         const catalog     = t.releases?.catalog_number || ''
         const artistNames = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
@@ -366,6 +374,17 @@
       })
       currentPage = 0
       renderTable()
+    }
+
+    function restoreFilters() {
+      const q       = getFilter('tracks', 'q', '')
+      const labelId = getFilter('tracks', 'labelId', '')
+      document.getElementById('searchInput').value = q
+      document.getElementById('labelFilter').value = labelId
+      if (getFilter('tracks', 'noTitle', false))   toggleNoTitle()
+      if (getFilter('tracks', 'multi', false))      toggleMultiArtist()
+      if (getFilter('tracks', 'conflict', false))   toggleConflict()
+      if (q || labelId) filterTable()
     }
 
     function prevPage() { if (currentPage > 0) { currentPage--; renderTable() } }

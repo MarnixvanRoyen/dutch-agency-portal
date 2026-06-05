@@ -300,7 +300,8 @@
       allArtists = data || []
       detectAttention()
       document.getElementById('artistCount').textContent = `(${allArtists.length})`
-      renderTable(allArtists)
+      restoreFilters()
+      if (!getFilter('artists', 'q') && !getFilter('artists', 'attention')) renderTable(allArtists)
     }
 
     function detectAttention() {
@@ -424,11 +425,20 @@
 
     function filterTable() {
       const q = document.getElementById('searchInput').value.toLowerCase()
+      saveFilter('artists', 'q', q)
+      saveFilter('artists', 'attention', filterAttention)
       renderTable(allArtists.filter(a => {
         const matchQ         = !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
         const matchAttention = !filterAttention || attentionIds.has(a.id)
         return matchQ && matchAttention
       }))
+    }
+
+    function restoreFilters() {
+      const q = getFilter('artists', 'q', '')
+      document.getElementById('searchInput').value = q
+      if (getFilter('artists', 'attention', false)) toggleAttention()
+      if (q) filterTable()
     }
 
     function toggleAttention() {

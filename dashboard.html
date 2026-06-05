@@ -275,7 +275,8 @@
       updateFlowCard(total)
       updateTypeCard(allLines)
       populateDropdowns()
-      renderBlocks(allLines)
+      restoreDashboardFilters()
+      if (!Object.values(filterValues).some(Boolean) && activeType === 'all') renderBlocks(allLines)
     }
 
     // ── Autocomplete bouwen ──────────────────────────────────────────────
@@ -505,12 +506,31 @@
       updateFlowCard(filteredTotal)
       updateTypeCard(filtered)
       renderBlocks(filtered)
+      saveDashboardFilters()
     }
 
     function resetFilters() {
       activeType = 'all'
       setTypeFilter('all')
       ;['label', 'artist', 'track', 'statement'].forEach(clearFilter)
+      clearPageFilters('dashboard')
+    }
+
+    function saveDashboardFilters() {
+      saveFilter('dashboard', 'type', activeType)
+      saveFilter('dashboard', 'label', filterValues.label)
+      saveFilter('dashboard', 'artist', filterValues.artist)
+      saveFilter('dashboard', 'track', filterValues.track)
+      saveFilter('dashboard', 'statement', filterValues.statement)
+    }
+
+    function restoreDashboardFilters() {
+      const type = getFilter('dashboard', 'type', 'all')
+      if (type !== 'all') setTypeFilter(type)
+      ;['label', 'artist', 'track', 'statement'].forEach(k => {
+        const v = getFilter('dashboard', k, '')
+        if (v) selectFilter(k, v)
+      })
     }
 
     // ── Blokken renderen ─────────────────────────────────────────────────

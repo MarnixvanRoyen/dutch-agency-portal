@@ -160,6 +160,20 @@ async function logout() {
   window.location.href = 'index.html'
 }
 
+// ── Filter persistentie (sessionStorage per pagina) ────────────
+function saveFilter(page, key, value) {
+  const all = JSON.parse(sessionStorage.getItem('f_' + page) || '{}')
+  all[key] = value
+  sessionStorage.setItem('f_' + page, JSON.stringify(all))
+}
+function getFilter(page, key, fallback = '') {
+  const all = JSON.parse(sessionStorage.getItem('f_' + page) || '{}')
+  return key in all ? all[key] : fallback
+}
+function clearPageFilters(page) {
+  sessionStorage.removeItem('f_' + page)
+}
+
 // Formatteer bedrag als EUR
 function fmt(amount) {
   if (amount == null || amount === '') return '—'

@@ -53,7 +53,7 @@
             <th class="text-left px-5 py-3 font-medium w-8"></th>
             <th class="text-left px-5 py-3 font-medium">Artiest</th>
             <th class="text-left px-5 py-3 font-medium">Tracks</th>
-            <th class="text-left px-5 py-3 font-medium">E-mail</th>
+            <th class="text-left px-5 py-3 font-medium hidden sm:table-cell">Persoon</th>
             <th class="text-right px-5 py-3 font-medium">Royalties (gesplitst)</th>
             <th class="text-right px-5 py-3 font-medium">Acties</th>
           </tr>
@@ -79,10 +79,11 @@
             placeholder="Artiestennaam">
         </div>
         <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mail</label>
-          <input type="email" id="artistEmail"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-            placeholder="artiest@email.nl">
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Persoon <span class="text-gray-600 normal-case">(eigenaar)</span></label>
+          <select id="artistPersonId"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+            <option value="">— Nog niet gekoppeld —</option>
+          </select>
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Telefoonnummer</label>
@@ -203,6 +204,7 @@
   <script src="shared.js"></script>
   <script>
     let allArtists      = []
+    let allPersons      = []
     let allLines        = []
     let allStatements   = []
     let splitRoyalties  = {}
@@ -215,9 +217,14 @@
     async function loadPage() {
       const session = await initPage('artists')
       if (!session) return
-      await loadStatements()
+      await Promise.all([loadStatements(), loadPersons()])
       await computeSplitRoyalties()
       await loadArtists()
+    }
+
+    async function loadPersons() {
+      const { data } = await db.from('persons').select('id, first_name, last_name, email').order('last_name')
+      allPersons = data || []
     }
 
     async function loadStatements() {
@@ -231,7 +238,7 @@
       await computeSplitRoyalties()
       renderTable(allArtists.filter(a => {
         const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
-        return !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+        return !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
       }))
     }
 
@@ -296,7 +303,7 @@
     }
 
     async function loadArtists() {
-      const { data } = await db.from('artists').select('*').order('name')
+      const { data } = await db.from('artists').select('*, persons(id, first_name, last_name, email)').order('name')
       allArtists = data || []
       detectAttention()
       document.getElementById('artistCount').textContent = `(${allArtists.length})`
@@ -357,12 +364,14 @@
               </div>
             </td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${tracks.length || '—'}</td>
-            <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs hidden sm:table-cell">
+              ${a.persons ? `<span class="text-gray-300">${a.persons.first_name} ${a.persons.last_name}</span>` : '<span class="text-gray-600">—</span>'}
+            </td>
             <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#FFD100] font-semibold' : 'text-gray-600'}">
               ${roy?.total ? fmt(roy.total) : '—'}
             </td>
             <td class="px-5 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
-              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${(a.email || '').replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
+              <button onclick="openReport('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${(a.persons?.email || '').replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">Rapport</button>
               <button onclick='editArtist(${JSON.stringify(a)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
             </td>
@@ -428,7 +437,7 @@
       saveFilter('artists', 'q', q)
       saveFilter('artists', 'attention', filterAttention)
       renderTable(allArtists.filter(a => {
-        const matchQ         = !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+        const matchQ         = !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
         const matchAttention = !filterAttention || attentionIds.has(a.id)
         return matchQ && matchAttention
       }))
@@ -453,11 +462,22 @@
     // ── Modal ────────────────────────────────────────────────────────
 
     function openModal(artist = null) {
-      document.getElementById('artistId').value    = artist?.id    || ''
-      document.getElementById('artistName').value  = artist?.name  || ''
-      document.getElementById('artistEmail').value = artist?.email || ''
-      document.getElementById('artistPhone').value = artist?.phone || ''
-      document.getElementById('artistNotes').value = artist?.notes || ''
+      document.getElementById('artistId').value       = artist?.id        || ''
+      document.getElementById('artistName').value     = artist?.name      || ''
+      document.getElementById('artistPhone').value    = artist?.phone     || ''
+      document.getElementById('artistNotes').value    = artist?.notes     || ''
+
+      // Personen-dropdown vullen
+      const sel = document.getElementById('artistPersonId')
+      sel.innerHTML = '<option value="">— Nog niet gekoppeld —</option>'
+      allPersons.forEach(p => {
+        const opt = document.createElement('option')
+        opt.value = p.id
+        opt.textContent = `${p.first_name} ${p.last_name}`
+        if (artist?.person_id === p.id) opt.selected = true
+        sel.appendChild(opt)
+      })
+
       document.getElementById('modalTitle').textContent = artist ? 'Artiest bewerken' : 'Artiest toevoegen'
       document.getElementById('modal').classList.remove('hidden')
       setTimeout(() => document.getElementById('artistName').focus(), 50)
@@ -470,10 +490,10 @@
       e.preventDefault()
       const id      = document.getElementById('artistId').value
       const payload = {
-        name:  document.getElementById('artistName').value.trim(),
-        email: document.getElementById('artistEmail').value.trim() || null,
-        phone: document.getElementById('artistPhone').value.trim() || null,
-        notes: document.getElementById('artistNotes').value.trim() || null,
+        name:      document.getElementById('artistName').value.trim(),
+        person_id: document.getElementById('artistPersonId').value || null,
+        phone:     document.getElementById('artistPhone').value.trim() || null,
+        notes:     document.getElementById('artistNotes').value.trim() || null,
       }
       let error
       if (id) {
@@ -511,7 +531,7 @@
       }
       renderTable(allArtists.filter(a => {
         const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
-        return !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+        return !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
       }))
     }
 

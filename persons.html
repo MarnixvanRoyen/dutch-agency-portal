@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personen — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
+
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-xl font-bold">Personen <span id="personCount" class="text-gray-500 font-normal text-base"></span></h1>
+        <p class="text-gray-500 text-sm mt-0.5">Eigenaren van artiestennamen — NAW, email & bankgegevens</p>
+      </div>
+      <button onclick="openModal()"
+        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span class="hidden sm:inline">Persoon toevoegen</span>
+        <span class="sm:hidden">Toevoegen</span>
+      </button>
+    </div>
+
+    <!-- Zoek -->
+    <div class="mb-4">
+      <input type="text" id="searchInput" placeholder="Zoek op naam, email of woonplaats..."
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-80 placeholder-gray-600"
+        oninput="filterTable()">
+    </div>
+
+    <!-- Tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium w-8"></th>
+            <th class="text-left px-5 py-3 font-medium">Naam</th>
+            <th class="text-left px-5 py-3 font-medium hidden sm:table-cell">Woonplaats</th>
+            <th class="text-left px-5 py-3 font-medium hidden md:table-cell">E-mail</th>
+            <th class="text-left px-5 py-3 font-medium hidden md:table-cell">IBAN</th>
+            <th class="text-left px-5 py-3 font-medium">Artiesten</th>
+            <th class="text-right px-5 py-3 font-medium">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="personsTable">
+          <tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+      <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Persoon toevoegen</h2>
+      <form id="personForm" class="space-y-4">
+        <input type="hidden" id="personId">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Voornaam *</label>
+            <input type="text" id="personFirstName" required
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+              placeholder="Jan">
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Achternaam *</label>
+            <input type="text" id="personLastName" required
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+              placeholder="Jansen">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Straat + huisnummer</label>
+          <input type="text" id="personStreet"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="Voorbeeldstraat 12">
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Postcode</label>
+            <input type="text" id="personPostalCode"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+              placeholder="1234 AB">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Woonplaats</label>
+            <input type="text" id="personCity"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+              placeholder="Amsterdam">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Land</label>
+          <input type="text" id="personCountry"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="NL" value="NL">
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mailadres</label>
+          <input type="email" id="personEmail"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="jan@email.nl">
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">IBAN</label>
+          <input type="text" id="personIban"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors font-mono"
+            placeholder="NL91 ABNA 0417 1643 00">
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Notities</label>
+          <textarea id="personNotes" rows="2"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors resize-none"
+            placeholder="Optionele notities..."></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-1">
+          <button type="button" onclick="closeModal()"
+            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            Annuleren
+          </button>
+          <button type="submit"
+            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    let allPersons    = []
+    let expandedIds   = new Set()
+
+    async function loadPage() {
+      const session = await initPage('persons')
+      if (!session) return
+      await loadPersons()
+    }
+
+    async function loadPersons() {
+      const { data, error } = await db
+        .from('persons')
+        .select('*, artists(id, name)')
+        .order('last_name')
+      if (error) { showToast('Fout bij laden: ' + error.message, 'error'); return }
+      allPersons = data || []
+      document.getElementById('personCount').textContent = `(${allPersons.length})`
+      renderTable(allPersons)
+    }
+
+    function maskIban(iban) {
+      if (!iban) return '—'
+      const clean = iban.replace(/\s/g, '')
+      if (clean.length < 6) return iban
+      return clean.slice(0, 4) + ' **** **** ' + clean.slice(-4)
+    }
+
+    function renderTable(persons) {
+      const tbody = document.getElementById('personsTable')
+      if (!persons.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Geen personen gevonden.</td></tr>'
+        return
+      }
+      tbody.innerHTML = persons.map(p => {
+        const fullName   = `${p.first_name} ${p.last_name}`
+        const artists    = p.artists || []
+        const isExpanded = expandedIds.has(p.id)
+
+        const mainRow = `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors cursor-pointer" onclick="togglePerson('${p.id}')">
+            <td class="px-5 py-3.5 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </td>
+            <td class="px-5 py-3.5 font-medium text-white">${fullName}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs hidden sm:table-cell">${p.city || '—'}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs hidden md:table-cell">${p.email || '—'}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs font-mono hidden md:table-cell">${maskIban(p.iban)}</td>
+            <td class="px-5 py-3.5 text-gray-500 text-xs">
+              ${artists.length
+                ? `<span class="text-white font-medium">${artists.length}</span> artiest${artists.length !== 1 ? 'en' : ''}`
+                : '<span class="text-gray-600">—</span>'}
+            </td>
+            <td class="px-5 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+              <button onclick='editPerson(${JSON.stringify(p)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
+              <button onclick="deletePerson('${p.id}', '${fullName.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+            </td>
+          </tr>
+        `
+
+        const expandRow = isExpanded ? `
+          <tr class="border-t border-[#2a2a2a]/50 bg-[#161616]">
+            <td></td>
+            <td colspan="6" class="px-5 py-3">
+              ${!artists.length
+                ? '<p class="text-gray-600 text-xs py-2">Geen artiesten gekoppeld aan deze persoon.</p>'
+                : `<div class="flex flex-wrap gap-2 py-1">
+                    ${artists.map(a => `
+                      <a href="artists.html" class="inline-flex items-center gap-1.5 bg-[#2a2a2a] hover:bg-[#333] rounded-lg px-3 py-1.5 text-xs text-gray-300 hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-[#FFD100]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                        ${a.name}
+                      </a>
+                    `).join('')}
+                  </div>`
+              }
+              <div class="mt-2 pt-2 border-t border-[#2a2a2a]/50 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-500">
+                ${p.street || p.postal_code || p.city ? `<div>📍 ${[p.street, p.postal_code, p.city, p.country].filter(Boolean).join(', ')}</div>` : ''}
+                ${p.email ? `<div>✉️ ${p.email}</div>` : ''}
+                ${p.iban  ? `<div class="font-mono">🏦 ${p.iban}</div>` : ''}
+              </div>
+            </td>
+          </tr>
+        ` : ''
+
+        return mainRow + expandRow
+      }).join('')
+    }
+
+    function togglePerson(id) {
+      if (expandedIds.has(id)) expandedIds.delete(id)
+      else expandedIds.add(id)
+      renderTable(allPersons.filter(p => {
+        const q = document.getElementById('searchInput').value.toLowerCase()
+        return matchesSearch(p, q)
+      }))
+    }
+
+    function matchesSearch(p, q) {
+      if (!q) return true
+      const full = `${p.first_name} ${p.last_name}`.toLowerCase()
+      return full.includes(q)
+        || (p.email || '').toLowerCase().includes(q)
+        || (p.city  || '').toLowerCase().includes(q)
+    }
+
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase()
+      renderTable(allPersons.filter(p => matchesSearch(p, q)))
+    }
+
+    // ── Modal ────────────────────────────────────────────────────────
+
+    function openModal(person = null) {
+      document.getElementById('personId').value        = person?.id         || ''
+      document.getElementById('personFirstName').value = person?.first_name || ''
+      document.getElementById('personLastName').value  = person?.last_name  || ''
+      document.getElementById('personStreet').value    = person?.street     || ''
+      document.getElementById('personPostalCode').value= person?.postal_code|| ''
+      document.getElementById('personCity').value      = person?.city       || ''
+      document.getElementById('personCountry').value   = person?.country    || 'NL'
+      document.getElementById('personEmail').value     = person?.email      || ''
+      document.getElementById('personIban').value      = person?.iban       || ''
+      document.getElementById('personNotes').value     = person?.notes      || ''
+      document.getElementById('modalTitle').textContent = person ? 'Persoon bewerken' : 'Persoon toevoegen'
+      document.getElementById('modal').classList.remove('hidden')
+      setTimeout(() => document.getElementById('personFirstName').focus(), 50)
+    }
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden') }
+    function editPerson(p) { openModal(p) }
+
+    document.getElementById('personForm').addEventListener('submit', async e => {
+      e.preventDefault()
+      const id = document.getElementById('personId').value
+      const payload = {
+        first_name:  document.getElementById('personFirstName').value.trim(),
+        last_name:   document.getElementById('personLastName').value.trim(),
+        street:      document.getElementById('personStreet').value.trim()     || null,
+        postal_code: document.getElementById('personPostalCode').value.trim() || null,
+        city:        document.getElementById('personCity').value.trim()       || null,
+        country:     document.getElementById('personCountry').value.trim()    || 'NL',
+        email:       document.getElementById('personEmail').value.trim()      || null,
+        iban:        document.getElementById('personIban').value.trim()       || null,
+        notes:       document.getElementById('personNotes').value.trim()      || null,
+      }
+      let error
+      if (id) {
+        ;({ error } = await db.from('persons').update(payload).eq('id', id))
+      } else {
+        ;({ error } = await db.from('persons').insert(payload))
+      }
+      if (error) { showToast(error.message || 'Er ging iets mis.', 'error'); return }
+      showToast(id ? 'Persoon bijgewerkt.' : 'Persoon toegevoegd.')
+      closeModal()
+      await loadPersons()
+    })
+
+    async function deletePerson(id, name) {
+      if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen?\n\nGekoppelde artiesten worden losgekoppeld maar niet verwijderd.`)) return
+      const { error } = await db.from('persons').delete().eq('id', id)
+      if (error) { showToast('Kan niet verwijderen: ' + error.message, 'error'); return }
+      showToast('Persoon verwijderd.')
+      await loadPersons()
+    }
+
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal()
+    })
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal() })
+
+    loadPage()
+  </script>
+</body>
+</html>

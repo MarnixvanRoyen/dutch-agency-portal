@@ -155,12 +155,19 @@
     }
 
     async function loadPersons() {
-      const { data, error } = await db
-        .from('persons')
-        .select('*, artists(id, name)')
-        .order('last_name')
+      const { data: persons, error } = await db.from('persons').select('*').order('last_name')
       if (error) { showToast('Fout bij laden: ' + error.message, 'error'); return }
-      allPersons = data || []
+
+      // Artiesten apart laden en in JS koppelen
+      const { data: artists } = await db.from('artists').select('id, name, person_id')
+      const artistsByPerson = {}
+      ;(artists || []).forEach(a => {
+        if (!a.person_id) return
+        if (!artistsByPerson[a.person_id]) artistsByPerson[a.person_id] = []
+        artistsByPerson[a.person_id].push(a)
+      })
+
+      allPersons = (persons || []).map(p => ({ ...p, artists: artistsByPerson[p.id] || [] }))
       document.getElementById('personCount').textContent = `(${allPersons.length})`
       renderTable(allPersons)
     }

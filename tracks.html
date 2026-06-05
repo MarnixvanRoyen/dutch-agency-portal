@@ -204,13 +204,25 @@
     }
 
     async function loadRoyalties() {
-      const { data: lines } = await db.from('statement_lines').select('track_id, usage_type, nett_royalty, artist_name')
+      const pageSize = 1000
+      let from = 0
+      const lines = []
+      while (true) {
+        const { data: page, error: pageErr } = await db
+          .from('statement_lines')
+          .select('track_id, usage_type, nett_royalty, artist_name')
+          .range(from, from + pageSize - 1)
+        if (pageErr || !page || page.length === 0) break
+        lines.push(...page)
+        if (page.length < pageSize) break
+        from += pageSize
+      }
       royaltyByTrack = {}
 
       // Artiestnamen per track uit statement_lines (voor conflict-check)
       const stmtArtistsByTrack = {}  // track_id → Set van artiestnamen (lowercase)
 
-      ;(lines || []).forEach(l => {
+      ;lines.forEach(l => {
         if (!l.track_id) return
         if (!royaltyByTrack[l.track_id]) royaltyByTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
         const amt = parseFloat(l.nett_royalty) || 0

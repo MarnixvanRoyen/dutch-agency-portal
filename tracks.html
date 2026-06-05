@@ -104,13 +104,22 @@
             placeholder="Leeg laten → ⚠️ onbekende track">
         </div>
 
-        <!-- CatalogNumber -->
-        <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
-          <input type="hidden" id="trackReleaseId">
-          <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
-            placeholder="bijv. BBR184-12">
+        <!-- CatalogNumber + Label -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
+            <input type="hidden" id="trackReleaseId">
+            <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
+              placeholder="bijv. BBR184-12">
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
+            <select id="trackLabelId"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              <option value="">— Geen label —</option>
+            </select>
+          </div>
         </div>
 
         <!-- Artiesten & splits -->
@@ -167,7 +176,11 @@
       const { data } = await db.from('labels').select('id, name').order('name')
       allLabels = data || []
       const filterSel = document.getElementById('labelFilter')
-      allLabels.forEach(l => filterSel.add(new Option(l.name, l.id)))
+      const modalSel  = document.getElementById('trackLabelId')
+      allLabels.forEach(l => {
+        filterSel.add(new Option(l.name, l.id))
+        modalSel.add(new Option(l.name, l.id))
+      })
     }
 
     async function loadArtists() {
@@ -365,6 +378,7 @@
       document.getElementById('trackTitle').value     = track?.title || ''
       document.getElementById('trackReleaseId').value = track?.release_id || ''
       document.getElementById('releaseSearch').value  = track?.releases?.catalog_number || ''
+      document.getElementById('trackLabelId').value   = track?.releases?.label_id || ''
       document.getElementById('modalTitle').textContent = track ? 'Track bewerken' : 'Track toevoegen'
 
       buildSplitRows(track?.track_artists || [])
@@ -447,12 +461,15 @@
       if (!releaseId) {
         const { data: existing } = await db.from('releases')
           .select('id').ilike('catalog_number', catalogInput).maybeSingle()
+        const labelId = document.getElementById('trackLabelId').value || null
         if (existing) {
           releaseId = existing.id
+          // Label bijwerken als geselecteerd
+          if (labelId) await db.from('releases').update({ label_id: labelId }).eq('id', releaseId)
           showToast(`Catalogusnummer ${catalogInput} bestaat al — track toegevoegd aan bestaande release.`)
         } else {
           const { data: newRelease, error: rErr } = await db.from('releases')
-            .insert({ catalog_number: catalogInput, release_type: 'single' }).select().single()
+            .insert({ catalog_number: catalogInput, release_type: 'single', label_id: labelId }).select().single()
           if (rErr) { showToast('Fout bij aanmaken release: ' + rErr.message, 'error'); return }
           releaseId = newRelease.id
           await loadReleases()

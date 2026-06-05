@@ -151,7 +151,7 @@
   <!-- Aan/To header -->
   <div class="header-box">
     <div>Aan / To:</div>
-    <div>T.a.v. / Attn.: &nbsp;<span id="artistName" style="font-weight:bold"></span></div>
+    <div id="artistHeader"></div>
   </div>
 
   <!-- Logos -->
@@ -229,13 +229,19 @@
     const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
     // Header
-    document.getElementById('artistName').textContent   = artistNames
+    const artistHeader = document.getElementById('artistHeader')
+    if (artists.length > 1) {
+      artistHeader.innerHTML = artists.map(a =>
+        `<div>T.a.v. / Attn.: &nbsp;<strong>${a.name}</strong> <span style="font-size:9pt;color:#555">(${a.pct}%)</span></div>`
+      ).join('')
+    } else {
+      artistHeader.innerHTML = `<div>T.a.v. / Attn.: &nbsp;<strong>${artistNames}</strong></div>`
+    }
     document.getElementById('fromLine').textContent     = `DJ-World / ${label}`
     document.getElementById('contractDate').textContent = today
     document.getElementById('labelCell').textContent    = label
     document.getElementById('productCell').textContent  = `Single(s): ${track}${catalog ? ' (' + catalog + ')' : ''}`
     document.getElementById('sigDate1').textContent     = today
-    document.getElementById('sigDate2').textContent     = today
     document.getElementById('printTitle').textContent   = `Deal Memo — ${artistNames} — ${track}`
 
     // Artist display met splits

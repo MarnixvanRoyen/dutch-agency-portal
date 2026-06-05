@@ -38,6 +38,11 @@
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
+      <select id="statementFilter"
+        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        onchange="onStatementChange()">
+        <option value="">Alle statements</option>
+      </select>
     </div>
 
     <!-- Tabel -->
@@ -49,11 +54,12 @@
             <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
             <th class="text-left px-5 py-3 font-medium">Label</th>
             <th class="text-right px-5 py-3 font-medium">Tracks</th>
+            <th class="text-right px-5 py-3 font-medium">Inkomsten</th>
             <th class="text-right px-5 py-3 font-medium">Acties</th>
           </tr>
         </thead>
         <tbody id="releasesTable">
-          <tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          <tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -134,13 +140,15 @@
 
   <script src="shared.js"></script>
   <script>
-    let allReleases  = []
-    let allLabels    = []
-    let tracksByRelease = {}   // { release_id: [{id, title}] }
-    let filtered     = []
-    let expandedRows = new Set()
-    let currentPage  = 0
-    const PAGE_SIZE  = 50
+    let allReleases     = []
+    let allLabels       = []
+    let tracksByRelease = {}
+    let royByTrack      = {}   // { track_id: royalty }
+    let royByRelease    = {}   // { release_id: royalty }
+    let filtered        = []
+    let expandedRows    = new Set()
+    let currentPage     = 0
+    const PAGE_SIZE     = 50
 
 
 
@@ -148,7 +156,43 @@
       const session = await initPage('releases')
       if (!session) return
       await loadLabels()
+      await loadStatements()
       await loadReleases()
+    }
+
+    async function loadStatements() {
+      const { data } = await db.from('statements').select('id, period, filename').order('uploaded_at', { ascending: false })
+      const sel = document.getElementById('statementFilter')
+      ;(data || []).forEach(s => sel.add(new Option(s.period || s.filename, s.id)))
+    }
+
+    async function loadRoyalties(statementId = '') {
+      let lines = [], from = 0
+      while (true) {
+        let q = db.from('statement_lines').select('track_id, nett_royalty, statement_id').range(from, from + 999)
+        if (statementId) q = q.eq('statement_id', statementId)
+        const { data } = await q
+        if (!data?.length) break
+        lines.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      royByTrack = {}
+      ;(lines || []).forEach(l => {
+        if (!l.track_id) return
+        royByTrack[l.track_id] = (royByTrack[l.track_id] || 0) + (parseFloat(l.nett_royalty) || 0)
+      })
+      // Aggregeer naar release niveau
+      royByRelease = {}
+      Object.entries(tracksByRelease).forEach(([releaseId, tracks]) => {
+        royByRelease[releaseId] = tracks.reduce((s, t) => s + (royByTrack[t.id] || 0), 0)
+      })
+    }
+
+    async function onStatementChange() {
+      const stmtId = document.getElementById('statementFilter').value
+      await loadRoyalties(stmtId)
+      renderTable()
     }
 
     async function loadLabels() {
@@ -192,6 +236,8 @@
         tracksByRelease[t.release_id].push({ id: t.id, title: t.title, artist: artists })
       })
 
+      await loadRoyalties()
+
       // Standaard: alleen releases met meerdere tracks tonen
       filtered = allReleases.filter(r => (tracksByRelease[r.id] || []).length > 1)
       currentPage = 0
@@ -204,7 +250,7 @@
       const page  = filtered.slice(start, start + PAGE_SIZE)
 
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Geen verzamelingen gevonden.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Geen verzamelingen gevonden.</td></tr>'
         document.getElementById('pageInfo').textContent = ''
         return
       }
@@ -212,7 +258,8 @@
       tbody.innerHTML = page.map(r => {
         const tracks     = tracksByRelease[r.id] || []
         const labelName  = r.labels?.name || '—'
-        const isExpanded = expandedRows.has(r.id)
+        const isExpanded  = expandedRows.has(r.id)
+        const releaseRoy  = royByRelease[r.id] || 0
         const trackCount = tracks.length
         const hasNoName  = tracks.some(t => !t.title)
 
@@ -228,6 +275,9 @@
             <td class="px-5 py-3 text-right text-xs ${hasNoName ? 'text-amber-400' : 'text-gray-400'}">
               ${trackCount} ${hasNoName ? '⚠️' : ''}
             </td>
+            <td class="px-5 py-3 text-right text-xs font-semibold ${releaseRoy ? 'text-[#FFD100]' : 'text-gray-600'}">
+              ${releaseRoy ? fmt(releaseRoy) : '—'}
+            </td>
             <td class="px-5 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
               <button onclick="openTrackModal('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
                 class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">+ Track</button>
@@ -242,7 +292,7 @@
         const expandedRow = isExpanded ? `
           <tr id="expand_${r.id}" class="border-t border-[#2a2a2a]/50 bg-[#161616]">
             <td></td>
-            <td colspan="5" class="px-5 py-3">
+            <td colspan="6" class="px-5 py-3">
               ${tracks.length === 0
                 ? '<p class="text-gray-600 text-xs">Geen tracks — klik "+ Track" om toe te voegen.</p>'
                 : `<div class="space-y-1">
@@ -254,11 +304,16 @@
                           </span>
                           ${t.artist ? `<span class="text-gray-600 text-xs">${t.artist}</span>` : ''}
                         </div>
-                        <div class="flex gap-3">
-                          <button onclick="editTrack(${JSON.stringify(t).replace(/"/g, '&quot;')}, '${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
-                            class="text-gray-600 hover:text-white text-xs transition-colors">Bewerken</button>
-                          <button onclick="deleteTrack('${t.id}', '${(t.title || 'onbekend').replace(/'/g, "\\'")}')"
-                            class="text-gray-600 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+                        <div class="flex items-center gap-4">
+                          <span class="text-xs font-semibold ${royByTrack[t.id] ? 'text-[#FFD100]' : 'text-gray-600'}">
+                            ${royByTrack[t.id] ? fmt(royByTrack[t.id]) : '—'}
+                          </span>
+                          <div class="flex gap-3">
+                            <button onclick="editTrack(${JSON.stringify(t).replace(/"/g, '&quot;')}, '${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
+                              class="text-gray-600 hover:text-white text-xs transition-colors">Bewerken</button>
+                            <button onclick="deleteTrack('${t.id}', '${(t.title || 'onbekend').replace(/'/g, "\\'")}')"
+                              class="text-gray-600 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
+                          </div>
                         </div>
                       </div>
                     `).join('')}

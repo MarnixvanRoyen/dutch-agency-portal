@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Royalty Afrekening — DJ·World</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10.5pt;
+      color: #111;
+      background: #fff;
+      padding: 20px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    #printBar {
+      background: #1e1e1e;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: -20px -20px 24px -20px;
+      font-size: 13px;
+      gap: 12px;
+    }
+    #printBar span { flex: 1; font-weight: bold; }
+    #printBar .btns { display: flex; gap: 8px; }
+    #printBar button {
+      border: none;
+      font-weight: bold;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #printBar .btn-print { background: #FFD100; color: #000; }
+    #printBar .btn-close  { background: #2a2a2a; color: #fff; }
+
+    @media print {
+      #printBar { display: none; }
+      body { padding: 0; }
+      .page-break { page-break-before: always; }
+    }
+
+    /* ── Header ── */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #111;
+    }
+    .doc-header img { max-height: 56px; object-fit: contain; }
+    .doc-header .address-block { text-align: right; font-size: 10pt; line-height: 1.5; }
+    .doc-header .address-block .name { font-weight: bold; font-size: 11pt; }
+
+    /* ── Title ── */
+    .doc-title { font-size: 15pt; font-weight: bold; margin-bottom: 4px; }
+    .doc-meta  { font-size: 9.5pt; color: #555; margin-bottom: 20px; }
+
+    /* ── Summary ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .summary-box {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+    .summary-box .label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+    .summary-box .value { font-size: 13pt; font-weight: bold; }
+    .summary-box.highlight { border-color: #333; background: #f9f9f9; }
+    .summary-box .value.green { color: #1a7a3a; }
+    .summary-box .value.yellow { color: #b88a00; }
+
+    /* ── Artist section ── */
+    .artist-section { margin-bottom: 28px; }
+    .artist-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+    .artist-heading h2 { font-size: 11.5pt; font-weight: bold; }
+    .artist-heading .artist-net { font-size: 10.5pt; color: #1a7a3a; font-weight: bold; }
+    .artist-heading .no-data { font-size: 9.5pt; color: #999; font-weight: normal; }
+
+    /* ── Track tabel ── */
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    thead tr { background: #f2f2f2; }
+    th {
+      text-align: right;
+      padding: 5px 8px;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #555;
+      border-bottom: 1px solid #ddd;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .totaal-row td { font-weight: bold; border-top: 1px solid #ccc; border-bottom: none; background: #fafafa; }
+    .col-dj  { color: #b88a00; }
+    .col-net { color: #1a7a3a; font-weight: bold; }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #777;
+    }
+    .doc-footer .grand-total { font-weight: bold; color: #111; font-size: 10pt; }
+    .doc-footer .grand-total span { color: #1a7a3a; }
+
+    /* ── Loading / Error ── */
+    #loadingMsg { text-align: center; padding: 60px 0; color: #888; font-size: 12pt; }
+  </style>
+</head>
+<body>
+
+  <div id="printBar">
+    <span id="printTitle">Royalty Afrekening</span>
+    <div class="btns">
+      <button class="btn-print" onclick="window.print()">🖨️ Afdrukken / PDF</button>
+      <button class="btn-close" onclick="window.close(); setTimeout(()=>{ if(!window.closed) window.history.back() },300)">Sluiten</button>
+    </div>
+  </div>
+
+  <div id="loadingMsg">Afrekening laden...</div>
+  <div id="doc" style="display:none"></div>
+
+  <script src="shared.js"></script>
+  <script>
+    const params      = new URLSearchParams(window.location.search)
+    const personId    = params.get('person')
+    const stmtIds     = (params.get('statements') || '').split(',').filter(Boolean)
+
+    async function buildDoc() {
+      if (!personId || !stmtIds.length) {
+        document.getElementById('loadingMsg').textContent = 'Ongeldige parameters.'
+        return
+      }
+
+      // Auth check (shared.js initPage vereist sidebar — we doen het handmatig)
+      const { data: { session } } = await db.auth.getSession()
+      if (!session) { window.location.href = 'index.html'; return }
+
+      await loadSettings()
+
+      // Persoon ophalen
+      const { data: person } = await db.from('persons').select('*').eq('id', personId).single()
+      if (!person) { document.getElementById('loadingMsg').textContent = 'Persoon niet gevonden.'; return }
+
+      // Artiesten van deze persoon
+      const { data: artists } = await db.from('artists').select('id, name').eq('person_id', personId).order('name')
+      const artistIds = (artists || []).map(a => a.id)
+
+      // Statements ophalen voor labels in rapport
+      const { data: stmts } = await db.from('statements').select('id, period, filename').in('id', stmtIds)
+      const periods = (stmts || []).map(s => s.period || s.filename)
+
+      // Track-artists
+      const { data: tas } = artistIds.length
+        ? await db.from('track_artists').select('artist_id, split_percentage, tracks(id, title, releases(catalog_number))').in('artist_id', artistIds)
+        : { data: [] }
+
+      const trackIds = (tas || []).map(ta => ta.tracks?.id).filter(Boolean)
+
+      // Statement lines
+      let lines = [], from = 0
+      while (trackIds.length) {
+        const { data: page } = await db
+          .from('statement_lines')
+          .select('track_id, nett_royalty, usage_type')
+          .in('statement_id', stmtIds)
+          .in('track_id', trackIds)
+          .range(from, from + 999)
+        if (!page || page.length === 0) break
+        lines.push(...page)
+        if (page.length < 1000) break
+        from += 1000
+      }
+
+      // Royalties per track
+      const royPerTrack = {}
+      lines.forEach(l => {
+        if (!l.track_id) return
+        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
+        const amt = parseFloat(l.nett_royalty) || 0
+        royPerTrack[l.track_id].total    += amt
+        if (l.usage_type === 'stream')   royPerTrack[l.track_id].stream   += amt
+        if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
+      })
+
+      // Per artiest (zonder aggregator)
+      const djPct = COMMISSIONS.djworldPct / 100
+      const artistBreakdown = {}
+      ;(tas || []).forEach(ta => {
+        const aid = ta.artist_id
+        if (!ta.tracks?.id) return
+        const roy = royPerTrack[ta.tracks.id]
+        if (!roy) return
+        const splitPct = (parseFloat(ta.split_percentage) || 0) / 100
+        const gross    = roy.total    * splitPct
+        const djAmt    = gross * djPct
+        const net      = gross - djAmt
+        if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, dj: 0, net: 0 }
+        artistBreakdown[aid].tracks.push({
+          title: ta.tracks.title || `⚠️ ${ta.tracks.releases?.catalog_number || '?'}`,
+          splitPct: ta.split_percentage,
+          stream: roy.stream * splitPct,
+          download: roy.download * splitPct,
+          gross, djAmt, net
+        })
+        artistBreakdown[aid].gross += gross
+        artistBreakdown[aid].dj   += djAmt
+        artistBreakdown[aid].net  += net
+      })
+
+      const grandGross = Object.values(artistBreakdown).reduce((s, a) => s + a.gross, 0)
+      const grandDJ    = Object.values(artistBreakdown).reduce((s, a) => s + a.dj,    0)
+      const grandNet   = Object.values(artistBreakdown).reduce((s, a) => s + a.net,   0)
+      const today      = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const fullName   = `${person.first_name} ${person.last_name}`
+
+      document.getElementById('printTitle').textContent = `Afrekening — ${fullName} — ${periods.join(', ')}`
+
+      const eur = v => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 4 }).format(v)
+
+      document.getElementById('doc').innerHTML = `
+        <!-- Header -->
+        <div class="doc-header">
+          <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ·World" onerror="this.style.display='none'">
+          <div class="address-block">
+            <div class="name">${fullName}</div>
+            ${person.street      ? `<div>${person.street}</div>` : ''}
+            ${person.postal_code || person.city ? `<div>${[person.postal_code, person.city].filter(Boolean).join(' ')}</div>` : ''}
+            ${person.email ? `<div style="margin-top:4px">${person.email}</div>` : ''}
+            ${person.iban  ? `<div style="font-family:monospace;font-size:9pt">${person.iban}</div>` : ''}
+          </div>
+        </div>
+
+        <!-- Titel -->
+        <div class="doc-title">Royalty Afrekening</div>
+        <div class="doc-meta">Datum: ${today} &nbsp;&nbsp;·&nbsp;&nbsp; Periode: ${periods.join(', ')}</div>
+
+        <!-- Samenvatting -->
+        <div class="summary-grid">
+          <div class="summary-box">
+            <div class="label">Bruto inkomsten</div>
+            <div class="value">${eur(grandGross)}</div>
+          </div>
+          <div class="summary-box">
+            <div class="label">DJ·World ${COMMISSIONS.djworldPct}%</div>
+            <div class="value yellow">-${eur(grandDJ)}</div>
+          </div>
+          <div class="summary-box highlight">
+            <div class="label">Jouw netto</div>
+            <div class="value green">${eur(grandNet)}</div>
+          </div>
+        </div>
+
+        <!-- Per artiest -->
+        ${(artists || []).map(a => {
+          const ab = artistBreakdown[a.id]
+          if (!ab) return `
+            <div class="artist-section">
+              <div class="artist-heading">
+                <h2>${a.name} <span class="no-data">— geen royalties in deze periode</span></h2>
+              </div>
+            </div>`
+          const sorted = ab.tracks.sort((x, y) => y.net - x.net)
+          return `
+            <div class="artist-section">
+              <div class="artist-heading">
+                <h2>${a.name}</h2>
+                <div class="artist-net">${eur(ab.net)}</div>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Track</th>
+                    <th>Split</th>
+                    <th>Streams</th>
+                    <th>Downloads</th>
+                    <th>Bruto</th>
+                    <th class="col-dj">DJ·World</th>
+                    <th class="col-net">Netto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${sorted.map(t => `
+                    <tr>
+                      <td>${t.title}</td>
+                      <td style="text-align:right;color:#777">${t.splitPct}%</td>
+                      <td style="text-align:right;color:#555">${eur(t.stream)}</td>
+                      <td style="text-align:right;color:#555">${eur(t.download)}</td>
+                      <td style="text-align:right">${eur(t.gross)}</td>
+                      <td class="col-dj" style="text-align:right">-${eur(t.djAmt)}</td>
+                      <td class="col-net" style="text-align:right">${eur(t.net)}</td>
+                    </tr>
+                  `).join('')}
+                  <tr class="totaal-row">
+                    <td colspan="4">Totaal ${a.name}</td>
+                    <td style="text-align:right">${eur(ab.gross)}</td>
+                    <td class="col-dj" style="text-align:right">-${eur(ab.dj)}</td>
+                    <td class="col-net" style="text-align:right">${eur(ab.net)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>`
+        }).join('')}
+
+        <!-- Footer -->
+        <div class="doc-footer">
+          <div>DJ·World &nbsp;·&nbsp; info@dj-world.nl</div>
+          <div class="grand-total">Totaal netto: <span>${eur(grandNet)}</span></div>
+        </div>
+      `
+
+      document.getElementById('loadingMsg').style.display = 'none'
+      document.getElementById('doc').style.display = 'block'
+    }
+
+    buildDoc()
+  </script>
+</body>
+</html>

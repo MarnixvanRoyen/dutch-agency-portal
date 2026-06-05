@@ -38,14 +38,6 @@
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
-      <select id="typeFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
-        onchange="filterTable()">
-        <option value="">Alle types</option>
-        <option value="single">Single</option>
-        <option value="compilation">Verzameling</option>
-        <option value="unknown">Onbekend</option>
-      </select>
     </div>
 
     <!-- Tabel -->
@@ -56,13 +48,12 @@
             <th class="text-left px-5 py-3 font-medium w-8"></th>
             <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
             <th class="text-left px-5 py-3 font-medium">Label</th>
-            <th class="text-left px-5 py-3 font-medium">Type</th>
             <th class="text-right px-5 py-3 font-medium">Tracks</th>
             <th class="text-right px-5 py-3 font-medium">Acties</th>
           </tr>
         </thead>
         <tbody id="releasesTable">
-          <tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          <tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -92,25 +83,12 @@
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
             placeholder="bijv. BBR184-12">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
-            <select id="releaseLabel"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
-              <option value="">— Geen label —</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Type</label>
-            <select id="releaseType"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
-              <option value="single">Single</option>
-              <option value="ep">EP</option>
-              <option value="album">Album</option>
-              <option value="compilation">Compilatie</option>
-              <option value="unknown">Onbekend</option>
-            </select>
-          </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
+          <select id="releaseLabel"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+            <option value="">— Geen label —</option>
+          </select>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeReleaseModal()"
@@ -223,7 +201,7 @@
       const page  = filtered.slice(start, start + PAGE_SIZE)
 
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Geen releases gevonden.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Geen verzamelingen gevonden.</td></tr>'
         document.getElementById('pageInfo').textContent = ''
         return
       }
@@ -231,8 +209,6 @@
       tbody.innerHTML = page.map(r => {
         const tracks     = tracksByRelease[r.id] || []
         const labelName  = r.labels?.name || '—'
-        const typeLabel  = TYPE_LABELS[r.release_type] || r.release_type || '—'
-        const typeColor  = TYPE_COLORS[r.release_type] || 'text-gray-500'
         const isExpanded = expandedRows.has(r.id)
         const trackCount = tracks.length
         const hasNoName  = tracks.some(t => !t.title)
@@ -246,7 +222,6 @@
             </td>
             <td class="px-5 py-3 text-white font-mono text-xs font-medium">${r.catalog_number}</td>
             <td class="px-5 py-3 text-gray-400 text-xs">${labelName}</td>
-            <td class="px-5 py-3 text-xs ${typeColor}">${typeLabel}</td>
             <td class="px-5 py-3 text-right text-xs ${hasNoName ? 'text-amber-400' : 'text-gray-400'}">
               ${trackCount} ${hasNoName ? '⚠️' : ''}
             </td>
@@ -309,13 +284,11 @@
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
-      const type    = document.getElementById('typeFilter').value
       filtered = allReleases.filter(r => {
-        const matchQ      = !q || r.catalog_number.toLowerCase().includes(q)
-        const matchLabel  = !labelId || r.label_id === labelId
-        const matchType   = !type || r.release_type === type
-        const matchMulti  = (tracksByRelease[r.id] || []).length > 1
-        return matchQ && matchLabel && matchType && matchMulti
+        const matchQ     = !q || r.catalog_number.toLowerCase().includes(q)
+        const matchLabel = !labelId || r.label_id === labelId
+        const matchMulti = (tracksByRelease[r.id] || []).length > 1
+        return matchQ && matchLabel && matchMulti
       })
       currentPage = 0
       renderTable()
@@ -330,7 +303,6 @@
       document.getElementById('releaseId').value      = release?.id    || ''
       document.getElementById('releaseCatalog').value = release?.catalog_number || ''
       document.getElementById('releaseLabel').value   = release?.label_id || ''
-      document.getElementById('releaseType').value    = release?.release_type || 'single'
       document.getElementById('releaseModalTitle').textContent = release ? 'Verzameling bewerken' : 'Verzameling toevoegen'
       document.getElementById('releaseModal').classList.remove('hidden')
       setTimeout(() => document.getElementById('releaseCatalog').focus(), 50)
@@ -352,7 +324,7 @@
       const payload = {
         catalog_number: document.getElementById('releaseCatalog').value.trim(),
         label_id:       document.getElementById('releaseLabel').value || null,
-        release_type:   document.getElementById('releaseType').value,
+
       }
       let error
       if (id) {

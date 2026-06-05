@@ -121,7 +121,8 @@
   <script>
     let parsedData = null
     // catalogMap: { 'bbr184-12': { release_id, tracks: [{id, titleLower}] } }
-    let catalogMap = {}
+    let catalogMap  = {}
+    let knownArtists = new Set()  // alle bekende artiestnamen uit DB
 
     async function loadPage() {
       const session = await initPage('statements')
@@ -157,10 +158,13 @@
         catalogMap[r.catalog_number.toLowerCase()] = { release_id: r.id, tracks: [] }
       })
       tracks.forEach(t => {
-        // Zoek release voor deze track
         const entry = Object.values(catalogMap).find(e => e.release_id === t.release_id)
         if (entry) entry.tracks.push({ id: t.id, titleLower: (t.title || '').toLowerCase() })
       })
+
+      // Artiesten laden voor detectie
+      const { data: artists } = await db.from('artists').select('name')
+      knownArtists = new Set((artists || []).map(a => a.name))
     }
 
     async function loadStatements() {
@@ -286,9 +290,46 @@
       const labelCounts = {}
       allLines.forEach(l => { labelCounts[l.label_name] = (labelCounts[l.label_name] || 0) + 1 })
 
-      const matchedLines   = allLines.filter(l => l.track_id).length
-      const noTitleLines   = allLines.filter(l => l.isrc && !l.track_title)
-      const noTitleCount   = noTitleLines.length
+      const matchedLines = allLines.filter(l => l.track_id).length
+      const noTitleLines = allLines.filter(l => l.isrc && !l.track_title)
+      const noTitleCount = noTitleLines.length
+
+      // ── Detecteer nieuw: releases, tracks, artiesten ──────────────
+      const newReleasesSet = new Set()
+      const newTracksSet   = new Set()
+      const newArtistsSet  = new Set()
+
+      allLines.forEach(l => {
+        if (!l.isrc) return
+        const catKey = l.isrc.toLowerCase()
+        if (!catalogMap[catKey]) {
+          newReleasesSet.add(l.isrc)
+        } else {
+          const titleKey = (l.track_title || '').toLowerCase()
+          const exists   = catalogMap[catKey].tracks.some(t => t.titleLower === titleKey)
+          if (!exists) newTracksSet.add(`${l.isrc} — ${l.track_title || '(geen naam)'}`)
+        }
+        if (l.artist_name && !knownArtists.has(l.artist_name)) {
+          newArtistsSet.add(l.artist_name)
+        }
+      })
+
+      const newBlock = (newReleasesSet.size || newTracksSet.size || newArtistsSet.size) ? `
+        <div class="mt-3 p-3 rounded-lg border border-blue-500/30 bg-blue-500/5 text-xs space-y-2">
+          <div class="text-blue-300 font-semibold mb-1">📥 Wordt automatisch toegevoegd bij upload:</div>
+          ${newReleasesSet.size ? `<div class="text-blue-200">
+            <span class="text-blue-400 font-medium">${newReleasesSet.size} nieuwe release(s):</span>
+            <span class="text-gray-400 ml-1">${[...newReleasesSet].slice(0,8).join(', ')}${newReleasesSet.size > 8 ? ` +${newReleasesSet.size-8} meer` : ''}</span>
+          </div>` : ''}
+          ${newTracksSet.size ? `<div class="text-blue-200">
+            <span class="text-blue-400 font-medium">${newTracksSet.size} nieuwe track(s):</span>
+            <span class="text-gray-400 ml-1">${[...newTracksSet].slice(0,5).join(', ')}${newTracksSet.size > 5 ? ` +${newTracksSet.size-5} meer` : ''}</span>
+          </div>` : ''}
+          ${newArtistsSet.size ? `<div class="text-blue-200">
+            <span class="text-blue-400 font-medium">${newArtistsSet.size} nieuwe artiest(en):</span>
+            <span class="text-gray-400 ml-1">${[...newArtistsSet].slice(0,8).join(', ')}${newArtistsSet.size > 8 ? ` +${newArtistsSet.size-8} meer` : ''}</span>
+          </div>` : ''}
+        </div>` : `<div class="mt-2 text-xs text-green-400">✓ Geen nieuwe releases, tracks of artiesten gevonden.</div>`
 
       document.getElementById('previewContent').innerHTML = `
         <div class="font-medium text-white mb-2">${file.name}</div>
@@ -299,13 +340,14 @@
           ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks
         </div>
         ${noTitleCount > 0 ? `
-        <div class="text-xs mb-3 text-amber-400">
+        <div class="text-xs mb-2 text-amber-400">
           ⚠️ ${noTitleCount} regel(s) hebben een CatalogNumber maar geen tracknaam — worden opgeslagen zonder titel.
           <div class="mt-1 text-gray-500 max-h-20 overflow-y-auto">
             ${[...new Set(noTitleLines.map(l => l.isrc))].map(c => `<span class="inline-block mr-2">${c}</span>`).join('')}
           </div>
         </div>` : ''}
-        <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+        ${newBlock}
+        <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto mt-3">
           ${Object.entries(labelCounts).map(([name, cnt]) => `
             <div class="text-xs text-gray-500">${name} <span class="text-gray-600">(${cnt})</span></div>
           `).join('')}

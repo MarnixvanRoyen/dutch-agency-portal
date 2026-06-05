@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <!-- Zoek + statement filter -->
+    <!-- Zoek + filters -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op naam..."
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-64 placeholder-gray-600"
@@ -38,6 +38,11 @@
         class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto">
         <option value="">Alle statements</option>
       </select>
+      <button id="attentionBtn" onclick="toggleAttention()"
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
+        Aandacht nodig
+      </button>
     </div>
 
     <!-- Tabel -->
@@ -198,11 +203,14 @@
   <script src="shared.js"></script>
   <script>
     let allArtists      = []
-    let allLines        = []   // alle statement_lines (gecached)
-    let allStatements   = []   // [{id, label}]
+    let allLines        = []
+    let allStatements   = []
     let splitRoyalties  = {}
     let tracksByArtist  = {}
     let expandedArtists = new Set()
+    let filterAttention = false
+    let attentionIds    = new Set()
+    const MULTI_RE      = / & | and | feat\.?| vs\.? |, /i
 
     async function loadPage() {
       const session = await initPage('artists')
@@ -290,7 +298,34 @@
     async function loadArtists() {
       const { data } = await db.from('artists').select('*').order('name')
       allArtists = data || []
+      detectAttention()
       renderTable(allArtists)
+    }
+
+    function detectAttention() {
+      attentionIds = new Set()
+      const names = allArtists.map(a => ({ id: a.id, nameLower: a.name.toLowerCase().trim() }))
+
+      allArtists.forEach(a => {
+        const n = a.name
+
+        // 1. Meerdere artiesten in één naam
+        if (MULTI_RE.test(n)) {
+          attentionIds.add(a.id)
+          return
+        }
+
+        // 2. Bijna-duplicaat: een andere artiest waarvan de naam sterk overlapt
+        // (bijv. "Bush & Crane" en "Bush and Crane", of "Rishi Bass" en "Rishi Bass & Franklin")
+        const nLower = n.toLowerCase().trim()
+        const isDup = names.some(other => {
+          if (other.id === a.id) return false
+          const o = other.nameLower
+          // Bevat de ene de andere (minus scheidingstekens)?
+          return (o.includes(nLower) || nLower.includes(o)) && Math.abs(o.length - nLower.length) > 2
+        })
+        if (isDup) attentionIds.add(a.id)
+      })
     }
 
     function renderTable(artists) {
@@ -313,7 +348,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
             </td>
-            <td class="px-5 py-3.5 font-medium text-white">${a.name}</td>
+            <td class="px-5 py-3.5 font-medium text-white">
+              <div class="flex items-center gap-2">
+                ${a.name}
+                ${attentionIds.has(a.id) ? `<span class="w-2 h-2 rounded-full bg-orange-400 shrink-0" title="Aandacht nodig — mogelijke duplicaat of meerdere artiesten"></span>` : ''}
+              </div>
+            </td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${tracks.length || '—'}</td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${a.email || '—'}</td>
             <td class="px-5 py-3.5 text-right ${roy?.total ? 'text-[#FFD100] font-semibold' : 'text-gray-600'}">
@@ -383,7 +423,20 @@
 
     function filterTable() {
       const q = document.getElementById('searchInput').value.toLowerCase()
-      renderTable(allArtists.filter(a => a.name.toLowerCase().includes(q)))
+      renderTable(allArtists.filter(a => {
+        const matchQ         = !q || a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+        const matchAttention = !filterAttention || attentionIds.has(a.id)
+        return matchQ && matchAttention
+      }))
+    }
+
+    function toggleAttention() {
+      filterAttention = !filterAttention
+      const btn = document.getElementById('attentionBtn')
+      btn.className = filterAttention
+        ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-orange-400 text-orange-400 rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+      filterTable()
     }
 
     // ── Modal ────────────────────────────────────────────────────────

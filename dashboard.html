@@ -55,7 +55,7 @@
     </div>
 
     <!-- Stat cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Labels</div>
         <div id="statLabels" class="text-3xl font-bold">—</div>
@@ -63,6 +63,10 @@
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Artiesten</div>
         <div id="statArtists" class="text-3xl font-bold">—</div>
+      </div>
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Tracks</div>
+        <div id="statTracks" class="text-3xl font-bold">—</div>
       </div>
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Statements</div>
@@ -224,13 +228,15 @@
       const session = await initPage('dashboard')
       if (!session) return
 
-      const [labelsR, artistsR, stmtsR] = await Promise.all([
+      const [labelsR, artistsR, tracksR, stmtsR] = await Promise.all([
         db.from('labels').select('id', { count: 'exact', head: true }),
         db.from('artists').select('id', { count: 'exact', head: true }),
+        db.from('tracks').select('id', { count: 'exact', head: true }),
         db.from('statements').select('id', { count: 'exact', head: true }),
       ])
       document.getElementById('statLabels').textContent     = labelsR.count ?? 0
       document.getElementById('statArtists').textContent    = artistsR.count ?? 0
+      document.getElementById('statTracks').textContent     = tracksR.count ?? 0
       document.getElementById('statStatements').textContent = stmtsR.count ?? 0
 
       // Statement lines — alle rijen ophalen (Supabase limiet omzeilen via paginering)

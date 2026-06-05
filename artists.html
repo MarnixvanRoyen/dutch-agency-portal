@@ -86,12 +86,6 @@
           </select>
         </div>
         <div>
-          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Telefoonnummer</label>
-          <input type="text" id="artistPhone"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-            placeholder="+31 6 00000000">
-        </div>
-        <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Notities</label>
           <textarea id="artistNotes" rows="2"
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors resize-none"
@@ -471,7 +465,6 @@
     function openModal(artist = null) {
       document.getElementById('artistId').value       = artist?.id        || ''
       document.getElementById('artistName').value     = artist?.name      || ''
-      document.getElementById('artistPhone').value    = artist?.phone     || ''
       document.getElementById('artistNotes').value    = artist?.notes     || ''
 
       // Personen-dropdown vullen
@@ -499,7 +492,6 @@
       const payload = {
         name:      document.getElementById('artistName').value.trim(),
         person_id: document.getElementById('artistPersonId').value || null,
-        phone:     document.getElementById('artistPhone').value.trim() || null,
         notes:     document.getElementById('artistNotes').value.trim() || null,
       }
       let error

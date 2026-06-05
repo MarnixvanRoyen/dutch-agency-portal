@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Releases — DJ·World</title>
+  <title>Verzamelingen — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -15,15 +15,15 @@
 
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h1 class="text-xl font-bold">Releases</h1>
-        <p class="text-gray-500 text-sm mt-0.5">CatalogNumbers — single, EP, album of compilatie</p>
+        <h1 class="text-xl font-bold">Verzamelingen</h1>
+        <p class="text-gray-500 text-sm mt-0.5">CatalogNumbers met meerdere tracks</p>
       </div>
       <button onclick="openReleaseModal()"
         class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span class="hidden sm:inline">Release toevoegen</span>
+        <span class="hidden sm:inline">Verzameling toevoegen</span>
         <span class="sm:hidden">Toevoegen</span>
       </button>
     </div>
@@ -331,7 +331,7 @@
       document.getElementById('releaseCatalog').value = release?.catalog_number || ''
       document.getElementById('releaseLabel').value   = release?.label_id || ''
       document.getElementById('releaseType').value    = release?.release_type || 'single'
-      document.getElementById('releaseModalTitle').textContent = release ? 'Release bewerken' : 'Release toevoegen'
+      document.getElementById('releaseModalTitle').textContent = release ? 'Verzameling bewerken' : 'Verzameling toevoegen'
       document.getElementById('releaseModal').classList.remove('hidden')
       setTimeout(() => document.getElementById('releaseCatalog').focus(), 50)
     }

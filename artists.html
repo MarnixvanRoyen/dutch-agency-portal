@@ -16,7 +16,7 @@
 
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h1 class="text-xl font-bold">Artiesten</h1>
+        <h1 class="text-xl font-bold">Artiesten <span id="artistCount" class="text-gray-500 font-normal text-base"></span></h1>
         <p class="text-gray-500 text-sm mt-0.5">Koppel artiesten via tracks aan labels</p>
       </div>
       <button onclick="openModal()"
@@ -299,6 +299,7 @@
       const { data } = await db.from('artists').select('*').order('name')
       allArtists = data || []
       detectAttention()
+      document.getElementById('artistCount').textContent = `(${allArtists.length})`
       renderTable(allArtists)
     }
 

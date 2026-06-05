@@ -15,7 +15,7 @@
 
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h1 class="text-xl font-bold">Verzamelingen</h1>
+        <h1 class="text-xl font-bold">Verzamelingen <span id="releaseCount" class="text-gray-500 font-normal text-base"></span></h1>
         <p class="text-gray-500 text-sm mt-0.5">CatalogNumbers met meerdere tracks</p>
       </div>
       <button onclick="openReleaseModal()"
@@ -240,6 +240,7 @@
 
       // Standaard: alleen releases met meerdere tracks tonen
       filtered = allReleases.filter(r => (tracksByRelease[r.id] || []).length > 1)
+      document.getElementById('releaseCount').textContent = `(${filtered.length})`
       currentPage = 0
       renderTable()
     }

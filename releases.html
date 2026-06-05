@@ -180,12 +180,16 @@
       }
       allReleases = all
 
-      // Track count per release
-      const { data: tracks } = await db.from('tracks').select('id, title, release_id')
+      // Tracks laden met artiest
+      const { data: tracks } = await db
+        .from('tracks')
+        .select('id, title, release_id, track_artists(artists(name))')
       tracksByRelease = {}
       ;(tracks || []).forEach(t => {
         if (!tracksByRelease[t.release_id]) tracksByRelease[t.release_id] = []
-        tracksByRelease[t.release_id].push({ id: t.id, title: t.title })
+        const artists = (t.track_artists || [])
+          .map(ta => ta.artists?.name).filter(Boolean).join(', ') || null
+        tracksByRelease[t.release_id].push({ id: t.id, title: t.title, artist: artists })
       })
 
       // Standaard: alleen releases met meerdere tracks tonen
@@ -244,9 +248,12 @@
                 : `<div class="space-y-1">
                     ${tracks.map(t => `
                       <div class="flex items-center justify-between py-1">
-                        <span class="${t.title ? 'text-gray-300' : 'text-amber-400'} text-xs">
-                          ${t.title ? t.title : '⚠️ Geen naam'}
-                        </span>
+                        <div class="flex flex-col">
+                          <span class="${t.title ? 'text-gray-300' : 'text-amber-400'} text-xs">
+                            ${t.title ? t.title : '⚠️ Geen naam'}
+                          </span>
+                          ${t.artist ? `<span class="text-gray-600 text-xs">${t.artist}</span>` : ''}
+                        </div>
                         <div class="flex gap-3">
                           <button onclick="editTrack(${JSON.stringify(t).replace(/"/g, '&quot;')}, '${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
                             class="text-gray-600 hover:text-white text-xs transition-colors">Bewerken</button>

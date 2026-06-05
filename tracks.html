@@ -48,6 +48,11 @@
         <span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
         Mogelijk meerdere artiesten
       </button>
+      <button id="conflictBtn" onclick="toggleConflict()"
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
+        Artiest conflict
+      </button>
     </div>
 
     <!-- Tabel -->
@@ -149,9 +154,11 @@
     let allReleases    = []
     let royaltyByTrack = {}
     let filtered       = []
-    let filterNoTitle    = false
-    let filterMultiArtist = false
-    const MULTI_ARTIST_RE = / & | and | feat\.?| vs\.? |, /i
+    let filterNoTitle      = false
+    let filterMultiArtist  = false
+    let filterConflict     = false
+    let conflictTrackIds   = new Set()
+    const MULTI_ARTIST_RE  = / & | and | feat\.?| vs\.? |, /i
     let currentPage    = 0
     const PAGE_SIZE    = 50
 
@@ -190,8 +197,12 @@
     }
 
     async function loadRoyalties() {
-      const { data: lines } = await db.from('statement_lines').select('track_id, usage_type, nett_royalty')
+      const { data: lines } = await db.from('statement_lines').select('track_id, usage_type, nett_royalty, artist_name')
       royaltyByTrack = {}
+
+      // Artiestnamen per track uit statement_lines (voor conflict-check)
+      const stmtArtistsByTrack = {}  // track_id → Set van artiestnamen (lowercase)
+
       ;(lines || []).forEach(l => {
         if (!l.track_id) return
         if (!royaltyByTrack[l.track_id]) royaltyByTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
@@ -199,6 +210,28 @@
         royaltyByTrack[l.track_id].total += amt
         if (l.usage_type === 'stream')   royaltyByTrack[l.track_id].stream   += amt
         if (l.usage_type === 'download') royaltyByTrack[l.track_id].download += amt
+
+        // Artiesten verzamelen voor conflict-detectie
+        if (l.artist_name) {
+          if (!stmtArtistsByTrack[l.track_id]) stmtArtistsByTrack[l.track_id] = new Set()
+          stmtArtistsByTrack[l.track_id].add(l.artist_name.toLowerCase().trim())
+        }
+      })
+
+      // Conflict: track_artists koppeling ophalen en vergelijken
+      const { data: tas } = await db.from('track_artists').select('track_id, artists(name)')
+      const linkedArtistByTrack = {}  // track_id → artiestnaam lowercase
+      ;(tas || []).forEach(ta => {
+        if (ta.artists?.name) linkedArtistByTrack[ta.track_id] = ta.artists.name.toLowerCase().trim()
+      })
+
+      conflictTrackIds = new Set()
+      Object.entries(stmtArtistsByTrack).forEach(([trackId, stmtNames]) => {
+        const linked = linkedArtistByTrack[trackId]
+        if (!linked) return
+        // Conflict als statement artiesten niet overeenkomen met de gekoppelde artiest
+        const match = [...stmtNames].some(n => n === linked || linked.includes(n) || n.includes(linked))
+        if (!match) conflictTrackIds.add(trackId)
       })
     }
 
@@ -300,6 +333,15 @@
       filterTable()
     }
 
+    function toggleConflict() {
+      filterConflict = !filterConflict
+      const btn = document.getElementById('conflictBtn')
+      btn.className = filterConflict
+        ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-red-400 text-red-400 rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+      filterTable()
+    }
+
     function filterTable() {
       const q       = document.getElementById('searchInput').value.toLowerCase()
       const labelId = document.getElementById('labelFilter').value
@@ -307,10 +349,11 @@
         const catalog     = t.releases?.catalog_number || ''
         const matchSearch = !q || (t.title || '').toLowerCase().includes(q) || catalog.toLowerCase().includes(q)
         const matchLabel  = !labelId || t.releases?.label_id === labelId
-        const matchNoTitle    = !filterNoTitle || !t.title
-        const artistNames     = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
+        const matchNoTitle     = !filterNoTitle || !t.title
+        const artistNames      = (t.track_artists || []).map(ta => ta.artists?.name || '').join(' ')
         const matchMultiArtist = !filterMultiArtist || MULTI_ARTIST_RE.test(artistNames)
-        return matchSearch && matchLabel && matchNoTitle && matchMultiArtist
+        const matchConflict    = !filterConflict || conflictTrackIds.has(t.id)
+        return matchSearch && matchLabel && matchNoTitle && matchMultiArtist && matchConflict
       })
       currentPage = 0
       renderTable()

@@ -54,6 +54,9 @@ async function initPage(activePage) {
     window.location.href = 'index.html'
     return null
   }
+  // Filters wissen bij page refresh, maar bewaren bij navigatie tussen pagina's
+  const navType = performance.getEntriesByType('navigation')[0]?.type
+  if (navType === 'reload') clearPageFilters(activePage)
   await loadSettings()
   renderNav(activePage, session.user.email)
   return session

@@ -432,9 +432,8 @@
       const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
       await saveSettings(aPct, dPct)
       toggleCommissieEdit()
-      // Herlaad dashboard met nieuwe percentages
-      const bruto = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
-      updateFlowCard(bruto)
+      // Herbereken alles met nieuwe percentages (flow + labels + artiesten + tracks)
+      applyFilters()
       showToast('Commissies opgeslagen.')
     }
 

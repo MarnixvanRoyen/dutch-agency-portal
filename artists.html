@@ -43,6 +43,11 @@
         <span class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
         Aandacht nodig
       </button>
+      <button id="uncoupledBtn" onclick="toggleUncoupled()"
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-gray-500 inline-block"></span>
+        Niet gekoppeld
+      </button>
     </div>
 
     <!-- Tabel -->
@@ -204,7 +209,8 @@
     let splitRoyalties  = {}
     let tracksByArtist  = {}
     let expandedArtists = new Set()
-    let filterAttention = false
+    let filterAttention  = false
+    let filterUncoupled  = false
     let attentionIds    = new Set()
     const MULTI_RE      = / & | and | feat\.?| vs\.? |, /i
 
@@ -230,10 +236,7 @@
 
     async function onStatementFilter() {
       await computeSplitRoyalties()
-      renderTable(allArtists.filter(a => {
-        const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
-        return !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
-      }))
+      filterTable()
     }
 
     // Royalties berekend via track_artists splits
@@ -362,6 +365,9 @@
               <div class="flex items-center gap-2">
                 ${a.name}
                 ${attentionIds.has(a.id) ? `<span class="w-2 h-2 rounded-full bg-orange-400 shrink-0" title="Aandacht nodig — mogelijke duplicaat of meerdere artiesten"></span>` : ''}
+                ${a.persons
+                  ? `<svg class="w-3.5 h-3.5 text-green-400 shrink-0" title="Gekoppeld aan ${a.persons.first_name} ${a.persons.last_name}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`
+                  : ''}
               </div>
             </td>
             <td class="px-5 py-3.5 text-gray-500 text-xs">${tracks.length || '—'}</td>
@@ -437,10 +443,12 @@
       const q = document.getElementById('searchInput').value.toLowerCase()
       saveFilter('artists', 'q', q)
       saveFilter('artists', 'attention', filterAttention)
+      saveFilter('artists', 'uncoupled', filterUncoupled)
       renderTable(allArtists.filter(a => {
         const matchQ         = !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
         const matchAttention = !filterAttention || attentionIds.has(a.id)
-        return matchQ && matchAttention
+        const matchUncoupled = !filterUncoupled || !a.person_id
+        return matchQ && matchAttention && matchUncoupled
       }))
     }
 
@@ -448,6 +456,7 @@
       const q = getFilter('artists', 'q', '')
       document.getElementById('searchInput').value = q
       if (getFilter('artists', 'attention', false)) toggleAttention()
+      if (getFilter('artists', 'uncoupled', false)) toggleUncoupled()
       if (q) filterTable()
     }
 
@@ -456,6 +465,15 @@
       const btn = document.getElementById('attentionBtn')
       btn.className = filterAttention
         ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-orange-400 text-orange-400 rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+      filterTable()
+    }
+
+    function toggleUncoupled() {
+      filterUncoupled = !filterUncoupled
+      const btn = document.getElementById('uncoupledBtn')
+      btn.className = filterUncoupled
+        ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-gray-400 text-gray-300 rounded-lg transition-colors whitespace-nowrap'
         : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
       filterTable()
     }
@@ -528,10 +546,7 @@
       } else {
         expandedArtists.add(artistId)
       }
-      renderTable(allArtists.filter(a => {
-        const q = document.getElementById('searchInput')?.value?.toLowerCase() || ''
-        return !q || a.name.toLowerCase().includes(q) || (a.persons ? `${a.persons.first_name} ${a.persons.last_name}` : '').toLowerCase().includes(q)
-      }))
+      filterTable()
     }
 
     let currentReportEmail = ''

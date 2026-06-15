@@ -96,7 +96,7 @@ function renderNav(activePage, email) {
   el.innerHTML = `
     <div class="flex flex-col h-full">
       <div class="px-4 py-3 border-b border-[#2a2a2a] flex items-center justify-between">
-        <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ World" class="h-16 object-contain" onerror="this.style.display='none'">
+        <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ World" class="h-24 object-contain" onerror="this.style.display='none'">
         <button onclick="closeSidebar()" class="md:hidden text-gray-500 hover:text-white transition-colors p-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -105,7 +105,7 @@ function renderNav(activePage, email) {
       </div>
       <div class="p-4 border-b border-[#2a2a2a] flex items-center gap-3">
         <img src="https://marnixvanroyen.github.io/dutch-agency-portal/rob.jpg" alt="Rob Boskamp"
-          class="w-10 h-10 rounded-full object-cover border border-[#2a2a2a]"
+          class="w-14 h-14 rounded-full object-cover border border-[#2a2a2a]"
           onerror="this.style.display='none'">
         <div>
           <div class="text-white text-xs font-medium">Rob Boskamp</div>

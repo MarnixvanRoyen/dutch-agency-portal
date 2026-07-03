@@ -216,6 +216,7 @@
       log(`Data geladen — ${lines.length} regels voor ${allTrackIds.length} tracks`, 'info')
 
       // ZIP aanmaken
+      const renderEl = document.getElementById('pdfRender')
       const zip  = new JSZip()
       const djPct = COMMISSIONS.djworldPct / 100
       const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -341,7 +342,6 @@
         `
 
         // HTML in render div zetten
-        const renderEl = document.getElementById('pdfRender')
         renderEl.innerHTML = html
 
         log(`${fullName} — PDF genereren...`)

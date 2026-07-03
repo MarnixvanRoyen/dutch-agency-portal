@@ -221,7 +221,7 @@
       const zip  = new JSZip()
       const djPct = COMMISSIONS.djworldPct / 100
       const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      const eur = v => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 4 }).format(v)
+      const eur = v => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
 
       for (let i = 0; i < persons.length; i++) {
         const p = persons[i]
@@ -350,70 +350,88 @@
         try {
           const { jsPDF } = window.jspdf
           const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-          const pw = doc.internal.pageSize.getWidth()
-          let y = 15
+          const pw  = doc.internal.pageSize.getWidth()
+          const ph  = doc.internal.pageSize.getHeight()
+          const YELLOW = [255, 209, 0]
+          const GREEN  = [26, 122, 58]
+          const GOLD   = [160, 110, 0]
+          const DARK   = [30, 30, 30]
+          const GRAY   = [120, 120, 120]
 
-          // Header
-          doc.setFontSize(18).setFont('helvetica','bold')
+          // ── Gele accentbalk bovenaan ─────────────────────────────
+          doc.setFillColor(...YELLOW).rect(0, 0, pw, 8, 'F')
+
+          // ── Header ───────────────────────────────────────────────
+          let y = 18
+          doc.setFontSize(20).setFont('helvetica','bold').setTextColor(...DARK)
           doc.text('DJ·World', 14, y)
-          doc.setFontSize(10).setFont('helvetica','normal')
+
+          // Adresblok rechts
+          doc.setFont('helvetica','bold').setFontSize(10).setTextColor(...DARK)
+          doc.text(fullName, pw - 14, y - 4, { align: 'right' })
+          doc.setFont('helvetica','normal').setFontSize(8.5).setTextColor(...GRAY)
           const addrLines = [
-            fullName,
             p.street || '',
             [p.postal_code, p.city].filter(Boolean).join(' '),
             p.email || '',
             p.iban  || ''
           ].filter(Boolean)
-          let ay = y
-          addrLines.forEach(l => { doc.text(l, pw - 14, ay, { align: 'right' }); ay += 5 })
+          let ay = y + 1
+          addrLines.forEach(l => { doc.text(l, pw - 14, ay, { align: 'right' }); ay += 4.5 })
 
           y += 10
-          doc.setDrawColor(0).setLineWidth(0.5)
-          doc.line(14, y, pw - 14, y)
-          y += 8
+          doc.setDrawColor(...DARK).setLineWidth(0.4).line(14, y, pw - 14, y)
+          y += 7
 
-          // Titel
-          doc.setFontSize(14).setFont('helvetica','bold')
+          // ── Titel + datum ────────────────────────────────────────
+          doc.setFontSize(15).setFont('helvetica','bold').setTextColor(...DARK)
           doc.text('Royalty Afrekening', 14, y)
-          y += 6
-          doc.setFontSize(8).setFont('helvetica','normal').setTextColor(100)
+          y += 5.5
+          doc.setFontSize(8).setFont('helvetica','normal').setTextColor(...GRAY)
           doc.text(`Datum: ${today}   ·   Periode: ${periods.join(', ')}`, 14, y)
-          doc.setTextColor(0)
-          y += 8
+          doc.setTextColor(...DARK)
+          y += 9
 
-          // Samenvatting blokken
-          const bw = (pw - 28 - 8) / 3
+          // ── Samenvatting blokken ─────────────────────────────────
+          const bw  = (pw - 28 - 8) / 3
+          const bh  = 18
           const boxes = [
-            { label: 'Bruto inkomsten', value: eur(grandGross), color: [40,40,40] },
-            { label: `DJ·World ${COMMISSIONS.djworldPct}%`, value: `-${eur(grandDJ)}`, color: [180,138,0] },
-            { label: 'Jouw netto', value: eur(grandNet), color: [26,122,58] },
+            { label: 'Bruto inkomsten',            value: eur(grandGross), fill: [248,248,248], border: [220,220,220], valColor: DARK },
+            { label: `DJ·World ${COMMISSIONS.djworldPct}%`, value: `-${eur(grandDJ)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
+            { label: 'Jouw netto',                 value: eur(grandNet),   fill: [237,250,242], border: [150,210,175], valColor: GREEN },
           ]
-          boxes.forEach((b, i) => {
-            const bx = 14 + i * (bw + 4)
-            doc.setDrawColor(200).setFillColor(250,250,250).roundedRect(bx, y, bw, 16, 2, 2, 'FD')
-            doc.setFontSize(6).setTextColor(120).text(b.label.toUpperCase(), bx + 4, y + 5)
-            doc.setFontSize(10).setFont('helvetica','bold').setTextColor(...b.color)
-            doc.text(b.value, bx + 4, y + 12)
-            doc.setFont('helvetica','normal').setTextColor(0)
+          boxes.forEach((b, idx) => {
+            const bx = 14 + idx * (bw + 4)
+            doc.setFillColor(...b.fill).setDrawColor(...b.border).setLineWidth(0.4)
+            doc.roundedRect(bx, y, bw, bh, 2, 2, 'FD')
+            doc.setFontSize(6.5).setFont('helvetica','normal').setTextColor(...GRAY)
+            doc.text(b.label.toUpperCase(), bx + 4, y + 5.5)
+            doc.setFontSize(11).setFont('helvetica','bold').setTextColor(...b.valColor)
+            doc.text(b.value, bx + 4, y + 13)
           })
-          y += 22
+          doc.setTextColor(...DARK).setFont('helvetica','normal')
+          y += bh + 8
 
-          // Per artiest tabel
+          // ── Per artiest ──────────────────────────────────────────
           p.artists.forEach(a => {
             const ab = artistBreakdown[a.id]
-            doc.setFontSize(10).setFont('helvetica','bold')
-            doc.text(a.name, 14, y)
+
+            // Artiest koptekst
+            doc.setFillColor(245,245,245).setDrawColor(220,220,220).setLineWidth(0.3)
+            doc.rect(14, y - 4, pw - 28, 8, 'FD')
+            doc.setFontSize(10).setFont('helvetica','bold').setTextColor(...DARK)
+            doc.text(a.name, 17, y + 0.5)
             if (ab) {
-              doc.setFontSize(9).setTextColor(26,122,58)
-              doc.text(eur(ab.net), pw - 14, y, { align: 'right' })
-              doc.setTextColor(0)
+              doc.setTextColor(...GREEN)
+              doc.text(eur(ab.net), pw - 17, y + 0.5, { align: 'right' })
             }
-            y += 2
+            doc.setTextColor(...DARK)
+            y += 7
 
             if (!ab) {
-              doc.setFontSize(8).setFont('helvetica','italic').setTextColor(150)
-              doc.text('Geen royalties in deze periode', 14, y + 5)
-              doc.setTextColor(0).setFont('helvetica','normal')
+              doc.setFontSize(8).setFont('helvetica','italic').setTextColor(...GRAY)
+              doc.text('Geen royalties in deze periode', 17, y + 3)
+              doc.setTextColor(...DARK).setFont('helvetica','normal')
               y += 10
               return
             }
@@ -421,26 +439,34 @@
             doc.autoTable({
               startY: y,
               margin: { left: 14, right: 14 },
-              styles: { fontSize: 7, cellPadding: 1.5 },
-              headStyles: { fillColor: [242,242,242], textColor: [80,80,80], fontStyle: 'bold' },
+              styles: { fontSize: 7.5, cellPadding: 2, textColor: [...DARK] },
+              headStyles: {
+                fillColor: [30,30,30], textColor: [255,255,255],
+                fontStyle: 'bold', fontSize: 7
+              },
+              columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 14, halign: 'right' },
+                2: { cellWidth: 24, halign: 'right' },
+                3: { cellWidth: 24, halign: 'right' },
+                4: { cellWidth: 24, halign: 'right' },
+                5: { cellWidth: 24, halign: 'right' },
+                6: { cellWidth: 24, halign: 'right' },
+              },
               columns: [
-                { header: 'Track',     dataKey: 'title' },
-                { header: 'Split',     dataKey: 'split' },
-                { header: 'Streams',   dataKey: 'stream' },
-                { header: 'Downloads', dataKey: 'download' },
-                { header: 'Bruto',     dataKey: 'gross' },
-                { header: `DJ·World`,  dataKey: 'dj' },
-                { header: 'Netto',     dataKey: 'net' },
+                { header: 'Track',      dataKey: 'title' },
+                { header: 'Split',      dataKey: 'split' },
+                { header: 'Streams',    dataKey: 'stream' },
+                { header: 'Downloads',  dataKey: 'download' },
+                { header: 'Bruto',      dataKey: 'gross' },
+                { header: 'DJ·World',   dataKey: 'dj' },
+                { header: 'Netto',      dataKey: 'net' },
               ],
               body: [
-                ...ab.tracks.sort((x,y) => y.net - x.net).map(t => ({
-                  title:    t.title,
-                  split:    t.splitPct + '%',
-                  stream:   eur(t.stream),
-                  download: eur(t.download),
-                  gross:    eur(t.gross),
-                  dj:       '-' + eur(t.djAmt),
-                  net:      eur(t.net),
+                ...ab.tracks.sort((ta, tb) => tb.net - ta.net).map(t => ({
+                  title: t.title, split: t.splitPct + '%',
+                  stream: eur(t.stream), download: eur(t.download),
+                  gross: eur(t.gross), dj: '-' + eur(t.djAmt), net: eur(t.net),
                 })),
                 {
                   title: `Totaal ${a.name}`, split: '', stream: '', download: '',
@@ -448,24 +474,36 @@
                 }
               ],
               didParseCell: (d) => {
-                if (d.row.index === ab.tracks.length) {
+                const isTotal = d.row.index === ab.tracks.length
+                if (isTotal) {
                   d.cell.styles.fontStyle = 'bold'
-                  d.cell.styles.fillColor = [248,248,248]
+                  d.cell.styles.fillColor = [245,245,245]
                 }
-                if (d.column.dataKey === 'net') d.cell.styles.textColor = [26,122,58]
-                if (d.column.dataKey === 'dj')  d.cell.styles.textColor = [180,138,0]
+                if (d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
+                if (d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
+                if (d.section === 'head' && d.column.dataKey === 'net') d.cell.styles.textColor = [180,255,180]
+                if (d.section === 'head' && d.column.dataKey === 'dj')  d.cell.styles.textColor = [255,235,150]
               }
             })
-            y = doc.lastAutoTable.finalY + 6
+            y = doc.lastAutoTable.finalY + 8
           })
 
-          // Footer
-          doc.setDrawColor(200).setLineWidth(0.3)
-          doc.line(14, y, pw - 14, y)
-          y += 5
-          doc.setFontSize(7).setTextColor(120)
-          doc.text('DJ·World · info@dj-world.nl', 14, y)
-          doc.text(`Totaal netto: ${eur(grandNet)}`, pw - 14, y, { align: 'right' })
+          // ── Footer ───────────────────────────────────────────────
+          const footerY = ph - 12
+          doc.setFillColor(...YELLOW).rect(0, ph - 8, pw, 8, 'F')
+          doc.setDrawColor(220,220,220).setLineWidth(0.3).line(14, footerY, pw - 14, footerY)
+          doc.setFontSize(7.5).setFont('helvetica','normal').setTextColor(...GRAY)
+          doc.text('DJ·World  ·  info@dj-world.nl', 14, footerY + 4.5)
+          doc.setFont('helvetica','bold').setTextColor(...GREEN)
+          doc.text(`Totaal netto: ${eur(grandNet)}`, pw - 14, footerY + 4.5, { align: 'right' })
+
+          // Paginanummer
+          const pageCount = doc.internal.getNumberOfPages()
+          for (let pg = 1; pg <= pageCount; pg++) {
+            doc.setPage(pg)
+            doc.setFontSize(7).setFont('helvetica','normal').setTextColor(...GRAY)
+            doc.text(`${pg} / ${pageCount}`, pw / 2, ph - 4, { align: 'center' })
+          }
 
           const pdfBlob = doc.output('blob')
           const filename = `Afrekening_${fullName.replace(/\s+/g, '_')}_${periods.join('-').replace(/\s+/g, '')}.pdf`

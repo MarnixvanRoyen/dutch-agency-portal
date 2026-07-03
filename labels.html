@@ -16,7 +16,7 @@
     <div class="flex items-center justify-between mb-5 md:mb-7">
       <div>
         <h1 class="text-xl font-bold">Labels</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Beheer alle record labels</p>
+        <p class="text-gray-500 text-sm mt-0.5">Beheer alle record labels &nbsp;·&nbsp; <span id="totalRoyalties" class="text-[#FFD100] font-semibold"></span></p>
       </div>
       <button onclick="openModal()"
         class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
@@ -103,13 +103,30 @@
     }
 
     async function loadLabels() {
-      // Royalties per label uit statement_lines
-      const { data: lines } = await db.from('statement_lines').select('label_name, nett_royalty')
+      // Royalties per label — met paginering (zelfde als dashboard, anders missen we >1000 regels)
+      let lines = [], from = 0
+      while (true) {
+        const { data: page } = await db
+          .from('statement_lines')
+          .select('label_name, nett_royalty')
+          .range(from, from + 999)
+        if (!page || page.length === 0) break
+        lines.push(...page)
+        if (page.length < 1000) break
+        from += 1000
+      }
+
       royaltyByLabel = {}
-      ;(lines || []).forEach(l => {
+      let totalRoyalties = 0
+      lines.forEach(l => {
         if (!l.label_name) return
-        royaltyByLabel[l.label_name] = (royaltyByLabel[l.label_name] || 0) + (parseFloat(l.nett_royalty) || 0)
+        const amt = parseFloat(l.nett_royalty) || 0
+        royaltyByLabel[l.label_name] = (royaltyByLabel[l.label_name] || 0) + amt
+        totalRoyalties += amt
       })
+
+      const totEl = document.getElementById('totalRoyalties')
+      if (totEl) totEl.textContent = totalRoyalties > 0 ? 'Totaal: ' + fmt(totalRoyalties) : ''
 
       const { data: labels, error } = await db.from('labels').select('*').order('name')
 

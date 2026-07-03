@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Kwaliteit — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-4xl">
+
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-bold">Data Kwaliteit</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Overzicht van ontbrekende of inconsistente data</p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="scanData()" id="btnScan"
+          class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2.5 rounded-lg text-sm transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Scan uitvoeren
+        </button>
+        <button onclick="downloadPDF()" id="btnPDF" disabled
+          class="flex items-center gap-2 border border-[#2a2a2a] text-gray-500 px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:border-gray-500 enabled:hover:text-white enabled:cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Download rapport PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Placeholder vóór scan -->
+    <div id="placeholder" class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-12 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-700 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p class="text-gray-600 text-sm">Klik op "Scan uitvoeren" om de datakwaliteit te controleren</p>
+    </div>
+
+    <!-- Resultaten (verborgen tot scan klaar) -->
+    <div id="results" class="hidden space-y-5">
+
+      <!-- Samenvattingsbalkjes -->
+      <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+      <!-- Grafiek -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Issues per categorie</h2>
+        <div id="chart" class="space-y-3"></div>
+      </div>
+
+      <!-- Detail tabellen -->
+      <div id="details" class="space-y-4"></div>
+
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    let scanResults = null
+
+    async function loadPage() {
+      const session = await initPage('datakwaliteit')
+      if (!session) return
+    }
+
+    // ── Data ophalen en checks uitvoeren ──────────────────────
+    async function scanData() {
+      const btn = document.getElementById('btnScan')
+      btn.disabled = true
+      btn.textContent = 'Bezig...'
+      document.getElementById('placeholder').classList.add('hidden')
+      document.getElementById('results').classList.add('hidden')
+
+      try {
+        const [
+          { data: allTracks },
+          { data: allArtists },
+          { data: allReleases },
+          { data: allPersons },
+          { data: allTA },
+          { count: unmatchedCount }
+        ] = await Promise.all([
+          db.from('tracks').select('id, title, releases(id, catalog_number)'),
+          db.from('artists').select('id, name, person_id, persons(first_name, last_name)'),
+          db.from('releases').select('id, catalog_number'),
+          db.from('persons').select('id, first_name, last_name, email, iban'),
+          db.from('track_artists').select('track_id, artist_id, split_percentage, artists(name), tracks(title)'),
+          db.from('statement_lines').select('*', { count: 'exact', head: true }).is('track_id', null)
+        ])
+
+        // 1. Tracks zonder titel
+        const tracksNoTitle = (allTracks || []).filter(t => !t.title)
+
+        // 2. Tracks zonder artiest
+        const taTrackIds = new Set((allTA || []).map(ta => ta.track_id))
+        const tracksNoArtist = (allTracks || []).filter(t => !taTrackIds.has(t.id))
+
+        // 3. Artiesten zonder persoon
+        const artistsNoPerson = (allArtists || []).filter(a => !a.person_id)
+
+        // 4. Releases zonder tracks
+        const trackReleaseIds = new Set((allTracks || []).map(t => t.releases?.id).filter(Boolean))
+        const releasesNoTracks = (allReleases || []).filter(r => !trackReleaseIds.has(r.id))
+
+        // 5. Split percentages die niet optellen tot 100%
+        const splitByTrack = {}
+        ;(allTA || []).forEach(ta => {
+          if (!splitByTrack[ta.track_id]) splitByTrack[ta.track_id] = { sum: 0, title: ta.tracks?.title || '?' }
+          splitByTrack[ta.track_id].sum += parseFloat(ta.split_percentage) || 0
+        })
+        const badSplitTracks = Object.entries(splitByTrack)
+          .filter(([, v]) => Math.abs(v.sum - 100) > 0.01)
+          .map(([id, v]) => ({ id, title: v.title, sum: v.sum }))
+
+        // 6. Personen zonder IBAN
+        const personsNoIban = (allPersons || []).filter(p => !p.iban || p.iban.trim() === '')
+
+        // 7. Personen zonder email
+        const personsNoEmail = (allPersons || []).filter(p => !p.email || p.email.trim() === '')
+
+        scanResults = {
+          tracksNoTitle,
+          tracksNoArtist,
+          artistsNoPerson,
+          releasesNoTracks,
+          unmatchedLines: unmatchedCount || 0,
+          badSplitTracks,
+          personsNoIban,
+          personsNoEmail
+        }
+
+        renderResults(scanResults)
+      } catch (err) {
+        showToast('Scan mislukt: ' + err.message, 'error')
+      }
+
+      btn.disabled = false
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Scan uitvoeren`
+    }
+
+    // ── Resultaten renderen ───────────────────────────────────
+    function renderResults(r) {
+      const categories = [
+        { key: 'unmatchedLines',   label: 'Statement lines niet gematcht', count: r.unmatchedLines,          severity: 'red',    info: 'Royalty-regels waarvan de track niet gevonden is — geld niet uitkeerbaar' },
+        { key: 'tracksNoTitle',    label: 'Tracks zonder titel',           count: r.tracksNoTitle.length,    severity: 'red',    info: 'Tracks kunnen niet gematcht worden aan statement lines' },
+        { key: 'artistsNoPerson',  label: 'Artiesten zonder persoon',      count: r.artistsNoPerson.length,  severity: 'orange', info: 'Kan geen PDF afrekening genereren zonder gekoppeld persoon' },
+        { key: 'badSplitTracks',   label: 'Split percentages ≠ 100%',      count: r.badSplitTracks.length,   severity: 'orange', info: 'Royalty berekeningen kloppen niet' },
+        { key: 'tracksNoArtist',   label: 'Tracks zonder artiest',         count: r.tracksNoArtist.length,   severity: 'yellow', info: 'Track levert geen royalties op voor een artiest' },
+        { key: 'personsNoIban',    label: 'Personen zonder IBAN',          count: r.personsNoIban.length,    severity: 'yellow', info: 'Kan niet uitbetalen zonder bankrekeningnummer' },
+        { key: 'personsNoEmail',   label: 'Personen zonder email',         count: r.personsNoEmail.length,   severity: 'yellow', info: 'Kan geen afrekening versturen per e-mail' },
+        { key: 'releasesNoTracks', label: 'Releases zonder tracks',        count: r.releasesNoTracks.length, severity: 'gray',   info: 'Lege releases, waarschijnlijk oud of onvolledig' },
+      ]
+
+      const totalIssues  = categories.reduce((s, c) => s + c.count, 0)
+      const critical     = categories.filter(c => c.severity === 'red').reduce((s, c) => s + c.count, 0)
+      const warnings     = categories.filter(c => c.severity === 'orange').reduce((s, c) => s + c.count, 0)
+      const cautions     = categories.filter(c => c.severity === 'yellow').reduce((s, c) => s + c.count, 0)
+
+      // Summary cards
+      document.getElementById('summaryCards').innerHTML = [
+        { label: 'Totaal issues', value: totalIssues,  color: totalIssues > 0 ? 'text-red-400' : 'text-green-400' },
+        { label: 'Kritiek',       value: critical,      color: critical > 0    ? 'text-red-400'    : 'text-gray-600' },
+        { label: 'Waarschuwing',  value: warnings,      color: warnings > 0    ? 'text-orange-400' : 'text-gray-600' },
+        { label: 'Let op',        value: cautions,      color: cautions > 0    ? 'text-[#FFD100]'  : 'text-gray-600' },
+      ].map(c => `
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wide mb-1">${c.label}</div>
+          <div class="text-2xl font-bold ${c.color}">${c.value}</div>
+        </div>
+      `).join('')
+
+      // Grafiek
+      const maxCount = Math.max(...categories.map(c => c.count), 1)
+      const severityColors = { red: 'bg-red-500', orange: 'bg-orange-500', yellow: 'bg-[#FFD100]', gray: 'bg-gray-600' }
+      const severityText   = { red: 'text-red-400', orange: 'text-orange-400', yellow: 'text-[#FFD100]', gray: 'text-gray-500' }
+
+      document.getElementById('chart').innerHTML = categories.map(c => `
+        <div class="flex items-center gap-3">
+          <div class="text-xs text-gray-400 w-52 shrink-0 truncate" title="${c.label}">${c.label}</div>
+          <div class="flex-1 bg-[#2a2a2a] rounded-full h-5 relative overflow-hidden">
+            <div class="${severityColors[c.severity]} h-5 rounded-full transition-all duration-500"
+              style="width: ${c.count > 0 ? Math.max(c.count / maxCount * 100, 3) : 0}%"></div>
+          </div>
+          <div class="text-sm font-bold ${severityText[c.severity]} w-8 text-right">${c.count}</div>
+        </div>
+      `).join('')
+
+      // Detail tabellen
+      const detailHtml = []
+
+      if (r.unmatchedLines > 0) {
+        detailHtml.push(issueCard('🔴 Statement lines niet gematcht',
+          `${r.unmatchedLines} royalty-regels konden niet aan een track gekoppeld worden. Controleer of de catalog-nummers en tracktitels in de statements overeenkomen met de database.`,
+          null, 'red'))
+      }
+
+      if (r.tracksNoTitle.length > 0) {
+        detailHtml.push(issueCard('🔴 Tracks zonder titel', null, {
+          headers: ['Catalog nummer'],
+          rows: r.tracksNoTitle.map(t => [t.releases?.catalog_number || '—'])
+        }, 'red'))
+      }
+
+      if (r.artistsNoPerson.length > 0) {
+        detailHtml.push(issueCard('🟠 Artiesten zonder persoon', null, {
+          headers: ['Artiest'],
+          rows: r.artistsNoPerson.map(a => [a.name])
+        }, 'orange'))
+      }
+
+      if (r.badSplitTracks.length > 0) {
+        detailHtml.push(issueCard('🟠 Split percentages ≠ 100%', null, {
+          headers: ['Track', 'Totaal split'],
+          rows: r.badSplitTracks.map(t => [t.title, t.sum.toFixed(2) + '%'])
+        }, 'orange'))
+      }
+
+      if (r.tracksNoArtist.length > 0) {
+        detailHtml.push(issueCard('🟡 Tracks zonder artiest', null, {
+          headers: ['Track', 'Catalog nummer'],
+          rows: r.tracksNoArtist.map(t => [t.title || '(geen titel)', t.releases?.catalog_number || '—'])
+        }, 'yellow'))
+      }
+
+      if (r.personsNoIban.length > 0) {
+        detailHtml.push(issueCard('🟡 Personen zonder IBAN', null, {
+          headers: ['Naam'],
+          rows: r.personsNoIban.map(p => [`${p.first_name} ${p.last_name}`])
+        }, 'yellow'))
+      }
+
+      if (r.personsNoEmail.length > 0) {
+        detailHtml.push(issueCard('🟡 Personen zonder email', null, {
+          headers: ['Naam'],
+          rows: r.personsNoEmail.map(p => [`${p.first_name} ${p.last_name}`])
+        }, 'yellow'))
+      }
+
+      if (r.releasesNoTracks.length > 0) {
+        detailHtml.push(issueCard('ℹ️ Releases zonder tracks', null, {
+          headers: ['Catalog nummer'],
+          rows: r.releasesNoTracks.map(rel => [rel.catalog_number])
+        }, 'gray'))
+      }
+
+      if (detailHtml.length === 0) {
+        detailHtml.push(`
+          <div class="bg-[#1e1e1e] border border-green-800/40 rounded-xl p-8 text-center">
+            <div class="text-green-400 text-2xl mb-2">✓</div>
+            <div class="text-green-400 font-semibold">Geen issues gevonden</div>
+            <div class="text-gray-500 text-sm mt-1">De data ziet er goed uit</div>
+          </div>
+        `)
+      }
+
+      document.getElementById('details').innerHTML = detailHtml.join('')
+      document.getElementById('results').classList.remove('hidden')
+      document.getElementById('btnPDF').disabled = false
+    }
+
+    function issueCard(title, text, table, severity) {
+      const borderColor = { red: 'border-red-800/50', orange: 'border-orange-800/50', yellow: 'border-yellow-800/50', gray: 'border-[#2a2a2a]' }[severity]
+      const tableHtml = table ? `
+        <table class="w-full text-xs mt-3">
+          <thead>
+            <tr class="border-b border-[#2a2a2a]">
+              ${table.headers.map(h => `<th class="text-left py-2 pr-4 text-gray-500 font-medium uppercase tracking-wide text-xs">${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${table.rows.map(row => `<tr class="border-b border-[#2a2a2a]/50">
+              ${row.map(cell => `<td class="py-1.5 pr-4 text-gray-300">${cell}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      ` : (text ? `<p class="text-gray-400 text-sm mt-2">${text}</p>` : '')
+
+      return `
+        <div class="bg-[#1e1e1e] border ${borderColor} rounded-xl p-5">
+          <div class="font-semibold text-sm text-white">${title}</div>
+          ${tableHtml}
+        </div>
+      `
+    }
+
+    // ── PDF rapport ───────────────────────────────────────────
+    async function downloadPDF() {
+      if (!scanResults) return
+      const { jsPDF } = window.jspdf
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pw = doc.internal.pageSize.getWidth()
+      const YELLOW = [255, 209, 0]
+      const DARK   = [30, 30, 30]
+      const GRAY   = [120, 120, 120]
+      const RED    = [200, 50, 50]
+      const ORANGE = [210, 100, 30]
+
+      const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })
+
+      // Header
+      doc.setFillColor(...YELLOW).rect(0, 0, pw, 7, 'F')
+      doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(...DARK)
+      doc.text('Data Kwaliteit Rapport', 14, 20)
+      doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(...GRAY)
+      doc.text(`DJ·World  ·  Gegenereerd op ${today}`, 14, 27)
+      doc.setDrawColor(...DARK).setLineWidth(0.4).line(14, 30, pw - 14, 30)
+
+      let y = 38
+
+      const r = scanResults
+      const categories = [
+        { label: 'Statement lines niet gematcht', count: r.unmatchedLines,          severity: RED    },
+        { label: 'Tracks zonder titel',           count: r.tracksNoTitle.length,    severity: RED    },
+        { label: 'Artiesten zonder persoon',      count: r.artistsNoPerson.length,  severity: ORANGE },
+        { label: 'Split percentages ≠ 100%',      count: r.badSplitTracks.length,   severity: ORANGE },
+        { label: 'Tracks zonder artiest',         count: r.tracksNoArtist.length,   severity: GRAY   },
+        { label: 'Personen zonder IBAN',          count: r.personsNoIban.length,    severity: GRAY   },
+        { label: 'Personen zonder email',         count: r.personsNoEmail.length,   severity: GRAY   },
+        { label: 'Releases zonder tracks',        count: r.releasesNoTracks.length, severity: GRAY   },
+      ]
+
+      const totalIssues = categories.reduce((s, c) => s + c.count, 0)
+      doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(...DARK)
+      doc.text(`Totaal aantal issues: ${totalIssues}`, 14, y)
+      y += 10
+
+      // Samenvattingstabel
+      doc.autoTable({
+        startY: y,
+        margin: { left: 14, right: 14 },
+        styles: { fontSize: 8.5, cellPadding: 3 },
+        headStyles: { fillColor: DARK, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7.5 },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 25, halign: 'center' },
+        },
+        columns: [
+          { header: 'Issue categorie', dataKey: 'label' },
+          { header: 'Aantal',          dataKey: 'count' },
+        ],
+        body: categories.map(c => ({ label: c.label, count: c.count })),
+        didParseCell: (d) => {
+          if (d.section === 'body') {
+            const cat = categories[d.row.index]
+            if (d.column.dataKey === 'count' && cat.count > 0) {
+              d.cell.styles.textColor = cat.severity
+              d.cell.styles.fontStyle = 'bold'
+            }
+          }
+        }
+      })
+      y = doc.lastAutoTable.finalY + 10
+
+      // Detail secties
+      const sections = [
+        { title: 'Tracks zonder titel', rows: r.tracksNoTitle.map(t => [t.releases?.catalog_number || '—']), headers: ['Catalog nummer'] },
+        { title: 'Artiesten zonder persoon', rows: r.artistsNoPerson.map(a => [a.name]), headers: ['Artiest'] },
+        { title: 'Split percentages ≠ 100%', rows: r.badSplitTracks.map(t => [t.title, t.sum.toFixed(2) + '%']), headers: ['Track', 'Totaal split'] },
+        { title: 'Tracks zonder artiest', rows: r.tracksNoArtist.map(t => [t.title || '(geen titel)', t.releases?.catalog_number || '—']), headers: ['Track', 'Catalog nummer'] },
+        { title: 'Personen zonder IBAN', rows: r.personsNoIban.map(p => [`${p.first_name} ${p.last_name}`]), headers: ['Naam'] },
+        { title: 'Personen zonder email', rows: r.personsNoEmail.map(p => [`${p.first_name} ${p.last_name}`]), headers: ['Naam'] },
+        { title: 'Releases zonder tracks', rows: r.releasesNoTracks.map(rel => [rel.catalog_number]), headers: ['Catalog nummer'] },
+      ].filter(s => s.rows.length > 0)
+
+      for (const s of sections) {
+        if (y > 250) { doc.addPage(); y = 20 }
+        doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(...DARK)
+        doc.text(s.title, 14, y)
+        y += 4
+        doc.autoTable({
+          startY: y,
+          margin: { left: 14, right: 14 },
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: [60,60,60], textColor: [255,255,255], fontSize: 7.5 },
+          columns: s.headers.map(h => ({ header: h, dataKey: h })),
+          body: s.rows.map(row => Object.fromEntries(s.headers.map((h, i) => [h, row[i]]))),
+        })
+        y = doc.lastAutoTable.finalY + 8
+      }
+
+      // Footer
+      const ph = doc.internal.pageSize.getHeight()
+      const pageCount = doc.internal.getNumberOfPages()
+      for (let pg = 1; pg <= pageCount; pg++) {
+        doc.setPage(pg)
+        doc.setFillColor(...YELLOW).rect(0, ph - 8, pw, 8, 'F')
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(...DARK)
+        doc.text('DJ·World  ·  Data Kwaliteit Rapport', 14, ph - 3)
+        doc.text(`${pg} / ${pageCount}`, pw / 2, ph - 3, { align: 'center' })
+        doc.text(today, pw - 14, ph - 3, { align: 'right' })
+      }
+
+      doc.save(`DJWorld_DataKwaliteit_${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

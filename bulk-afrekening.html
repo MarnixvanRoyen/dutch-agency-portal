@@ -395,16 +395,17 @@
           const GRAY   = [120, 120, 120]
 
           // ── Gele accentbalk bovenaan ─────────────────────────────
-          doc.setFillColor(...YELLOW).rect(0, 0, pw, 6, 'F')
+          doc.setFillColor(...YELLOW).rect(0, 0, pw, 7, 'F')
 
           // ── Logo (echt beeld of fallback tekst) ──────────────────
-          const LOGO_H = 14
-          const LOGO_W = Math.min(logoAspect * LOGO_H, 50)
+          // Logo vult de ruimte tussen gele balk (7mm) en scheidingslijn (36mm) → 26mm hoog
+          const LOGO_H = 26
+          const LOGO_W = Math.min(logoAspect * LOGO_H, 70)
           if (logoDataURL) {
-            doc.addImage(logoDataURL, 'PNG', 14, 9, LOGO_W, LOGO_H)
+            doc.addImage(logoDataURL, 'PNG', 14, 8, LOGO_W, LOGO_H)
           } else {
-            doc.setFontSize(20).setFont('helvetica','bold').setTextColor(...DARK)
-            doc.text('DJ·World', 14, 21)
+            doc.setFontSize(22).setFont('helvetica','bold').setTextColor(...DARK)
+            doc.text('DJ·World', 14, 28)
           }
 
           // ── Adresblok rechts — uitlijnen op zelfde hoogte als logo ──
@@ -534,13 +535,12 @@
           })
 
           // ── Footer ───────────────────────────────────────────────
-          const footerY = ph - 12
-          doc.setFillColor(...YELLOW).rect(0, ph - 8, pw, 8, 'F')
-          doc.setDrawColor(220,220,220).setLineWidth(0.3).line(14, footerY, pw - 14, footerY)
-          doc.setFontSize(7.5).setFont('helvetica','normal').setTextColor(...GRAY)
-          doc.text('DJ·World  ·  info@dj-world.nl', 14, footerY + 4.5)
-          doc.setFont('helvetica','bold').setTextColor(...GREEN)
-          doc.text(`Totaal netto: ${eur(grandNet)}`, pw - 14, footerY + 4.5, { align: 'right' })
+          // Gele balk: 14mm hoog, tekst gecentreerd erin op ~8mm van onderkant
+          doc.setFillColor(...YELLOW).rect(0, ph - 14, pw, 14, 'F')
+          doc.setFontSize(8).setFont('helvetica','normal').setTextColor(...DARK)
+          doc.text('DJ·World  ·  info@dj-world.nl', 14, ph - 6)
+          doc.setFont('helvetica','bold').setTextColor(0, 100, 40)
+          doc.text(`Totaal netto: ${eur(grandNet)}`, pw - 14, ph - 6, { align: 'right' })
 
           // Paginanummer
           const pageCount = doc.internal.getNumberOfPages()

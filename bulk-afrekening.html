@@ -149,7 +149,8 @@
     function log(msg, type = 'normal') {
       const el = document.getElementById('progressLog')
       const colors = { normal: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', info: 'text-[#FFD100]' }
-      el.innerHTML += `<div class="${colors[type]}">${msg}</div>`
+      const safe = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      el.innerHTML += `<div class="${colors[type]}">${safe}</div>`
       el.scrollTop = el.scrollHeight
     }
 

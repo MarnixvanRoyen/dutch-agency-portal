@@ -1,5 +1,5 @@
 -- ============================================================
--- Dutch Agency Portal — Schema v3
+-- Dutch Agency Portal — Schema v4
 -- Voer dit uit in Supabase SQL Editor (lege database)
 -- ============================================================
 
@@ -11,11 +11,26 @@ CREATE TABLE IF NOT EXISTS public.labels (
   created_at  timestamptz   DEFAULT now()
 );
 
--- Artiesten
+-- Personen (eigenaar van 1 of meer artiesten)
+CREATE TABLE IF NOT EXISTS public.persons (
+  id           uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+  first_name   text         NOT NULL,
+  last_name    text         NOT NULL,
+  street       text,
+  postal_code  text,
+  city         text,
+  country      text         DEFAULT 'NL',
+  email        text,
+  iban         text,
+  notes        text,
+  created_at   timestamptz  DEFAULT now()
+);
+
+-- Artiesten (gekoppeld aan een persoon)
 CREATE TABLE IF NOT EXISTS public.artists (
   id         uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
   name       text          NOT NULL,
-  email      text,
+  person_id  uuid          REFERENCES public.persons(id) ON DELETE SET NULL,
   phone      text,
   notes      text,
   created_at timestamptz   DEFAULT now()
@@ -76,19 +91,30 @@ CREATE TABLE IF NOT EXISTS public.statement_lines (
   raw_data     jsonb
 );
 
--- ── RLS uitgeschakeld (intern portaal) ────────────────────────
-ALTER TABLE public.labels          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.artists         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.releases        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tracks          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.track_artists   DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.statements      DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.statement_lines DISABLE ROW LEVEL SECURITY;
+-- ── Row Level Security — alleen authenticated gebruikers ──────
+ALTER TABLE public.labels          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.persons         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artists         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.releases        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracks          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.track_artists   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statements      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statement_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings        ENABLE ROW LEVEL SECURITY;
 
-GRANT ALL ON public.labels          TO anon;
-GRANT ALL ON public.artists         TO anon;
-GRANT ALL ON public.releases        TO anon;
-GRANT ALL ON public.tracks          TO anon;
-GRANT ALL ON public.track_artists   TO anon;
-GRANT ALL ON public.statements      TO anon;
-GRANT ALL ON public.statement_lines TO anon;
+-- Anon rol heeft geen directe tabelrechten
+REVOKE ALL ON public.labels, public.persons, public.artists,
+  public.releases, public.tracks, public.track_artists,
+  public.statements, public.statement_lines, public.settings
+FROM anon;
+
+-- Alleen ingelogde gebruikers mogen lezen en schrijven
+CREATE POLICY auth_only ON public.labels          FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.persons         FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.artists         FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.releases        FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.tracks          FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.track_artists   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.statements      FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.statement_lines FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY auth_only ON public.settings        FOR ALL TO authenticated USING (true) WITH CHECK (true);

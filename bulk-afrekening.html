@@ -6,7 +6,8 @@
   <title>Bulk Afrekening — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
@@ -347,14 +348,126 @@
         log(`${fullName} — PDF genereren...`)
 
         try {
-          renderEl.style.visibility = 'visible'
-          const pdfBlob = await html2pdf().set({
-            margin:      [10, 12, 10, 12],
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          }).from(renderEl).outputPdf('blob')
-          renderEl.style.visibility = 'hidden'
+          const { jsPDF } = window.jspdf
+          const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+          const pw = doc.internal.pageSize.getWidth()
+          let y = 15
 
+          // Header
+          doc.setFontSize(18).setFont('helvetica','bold')
+          doc.text('DJ·World', 14, y)
+          doc.setFontSize(10).setFont('helvetica','normal')
+          const addrLines = [
+            fullName,
+            p.street || '',
+            [p.postal_code, p.city].filter(Boolean).join(' '),
+            p.email || '',
+            p.iban  || ''
+          ].filter(Boolean)
+          let ay = y
+          addrLines.forEach(l => { doc.text(l, pw - 14, ay, { align: 'right' }); ay += 5 })
+
+          y += 10
+          doc.setDrawColor(0).setLineWidth(0.5)
+          doc.line(14, y, pw - 14, y)
+          y += 8
+
+          // Titel
+          doc.setFontSize(14).setFont('helvetica','bold')
+          doc.text('Royalty Afrekening', 14, y)
+          y += 6
+          doc.setFontSize(8).setFont('helvetica','normal').setTextColor(100)
+          doc.text(`Datum: ${today}   ·   Periode: ${periods.join(', ')}`, 14, y)
+          doc.setTextColor(0)
+          y += 8
+
+          // Samenvatting blokken
+          const bw = (pw - 28 - 8) / 3
+          const boxes = [
+            { label: 'Bruto inkomsten', value: eur(grandGross), color: [40,40,40] },
+            { label: `DJ·World ${COMMISSIONS.djworldPct}%`, value: `-${eur(grandDJ)}`, color: [180,138,0] },
+            { label: 'Jouw netto', value: eur(grandNet), color: [26,122,58] },
+          ]
+          boxes.forEach((b, i) => {
+            const bx = 14 + i * (bw + 4)
+            doc.setDrawColor(200).setFillColor(250,250,250).roundedRect(bx, y, bw, 16, 2, 2, 'FD')
+            doc.setFontSize(6).setTextColor(120).text(b.label.toUpperCase(), bx + 4, y + 5)
+            doc.setFontSize(10).setFont('helvetica','bold').setTextColor(...b.color)
+            doc.text(b.value, bx + 4, y + 12)
+            doc.setFont('helvetica','normal').setTextColor(0)
+          })
+          y += 22
+
+          // Per artiest tabel
+          p.artists.forEach(a => {
+            const ab = artistBreakdown[a.id]
+            doc.setFontSize(10).setFont('helvetica','bold')
+            doc.text(a.name, 14, y)
+            if (ab) {
+              doc.setFontSize(9).setTextColor(26,122,58)
+              doc.text(eur(ab.net), pw - 14, y, { align: 'right' })
+              doc.setTextColor(0)
+            }
+            y += 2
+
+            if (!ab) {
+              doc.setFontSize(8).setFont('helvetica','italic').setTextColor(150)
+              doc.text('Geen royalties in deze periode', 14, y + 5)
+              doc.setTextColor(0).setFont('helvetica','normal')
+              y += 10
+              return
+            }
+
+            doc.autoTable({
+              startY: y,
+              margin: { left: 14, right: 14 },
+              styles: { fontSize: 7, cellPadding: 1.5 },
+              headStyles: { fillColor: [242,242,242], textColor: [80,80,80], fontStyle: 'bold' },
+              columns: [
+                { header: 'Track',     dataKey: 'title' },
+                { header: 'Split',     dataKey: 'split' },
+                { header: 'Streams',   dataKey: 'stream' },
+                { header: 'Downloads', dataKey: 'download' },
+                { header: 'Bruto',     dataKey: 'gross' },
+                { header: `DJ·World`,  dataKey: 'dj' },
+                { header: 'Netto',     dataKey: 'net' },
+              ],
+              body: [
+                ...ab.tracks.sort((x,y) => y.net - x.net).map(t => ({
+                  title:    t.title,
+                  split:    t.splitPct + '%',
+                  stream:   eur(t.stream),
+                  download: eur(t.download),
+                  gross:    eur(t.gross),
+                  dj:       '-' + eur(t.djAmt),
+                  net:      eur(t.net),
+                })),
+                {
+                  title: `Totaal ${a.name}`, split: '', stream: '', download: '',
+                  gross: eur(ab.gross), dj: '-' + eur(ab.dj), net: eur(ab.net)
+                }
+              ],
+              didParseCell: (d) => {
+                if (d.row.index === ab.tracks.length) {
+                  d.cell.styles.fontStyle = 'bold'
+                  d.cell.styles.fillColor = [248,248,248]
+                }
+                if (d.column.dataKey === 'net') d.cell.styles.textColor = [26,122,58]
+                if (d.column.dataKey === 'dj')  d.cell.styles.textColor = [180,138,0]
+              }
+            })
+            y = doc.lastAutoTable.finalY + 6
+          })
+
+          // Footer
+          doc.setDrawColor(200).setLineWidth(0.3)
+          doc.line(14, y, pw - 14, y)
+          y += 5
+          doc.setFontSize(7).setTextColor(120)
+          doc.text('DJ·World · info@dj-world.nl', 14, y)
+          doc.text(`Totaal netto: ${eur(grandNet)}`, pw - 14, y, { align: 'right' })
+
+          const pdfBlob = doc.output('blob')
           const filename = `Afrekening_${fullName.replace(/\s+/g, '_')}_${periods.join('-').replace(/\s+/g, '')}.pdf`
           zip.file(filename, pdfBlob)
           log(`${fullName} — ✓ klaar`, 'success')

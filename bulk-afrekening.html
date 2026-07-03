@@ -368,15 +368,22 @@
 
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Afrekenigen_${periods.join('-')}_${new Date().toISOString().slice(0,10)}.zip`
-      a.click()
-      URL.revokeObjectURL(url)
+      const filename = `Afrekenigen_${periods.join('-')}_${new Date().toISOString().slice(0,10)}.zip`
 
       document.getElementById('progressTitle').textContent = '✓ Klaar!'
       document.getElementById('btnGenereer').disabled = false
-      log('Alle PDF\'s gedownload als ZIP.', 'success')
+      log('ZIP klaar — klik de knop hieronder om te downloaden.', 'success')
+
+      // Zichtbare downloadknop tonen (werkt beter in Safari dan auto-click)
+      const existing = document.getElementById('downloadLink')
+      if (existing) existing.remove()
+      const dlBtn = document.createElement('a')
+      dlBtn.id       = 'downloadLink'
+      dlBtn.href     = url
+      dlBtn.download = filename
+      dlBtn.className = 'mt-4 flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-5 py-3 rounded-lg text-sm transition-colors w-fit'
+      dlBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Download ZIP (${filename})`
+      document.getElementById('progressLog').after(dlBtn)
     }
 
     loadPage()

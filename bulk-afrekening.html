@@ -221,7 +221,31 @@
       const zip  = new JSZip()
       const djPct = COMMISSIONS.djworldPct / 100
       const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      const eur = v => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+      const eur = v => {
+        if (Math.abs(v) < 0.005) v = 0
+        return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+      }
+      const eurDJ = v => Math.abs(v) < 0.005 ? '€0,00' : '-' + eur(v)
+
+      // Logo vooraf laden via fetch (betrouwbaarder dan Image + canvas)
+      let logoDataURL = null
+      let logoAspect  = 3.5  // fallback breedte/hoogte verhouding
+      try {
+        const resp = await fetch('https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png')
+        if (resp.ok) {
+          const blob = await resp.blob()
+          logoDataURL = await new Promise(res => {
+            const reader = new FileReader()
+            reader.onload = () => res(reader.result)
+            reader.readAsDataURL(blob)
+          })
+          // Aspect ratio bepalen via tijdelijk Image-object
+          const tmpImg = new Image()
+          tmpImg.src = logoDataURL
+          await new Promise(r => { tmpImg.onload = r; tmpImg.onerror = r })
+          if (tmpImg.naturalWidth > 0) logoAspect = tmpImg.naturalWidth / tmpImg.naturalHeight
+        }
+      } catch(e) {}
 
       for (let i = 0; i < persons.length; i++) {
         const p = persons[i]
@@ -359,16 +383,22 @@
           const GRAY   = [120, 120, 120]
 
           // ── Gele accentbalk bovenaan ─────────────────────────────
-          doc.setFillColor(...YELLOW).rect(0, 0, pw, 8, 'F')
+          doc.setFillColor(...YELLOW).rect(0, 0, pw, 6, 'F')
 
-          // ── Header ───────────────────────────────────────────────
-          let y = 18
-          doc.setFontSize(20).setFont('helvetica','bold').setTextColor(...DARK)
-          doc.text('DJ·World', 14, y)
+          // ── Logo (echt beeld of fallback tekst) ──────────────────
+          const LOGO_H = 14
+          const LOGO_W = Math.min(logoAspect * LOGO_H, 50)
+          if (logoDataURL) {
+            doc.addImage(logoDataURL, 'PNG', 14, 9, LOGO_W, LOGO_H)
+          } else {
+            doc.setFontSize(20).setFont('helvetica','bold').setTextColor(...DARK)
+            doc.text('DJ·World', 14, 21)
+          }
 
-          // Adresblok rechts
+          // ── Adresblok rechts — uitlijnen op zelfde hoogte als logo ──
+          const ADDR_TOP = 12
           doc.setFont('helvetica','bold').setFontSize(10).setTextColor(...DARK)
-          doc.text(fullName, pw - 14, y - 4, { align: 'right' })
+          doc.text(fullName, pw - 14, ADDR_TOP, { align: 'right' })
           doc.setFont('helvetica','normal').setFontSize(8.5).setTextColor(...GRAY)
           const addrLines = [
             p.street || '',
@@ -376,12 +406,13 @@
             p.email || '',
             p.iban  || ''
           ].filter(Boolean)
-          let ay = y + 1
+          let ay = ADDR_TOP + 5
           addrLines.forEach(l => { doc.text(l, pw - 14, ay, { align: 'right' }); ay += 4.5 })
 
-          y += 10
-          doc.setDrawColor(...DARK).setLineWidth(0.4).line(14, y, pw - 14, y)
-          y += 7
+          // Scheidingslijn — onder het adresblok (IBAN eindigt op ~30mm, lijn op 36mm)
+          const headerBottom = 36
+          doc.setDrawColor(...DARK).setLineWidth(0.4).line(14, headerBottom, pw - 14, headerBottom)
+          let y = headerBottom + 7
 
           // ── Titel + datum ────────────────────────────────────────
           doc.setFontSize(15).setFont('helvetica','bold').setTextColor(...DARK)
@@ -416,17 +447,17 @@
           p.artists.forEach(a => {
             const ab = artistBreakdown[a.id]
 
-            // Artiest koptekst
-            doc.setFillColor(245,245,245).setDrawColor(220,220,220).setLineWidth(0.3)
-            doc.rect(14, y - 4, pw - 28, 8, 'FD')
+            // Artiest koptekst — gele accentlijn + naam
+            doc.setFillColor(...YELLOW).rect(14, y - 1, 2, 6, 'F')
             doc.setFontSize(10).setFont('helvetica','bold').setTextColor(...DARK)
-            doc.text(a.name, 17, y + 0.5)
+            doc.text(a.name, 19, y + 4)
             if (ab) {
               doc.setTextColor(...GREEN)
-              doc.text(eur(ab.net), pw - 17, y + 0.5, { align: 'right' })
+              doc.text(eur(ab.net), pw - 14, y + 4, { align: 'right' })
             }
             doc.setTextColor(...DARK)
-            y += 7
+            doc.setDrawColor(220,220,220).setLineWidth(0.2).line(14, y + 6.5, pw - 14, y + 6.5)
+            y += 10
 
             if (!ab) {
               doc.setFontSize(8).setFont('helvetica','italic').setTextColor(...GRAY)
@@ -446,16 +477,14 @@
               },
               columnStyles: {
                 0: { cellWidth: 'auto' },
-                1: { cellWidth: 14, halign: 'right' },
-                2: { cellWidth: 24, halign: 'right' },
-                3: { cellWidth: 24, halign: 'right' },
-                4: { cellWidth: 24, halign: 'right' },
-                5: { cellWidth: 24, halign: 'right' },
-                6: { cellWidth: 24, halign: 'right' },
+                1: { cellWidth: 26, halign: 'right' },
+                2: { cellWidth: 26, halign: 'right' },
+                3: { cellWidth: 26, halign: 'right' },
+                4: { cellWidth: 26, halign: 'right' },
+                5: { cellWidth: 26, halign: 'right' },
               },
               columns: [
                 { header: 'Track',      dataKey: 'title' },
-                { header: 'Split',      dataKey: 'split' },
                 { header: 'Streams',    dataKey: 'stream' },
                 { header: 'Downloads',  dataKey: 'download' },
                 { header: 'Bruto',      dataKey: 'gross' },
@@ -464,23 +493,27 @@
               ],
               body: [
                 ...ab.tracks.sort((ta, tb) => tb.net - ta.net).map(t => ({
-                  title: t.title, split: t.splitPct + '%',
+                  title: t.title,
                   stream: eur(t.stream), download: eur(t.download),
-                  gross: eur(t.gross), dj: '-' + eur(t.djAmt), net: eur(t.net),
+                  gross: eur(t.gross), dj: eurDJ(t.djAmt), net: eur(t.net),
                 })),
                 {
-                  title: `Totaal ${a.name}`, split: '', stream: '', download: '',
-                  gross: eur(ab.gross), dj: '-' + eur(ab.dj), net: eur(ab.net)
+                  title: `Totaal ${a.name}`, stream: '', download: '',
+                  gross: eur(ab.gross), dj: eurDJ(ab.dj), net: eur(ab.net)
                 }
               ],
               didParseCell: (d) => {
                 const isTotal = d.row.index === ab.tracks.length
                 if (isTotal) {
                   d.cell.styles.fontStyle = 'bold'
-                  d.cell.styles.fillColor = [245,245,245]
+                  d.cell.styles.fillColor = [...YELLOW]
+                  d.cell.styles.textColor = [...DARK]
+                  d.cell.styles.fontSize  = 8.5
                 }
-                if (d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
-                if (d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
+                if (!isTotal && d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
+                if (!isTotal && d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
+                if (isTotal  && d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
+                if (isTotal  && d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
                 if (d.section === 'head' && d.column.dataKey === 'net') d.cell.styles.textColor = [180,255,180]
                 if (d.section === 'head' && d.column.dataKey === 'dj')  d.cell.styles.textColor = [255,235,150]
               }

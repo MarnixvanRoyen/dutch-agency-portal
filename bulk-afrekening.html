@@ -227,25 +227,37 @@
       }
       const eurDJ = v => Math.abs(v) < 0.005 ? '€0,00' : '-' + eur(v)
 
-      // Logo vooraf laden via fetch (betrouwbaarder dan Image + canvas)
+      // Logo laden — eerst bestaand DOM-element (al geladen in sidebar), dan fetch als fallback
       let logoDataURL = null
-      let logoAspect  = 3.5  // fallback breedte/hoogte verhouding
-      try {
-        const resp = await fetch('https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png')
-        if (resp.ok) {
-          const blob = await resp.blob()
-          logoDataURL = await new Promise(res => {
-            const reader = new FileReader()
-            reader.onload = () => res(reader.result)
-            reader.readAsDataURL(blob)
-          })
-          // Aspect ratio bepalen via tijdelijk Image-object
-          const tmpImg = new Image()
-          tmpImg.src = logoDataURL
-          await new Promise(r => { tmpImg.onload = r; tmpImg.onerror = r })
-          if (tmpImg.naturalWidth > 0) logoAspect = tmpImg.naturalWidth / tmpImg.naturalHeight
-        }
-      } catch(e) {}
+      let logoAspect  = 3.5
+      const sidebarLogoEl = document.querySelector('#sidebar img')
+      if (sidebarLogoEl?.complete && sidebarLogoEl.naturalWidth > 0) {
+        try {
+          const cvs = document.createElement('canvas')
+          cvs.width  = sidebarLogoEl.naturalWidth
+          cvs.height = sidebarLogoEl.naturalHeight
+          cvs.getContext('2d').drawImage(sidebarLogoEl, 0, 0)
+          logoDataURL = cvs.toDataURL('image/png')
+          logoAspect  = sidebarLogoEl.naturalWidth / sidebarLogoEl.naturalHeight
+        } catch(e) {}
+      }
+      if (!logoDataURL) {
+        try {
+          const resp = await fetch('https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png')
+          if (resp.ok) {
+            const blob = await resp.blob()
+            logoDataURL = await new Promise(res => {
+              const reader = new FileReader()
+              reader.onload = () => res(reader.result)
+              reader.readAsDataURL(blob)
+            })
+            const tmpImg = new Image()
+            tmpImg.src = logoDataURL
+            await new Promise(r => { tmpImg.onload = r; tmpImg.onerror = r })
+            if (tmpImg.naturalWidth > 0) logoAspect = tmpImg.naturalWidth / tmpImg.naturalHeight
+          }
+        } catch(e) {}
+      }
 
       for (let i = 0; i < persons.length; i++) {
         const p = persons[i]

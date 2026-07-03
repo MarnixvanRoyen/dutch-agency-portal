@@ -79,7 +79,7 @@
   </main>
 
   <!-- Verborgen render-div voor PDF generatie -->
-  <div id="pdfRender" style="position:fixed;top:0;left:0;width:820px;background:#fff;padding:20px;font-family:Arial,sans-serif;font-size:10pt;color:#111;opacity:0;pointer-events:none;z-index:-1"></div>
+  <div id="pdfRender" style="position:fixed;top:0;left:0;width:820px;background:#fff;padding:20px;font-family:Arial,sans-serif;font-size:10pt;color:#111;visibility:hidden;pointer-events:none;z-index:9999"></div>
 
   <script src="shared.js"></script>
   <script>
@@ -347,11 +347,13 @@
         log(`${fullName} — PDF genereren...`)
 
         try {
+          renderEl.style.visibility = 'visible'
           const pdfBlob = await html2pdf().set({
             margin:      [10, 12, 10, 12],
             html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
             jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
           }).from(renderEl).outputPdf('blob')
+          renderEl.style.visibility = 'hidden'
 
           const filename = `Afrekening_${fullName.replace(/\s+/g, '_')}_${periods.join('-').replace(/\s+/g, '')}.pdf`
           zip.file(filename, pdfBlob)

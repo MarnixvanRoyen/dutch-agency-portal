@@ -14,9 +14,18 @@
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
-    <div class="mb-7">
-      <h1 class="text-xl font-bold">Royalty Statements</h1>
-      <p class="text-gray-500 text-sm mt-0.5">Upload Excel-bestanden (24 sheets per label)</p>
+    <div class="flex items-start justify-between mb-7">
+      <div>
+        <h1 class="text-xl font-bold">Royalty Statements</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Upload Excel-bestanden (24 sheets per label)</p>
+      </div>
+      <button onclick="exportAllesExcel()" id="btnExport"
+        class="flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white hover:border-gray-500 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Export alle statements Excel
+      </button>
     </div>
 
     <!-- Upload sectie -->
@@ -639,6 +648,79 @@
         showToast('Statement verwijderd.')
         await loadStatements()
       }
+    }
+
+    // ── Export alle statement_lines naar Excel ────────────────
+    async function exportAllesExcel() {
+      const btn = document.getElementById('btnExport')
+      btn.textContent = 'Laden...'
+      btn.disabled = true
+
+      try {
+        // Alle regels ophalen met paginering
+        let lines = [], from = 0
+        while (true) {
+          const { data: page } = await db
+            .from('statement_lines')
+            .select('label_name, artist_name, track_title, isrc, usage_type, quantity, nett_royalty, track_id, statements(period, filename)')
+            .order('isrc', { ascending: true, nullsFirst: false })
+            .order('track_title', { ascending: true })
+            .range(from, from + 999)
+          if (!page || page.length === 0) break
+          lines.push(...page)
+          if (page.length < 1000) break
+          from += 1000
+        }
+
+        // Rijen bouwen voor Excel
+        const rows = lines.map(l => ({
+          'Periode':         l.statements?.period || l.statements?.filename || '—',
+          'Catalogus Nr':    l.isrc       || '(geen)',
+          'Label':           l.label_name || '—',
+          'Artiest':         l.artist_name || '—',
+          'Track':           l.track_title || '—',
+          'Type':            l.usage_type  || '—',
+          'Aantal':          l.quantity    ?? '',
+          'Royalty (€)':     parseFloat(l.nett_royalty || 0).toFixed(4),
+          'Gematcht':        l.track_id ? '✓' : '✗ niet gevonden',
+        }))
+
+        // Gesorteerd op Catalogus Nr (null/leeg achteraan)
+        rows.sort((a, b) => {
+          const ca = a['Catalogus Nr'] === '(geen)' ? 'zzzzz' : a['Catalogus Nr']
+          const cb = b['Catalogus Nr'] === '(geen)' ? 'zzzzz' : b['Catalogus Nr']
+          return ca.localeCompare(cb)
+        })
+
+        // Excel aanmaken met SheetJS
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.json_to_sheet(rows)
+
+        // Kolombreedte instellen
+        ws['!cols'] = [
+          { wch: 14 }, // Periode
+          { wch: 16 }, // Catalogus Nr
+          { wch: 20 }, // Label
+          { wch: 22 }, // Artiest
+          { wch: 30 }, // Track
+          { wch: 10 }, // Type
+          { wch: 8  }, // Aantal
+          { wch: 14 }, // Royalty
+          { wch: 18 }, // Gematcht
+        ]
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Alle Statements')
+
+        const today = new Date().toISOString().slice(0, 10)
+        XLSX.writeFile(wb, `DJWorld_Statements_Export_${today}.xlsx`)
+
+        showToast(`${rows.length} regels geëxporteerd.`)
+      } catch (err) {
+        showToast('Export mislukt: ' + err.message, 'error')
+      }
+
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Export alle statements Excel`
+      btn.disabled = false
     }
 
     loadPage()

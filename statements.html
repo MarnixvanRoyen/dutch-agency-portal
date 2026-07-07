@@ -255,10 +255,8 @@
         const trackName  = cols.trackName >= 0 ? (row[cols.trackName] || '').trim() || null : null
         const mixName    = cols.mixName  >= 0 ? (row[cols.mixName]  || '').trim() || null : null
 
-        // Track titel = TrackName + MixName gecombineerd
-        const trackTitle = trackName
-          ? (mixName ? `${trackName} — ${mixName}` : trackName)
-          : null
+        // Track titel = alleen TrackName (MixName weggooien)
+        const trackTitle = trackName || null
 
         // Match: eerst via ISRC (als track al ISRC heeft), dan via CatalogNumber + titel
         const isrcKey  = catalogVal ? catalogVal.toLowerCase() : null

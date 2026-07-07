@@ -756,6 +756,23 @@
         showToast(`Nieuw: ${newReleases.length} releases, ${newTracks.length} tracks, ${newArtistNames.length} artiesten toegevoegd.`)
       }
 
+      // ── ISRC bijwerken voor gematchte tracks die nog geen ISRC hebben ──
+      const isrcUpdates = {}  // track_id → actual_isrc
+      lines.forEach(l => {
+        if (l.track_id && l._actual_isrc) isrcUpdates[l.track_id] = l._actual_isrc
+      })
+      const isrcEntries = Object.entries(isrcUpdates)
+      if (isrcEntries.length) {
+        setProgress(true, `ISRC bijwerken voor ${isrcEntries.length} track(s)...`, 55)
+        for (let i = 0; i < isrcEntries.length; i += 100) {
+          await Promise.all(
+            isrcEntries.slice(i, i + 100).map(([trackId, isrc]) =>
+              db.from('tracks').update({ isrc }).eq('id', trackId).is('isrc', null)
+            )
+          )
+        }
+      }
+
       // ── Regels in batches van 500 opslaan ───────────────────────────
       const batchSize = 500
       for (let i = 0; i < lines.length; i += batchSize) {

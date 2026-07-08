@@ -6,6 +6,8 @@
   <title>Dashboard — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
 
@@ -49,6 +51,13 @@
           <button onclick="resetFilters()"
             class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
             Reset
+          </button>
+          <button onclick="generateStatementReport()" id="btnStatementReport" disabled title="Selecteer eerst een statement"
+            class="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#FFD100] text-black font-bold text-xs px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Statement rapport
           </button>
         </div>
       </div>
@@ -506,6 +515,9 @@
       updateTypeCard(filtered)
       renderBlocks(filtered)
       saveDashboardFilters()
+
+      const reportBtn = document.getElementById('btnStatementReport')
+      if (reportBtn) reportBtn.disabled = !statementIdMap[filterValues.statement]
     }
 
     function resetFilters() {
@@ -603,6 +615,228 @@
 
       if (entries.length > topN) {
         el.innerHTML += `<p class="text-gray-600 text-xs mt-2">+ ${entries.length - topN} meer</p>`
+      }
+    }
+
+    // ── Statement rapport (PDF, 1 pagina) ──────────────────────────────
+
+    function drawStatBoxes(doc, boxes, startX, y, bw, bh, gap) {
+      boxes.forEach((b, i) => {
+        const bx = startX + i * (bw + gap)
+        doc.setDrawColor(...b.border).setLineWidth(0.3).setFillColor(...b.fill).roundedRect(bx, y, bw, bh, 2, 2, 'FD')
+        doc.setFontSize(6.5).setFont('helvetica', 'normal').setTextColor(136, 136, 136)
+        doc.text(b.label, bx + 3, y + 6.5, { maxWidth: bw - 6 })
+        doc.setFontSize(10.5).setFont('helvetica', 'bold').setTextColor(...b.valColor)
+        doc.text(b.value, bx + 3, y + 13.5, { maxWidth: bw - 6 })
+      })
+    }
+
+    async function generateStatementReport() {
+      const sq = filterValues.statement
+      const stmtId = sq ? statementIdMap[sq] : null
+      if (!stmtId) { showToast('Selecteer eerst een statement.', 'error'); return }
+
+      const lines = allLines.filter(l => l.statement_id === stmtId)
+      if (!lines.length) { showToast('Geen data gevonden voor dit statement.', 'error'); return }
+
+      const btn = document.getElementById('btnStatementReport')
+      const origHtml = btn.innerHTML
+      btn.disabled = true
+      btn.textContent = 'Bezig...'
+
+      try {
+        const meta = lines[0].statements || {}
+        const periodLabel = meta.period || meta.filename || sq
+
+        // Totalen voor dit statement
+        const bruto        = lines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+        const streamTotal   = lines.filter(l => l.usage_type === 'stream').reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+        const downloadTotal = lines.filter(l => l.usage_type === 'download').reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
+        const aPct  = COMMISSIONS.aggregatorPct
+        const dPct  = COMMISSIONS.djworldPct
+        const aAmt  = bruto * aPct / 100
+        const rest1 = bruto - aAmt
+        const dAmt  = rest1 * dPct / 100
+        const artAmt = rest1 - dAmt
+
+        // Data kwaliteit — samenvatting voor dit statement (matching rate)
+        const matchedCount   = lines.filter(l => l.track_id).length
+        const unmatchedCount = lines.length - matchedCount
+        const matchPct       = lines.length ? (matchedCount / lines.length * 100) : 100
+
+        // Per label / artiest / track (top 5)
+        const byLabel = {}
+        lines.forEach(l => { const k = l.label_name; if (!k) return; byLabel[k] = (byLabel[k] || 0) + (parseFloat(l.nett_royalty) || 0) })
+
+        const byTrack = {}
+        lines.forEach(l => {
+          const k = l.track_title || (l.isrc ? `⚠️ ${l.isrc}` : null)
+          if (!k) return
+          byTrack[k] = (byTrack[k] || 0) + (parseFloat(l.nett_royalty) || 0)
+        })
+
+        const byArtist = {}
+        lines.forEach(l => {
+          if (!l.track_id) return
+          const splits = trackArtistMap[l.track_id]
+          if (!splits) return
+          const b = parseFloat(l.nett_royalty) || 0
+          splits.forEach(({ name, pct }) => { byArtist[name] = (byArtist[name] || 0) + b * netFactor() * pct })
+        })
+
+        const top = (obj, n = 5) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n)
+        const topLabels  = top(byLabel)
+        const topArtists = top(byArtist)
+        const topTracks  = top(byTrack)
+
+        // Logo laden — eerst DOM-element (sidebar), dan fetch als fallback
+        let logoDataURL = null
+        let logoAspect  = 3.5
+        const sidebarLogoEl = document.querySelector('#sidebar img')
+        if (sidebarLogoEl?.complete && sidebarLogoEl.naturalWidth > 0) {
+          try {
+            const cvs = document.createElement('canvas')
+            cvs.width  = sidebarLogoEl.naturalWidth
+            cvs.height = sidebarLogoEl.naturalHeight
+            cvs.getContext('2d').drawImage(sidebarLogoEl, 0, 0)
+            logoDataURL = cvs.toDataURL('image/png')
+            logoAspect  = sidebarLogoEl.naturalWidth / sidebarLogoEl.naturalHeight
+          } catch (e) {}
+        }
+        if (!logoDataURL) {
+          try {
+            const resp = await fetch('https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png')
+            if (resp.ok) {
+              const blob = await resp.blob()
+              logoDataURL = await new Promise(res => {
+                const reader = new FileReader()
+                reader.onload = () => res(reader.result)
+                reader.readAsDataURL(blob)
+              })
+              const tmpImg = new Image()
+              tmpImg.src = logoDataURL
+              await new Promise(r => { tmpImg.onload = r; tmpImg.onerror = r })
+              if (tmpImg.naturalWidth > 0) logoAspect = tmpImg.naturalWidth / tmpImg.naturalHeight
+            }
+          } catch (e) {}
+        }
+
+        // ── PDF opbouwen ──────────────────────────────────────────
+        const { jsPDF } = window.jspdf
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+        const pw = doc.internal.pageSize.getWidth()
+        const ph = doc.internal.pageSize.getHeight()
+        const YELLOW = [255, 209, 0]
+        const DARK   = [30, 30, 30]
+        const GRAY   = [120, 120, 120]
+        const GREEN  = [26, 122, 58]
+        const GOLD   = [160, 110, 0]
+        const RED    = [190, 60, 60]
+        const today  = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })
+
+        // Header
+        doc.setFillColor(...YELLOW).rect(0, 0, pw, 7, 'F')
+        const LOGO_H = 22
+        const LOGO_W = Math.min(logoAspect * LOGO_H, 65)
+        if (logoDataURL) {
+          doc.addImage(logoDataURL, 'PNG', 14, 10, LOGO_W, LOGO_H)
+        } else {
+          doc.setFontSize(20).setFont('helvetica', 'bold').setTextColor(...DARK)
+          doc.text('DJ·World', 14, 25)
+        }
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...DARK)
+        doc.text('Maandrapport', pw - 14, 15, { align: 'right' })
+        doc.setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+        doc.text(String(periodLabel), pw - 14, 20, { align: 'right' })
+        doc.text(`Gegenereerd op ${today}`, pw - 14, 24.5, { align: 'right' })
+
+        const headerBottom = 34
+        doc.setDrawColor(...DARK).setLineWidth(0.4).line(14, headerBottom, pw - 14, headerBottom)
+        let y = headerBottom + 8
+
+        doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(...DARK)
+        doc.text(`Samenvatting — ${periodLabel}`, 14, y)
+        y += 8
+
+        // Rij 1 — 4 kerncijfers
+        const gap = 4
+        const bw4 = (pw - 28 - gap * 3) / 4
+        drawStatBoxes(doc, [
+          { label: 'Bruto royalties', value: fmt(bruto),                    fill: [248,248,248], border: [220,220,220], valColor: DARK },
+          { label: 'Aantal regels',   value: String(lines.length),          fill: [248,248,248], border: [220,220,220], valColor: DARK },
+          { label: 'Streams',         value: bruto > 0 ? (streamTotal/bruto*100).toFixed(0)+'%' : '—', fill: [248,248,248], border: [220,220,220], valColor: DARK },
+          { label: 'Downloads',       value: bruto > 0 ? (downloadTotal/bruto*100).toFixed(0)+'%' : '—', fill: [248,248,248], border: [220,220,220], valColor: DARK },
+        ], 14, y, bw4, 18, gap)
+        y += 18 + 6
+
+        // Rij 2 — royalty verdeling
+        const bw3 = (pw - 28 - gap * 2) / 3
+        drawStatBoxes(doc, [
+          { label: `Aggregator ${aPct}%`, value: '-' + fmt(aAmt),  fill: [253,238,238], border: [230,190,190], valColor: RED },
+          { label: `DJ·World ${dPct}%`,   value: '-' + fmt(dAmt),  fill: [255,250,230], border: [220,200,100], valColor: GOLD },
+          { label: 'Voor artiesten',      value: fmt(artAmt),      fill: [237,250,242], border: [150,210,175], valColor: GREEN },
+        ], 14, y, bw3, 18, gap)
+        y += 18 + 9
+
+        // 3-koloms tabellen: top labels / artiesten / tracks
+        const colGap = 6
+        const colW = (pw - 28 - colGap * 2) / 3
+        const tableStyle = {
+          styles: { fontSize: 7.5, cellPadding: 2 },
+          headStyles: { fillColor: DARK, textColor: [255,255,255], fontSize: 7, fontStyle: 'bold' },
+          columnStyles: { 0: { cellWidth: colW - 16, overflow: 'ellipsize' }, 1: { cellWidth: 16, halign: 'right' } },
+        }
+
+        doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(...DARK)
+        doc.text('Top labels', 14, y)
+        doc.text('Top artiesten', 14 + colW + colGap, y)
+        doc.text('Top tracks', 14 + 2 * (colW + colGap), y)
+        const tableY = y + 3
+
+        doc.autoTable({ startY: tableY, margin: { left: 14 }, ...tableStyle,
+          columns: [{ header: 'Label', dataKey: 'n' }, { header: '€', dataKey: 'v' }],
+          body: topLabels.length ? topLabels.map(([n, v]) => ({ n, v: fmt(v) })) : [{ n: '—', v: '' }] })
+        const y1 = doc.lastAutoTable.finalY
+
+        doc.autoTable({ startY: tableY, margin: { left: 14 + colW + colGap }, ...tableStyle,
+          columns: [{ header: 'Artiest', dataKey: 'n' }, { header: '€', dataKey: 'v' }],
+          body: topArtists.length ? topArtists.map(([n, v]) => ({ n, v: fmt(v) })) : [{ n: '—', v: '' }] })
+        const y2 = doc.lastAutoTable.finalY
+
+        doc.autoTable({ startY: tableY, margin: { left: 14 + 2 * (colW + colGap) }, ...tableStyle,
+          columns: [{ header: 'Track', dataKey: 'n' }, { header: '€', dataKey: 'v' }],
+          body: topTracks.length ? topTracks.map(([n, v]) => ({ n, v: fmt(v) })) : [{ n: '—', v: '' }] })
+        const y3 = doc.lastAutoTable.finalY
+
+        y = Math.max(y1, y2, y3) + 9
+
+        // Data kwaliteit — samenvatting
+        const dqColor = matchPct >= 99.5 ? GREEN : (matchPct >= 90 ? GOLD : RED)
+        const dqFill  = matchPct >= 99.5 ? [237,250,242] : (matchPct >= 90 ? [255,250,230] : [253,238,238])
+        doc.setDrawColor(...dqColor).setLineWidth(0.3).setFillColor(...dqFill).roundedRect(14, y, pw - 28, 16, 2, 2, 'FD')
+        doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(...dqColor)
+        doc.text('Data kwaliteit', 19, y + 6.5)
+        doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...DARK)
+        const dqText = `${matchedCount} van ${lines.length} regels (${matchPct.toFixed(1)}%) succesvol gekoppeld aan een track.` +
+          (unmatchedCount ? `  ${unmatchedCount} regel(s) niet gematcht.` : '  Alle regels gematcht.')
+        doc.text(dqText, 19, y + 11.5, { maxWidth: pw - 38 })
+        y += 16
+
+        // Footer
+        doc.setFillColor(...YELLOW).rect(0, ph - 8, pw, 8, 'F')
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(...DARK)
+        doc.text('DJ·World · Maandrapport', 14, ph - 3)
+        doc.text('1 / 1', pw / 2, ph - 3, { align: 'center' })
+        doc.text(today, pw - 14, ph - 3, { align: 'right' })
+
+        const safeName = String(periodLabel).replace(/[^\w\-]+/g, '_')
+        doc.save(`DJWorld_Rapport_${safeName}.pdf`)
+        showToast('Rapport gedownload.')
+      } catch (err) {
+        showToast('Rapport genereren mislukt: ' + err.message, 'error')
+      } finally {
+        btn.disabled = !statementIdMap[filterValues.statement]
+        btn.innerHTML = origHtml
       }
     }
 

@@ -182,7 +182,7 @@
     }
 
     async function loadPersons() {
-      const { data: persons, error } = await db.from('persons').select('*').order('last_name')
+      const { data: persons, error } = await db.from('persons').select('*').order('first_name').order('last_name')
       if (error) { showToast('Fout bij laden: ' + error.message, 'error'); return }
 
       // Artiesten apart laden en in JS koppelen
@@ -194,7 +194,14 @@
         artistsByPerson[a.person_id].push(a)
       })
 
-      allPersons = (persons || []).map(p => ({ ...p, artists: artistsByPerson[p.id] || [] }))
+      // Extra sortering in JS: localeCompare regelt hoofdletters/accenten (é, ij) netjes,
+      // waar de database-sortering daar soms anders mee omgaat.
+      allPersons = (persons || [])
+        .map(p => ({ ...p, artists: artistsByPerson[p.id] || [] }))
+        .sort((a, b) =>
+          (a.first_name || '').localeCompare(b.first_name || '', 'nl', { sensitivity: 'base' }) ||
+          (a.last_name  || '').localeCompare(b.last_name  || '', 'nl', { sensitivity: 'base' })
+        )
       document.getElementById('personCount').textContent = `(${allPersons.length})`
       renderTable(allPersons)
     }
@@ -204,6 +211,15 @@
       const clean = iban.replace(/\s/g, '')
       if (clean.length < 6) return iban
       return clean.slice(0, 4) + ' **** **** ' + clean.slice(-4)
+    }
+
+    // IBAN in het detailscherm staat standaard gemaskeerd, pas zichtbaar na klikken op "toon"
+    function toggleIbanReveal(id) {
+      const el = document.getElementById(`ibanSpan_${id}`)
+      if (!el) return
+      const showing = el.dataset.state === 'full'
+      el.textContent  = showing ? el.dataset.masked : el.dataset.full
+      el.dataset.state = showing ? 'masked' : 'full'
     }
 
     function renderTable(persons) {
@@ -261,7 +277,7 @@
               <div class="mt-2 pt-2 border-t border-[#2a2a2a]/50 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-500">
                 ${p.street || p.postal_code || p.city ? `<div>📍 ${[p.street, p.postal_code, p.city, p.country].filter(Boolean).join(', ')}</div>` : ''}
                 ${p.email ? `<div>✉️ ${p.email}</div>` : ''}
-                ${p.iban  ? `<div class="font-mono">🏦 ${p.iban}</div>` : ''}
+                ${p.iban  ? `<div class="font-mono flex items-center gap-2">🏦 <span id="ibanSpan_${p.id}" data-full="${p.iban}" data-masked="${maskIban(p.iban)}" data-state="masked">${maskIban(p.iban)}</span><button type="button" onclick="event.stopPropagation(); toggleIbanReveal('${p.id}')" class="text-[10px] text-gray-600 hover:text-[#FFD100] underline">toon</button></div>` : ''}
               </div>
             </td>
           </tr>

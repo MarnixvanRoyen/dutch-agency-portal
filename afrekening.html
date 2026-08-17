@@ -94,7 +94,7 @@
     /* ── Summary ── */
     .summary-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       margin-bottom: 28px;
     }
@@ -235,8 +235,9 @@
         if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
       })
 
-      // Per artiest (zonder aggregator)
-      const djPct = COMMISSIONS.djworldPct / 100
+      // Per artiest — eerst aggregator eraf, daarna de rest verdelen met DJ·World
+      const aggPct = COMMISSIONS.aggregatorPct / 100
+      const djPct  = COMMISSIONS.djworldPct / 100
       const artistBreakdown = {}
       ;(tas || []).forEach(ta => {
         const aid = ta.artist_id
@@ -244,23 +245,27 @@
         const roy = royPerTrack[ta.tracks.id]
         if (!roy) return
         const splitPct = (parseFloat(ta.split_percentage) || 0) / 100
-        const gross    = roy.total    * splitPct
-        const djAmt    = gross * djPct
-        const net      = gross - djAmt
-        if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, dj: 0, net: 0 }
+        const gross    = roy.total * splitPct
+        const aggAmt   = gross * aggPct
+        const afterAgg = gross - aggAmt
+        const djAmt    = afterAgg * djPct
+        const net      = afterAgg - djAmt
+        if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, agg: 0, dj: 0, net: 0 }
         artistBreakdown[aid].tracks.push({
           title: ta.tracks.title || `⚠️ ${ta.tracks.releases?.catalog_number || '?'}`,
           splitPct: ta.split_percentage,
           stream: roy.stream * splitPct,
           download: roy.download * splitPct,
-          gross, djAmt, net
+          gross, aggAmt, djAmt, net
         })
         artistBreakdown[aid].gross += gross
-        artistBreakdown[aid].dj   += djAmt
-        artistBreakdown[aid].net  += net
+        artistBreakdown[aid].agg   += aggAmt
+        artistBreakdown[aid].dj    += djAmt
+        artistBreakdown[aid].net   += net
       })
 
       const grandGross = Object.values(artistBreakdown).reduce((s, a) => s + a.gross, 0)
+      const grandAgg   = Object.values(artistBreakdown).reduce((s, a) => s + a.agg,   0)
       const grandDJ    = Object.values(artistBreakdown).reduce((s, a) => s + a.dj,    0)
       const grandNet   = Object.values(artistBreakdown).reduce((s, a) => s + a.net,   0)
       const today      = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -292,6 +297,10 @@
           <div class="summary-box">
             <div class="label">Bruto inkomsten</div>
             <div class="value">${eur(grandGross)}</div>
+          </div>
+          <div class="summary-box">
+            <div class="label">Aggregator ${COMMISSIONS.aggregatorPct}%</div>
+            <div class="value yellow">-${eur(grandAgg)}</div>
           </div>
           <div class="summary-box">
             <div class="label">DJ·World ${COMMISSIONS.djworldPct}%</div>
@@ -327,6 +336,7 @@
                     <th>Streams</th>
                     <th>Downloads</th>
                     <th>Bruto</th>
+                    <th class="col-dj">Aggregator</th>
                     <th class="col-dj">DJ·World</th>
                     <th class="col-net">Netto</th>
                   </tr>
@@ -339,6 +349,7 @@
                       <td style="text-align:right;color:#555">${eur(t.stream)}</td>
                       <td style="text-align:right;color:#555">${eur(t.download)}</td>
                       <td style="text-align:right">${eur(t.gross)}</td>
+                      <td class="col-dj" style="text-align:right">-${eur(t.aggAmt)}</td>
                       <td class="col-dj" style="text-align:right">-${eur(t.djAmt)}</td>
                       <td class="col-net" style="text-align:right">${eur(t.net)}</td>
                     </tr>
@@ -346,6 +357,7 @@
                   <tr class="totaal-row">
                     <td colspan="4">Totaal ${a.name}</td>
                     <td style="text-align:right">${eur(ab.gross)}</td>
+                    <td class="col-dj" style="text-align:right">-${eur(ab.agg)}</td>
                     <td class="col-dj" style="text-align:right">-${eur(ab.dj)}</td>
                     <td class="col-net" style="text-align:right">${eur(ab.net)}</td>
                   </tr>

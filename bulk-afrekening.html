@@ -220,7 +220,8 @@
       // ZIP aanmaken
       const renderEl = document.getElementById('pdfRender')
       const zip  = new JSZip()
-      const djPct = COMMISSIONS.djworldPct / 100
+      const aggPct = COMMISSIONS.aggregatorPct / 100
+      const djPct  = COMMISSIONS.djworldPct / 100
       const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
       const eur = v => {
         if (Math.abs(v) < 0.005) v = 0
@@ -276,23 +277,27 @@
           const roy = royPerTrack[ta.tracks.id]
           if (!roy) return
           const splitPct = (parseFloat(ta.split_percentage) || 0) / 100
-          const gross = roy.total * splitPct
-          const djAmt = gross * djPct
-          const net   = gross - djAmt
-          if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, dj: 0, net: 0 }
+          const gross    = roy.total * splitPct
+          const aggAmt   = gross * aggPct
+          const afterAgg = gross - aggAmt
+          const djAmt    = afterAgg * djPct
+          const net      = afterAgg - djAmt
+          if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, agg: 0, dj: 0, net: 0 }
           artistBreakdown[aid].tracks.push({
             title: ta.tracks.title || `⚠️ ${ta.tracks.releases?.catalog_number || '?'}`,
             splitPct: ta.split_percentage,
             stream: roy.stream * splitPct,
             download: roy.download * splitPct,
-            gross, djAmt, net
+            gross, aggAmt, djAmt, net
           })
           artistBreakdown[aid].gross += gross
-          artistBreakdown[aid].dj   += djAmt
-          artistBreakdown[aid].net  += net
+          artistBreakdown[aid].agg   += aggAmt
+          artistBreakdown[aid].dj    += djAmt
+          artistBreakdown[aid].net   += net
         })
 
         const grandGross = Object.values(artistBreakdown).reduce((s, a) => s + a.gross, 0)
+        const grandAgg   = Object.values(artistBreakdown).reduce((s, a) => s + a.agg,   0)
         const grandDJ    = Object.values(artistBreakdown).reduce((s, a) => s + a.dj,    0)
         const grandNet   = Object.values(artistBreakdown).reduce((s, a) => s + a.net,   0)
 
@@ -313,10 +318,14 @@
             <div style="font-size:14pt;font-weight:bold;margin-bottom:3px">Royalty Afrekening</div>
             <div style="font-size:8.5pt;color:#555;margin-bottom:14px">Datum: ${today} &nbsp;·&nbsp; Periode: ${periods.join(', ')}</div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
               <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
                 <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Bruto inkomsten</div>
                 <div style="font-size:11pt;font-weight:bold">${eur(grandGross)}</div>
+              </div>
+              <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Aggregator ${COMMISSIONS.aggregatorPct}%</div>
+                <div style="font-size:11pt;font-weight:bold;color:#b88a00">-${eur(grandAgg)}</div>
               </div>
               <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
                 <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">DJ·World ${COMMISSIONS.djworldPct}%</div>
@@ -345,6 +354,7 @@
                         <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Streams</th>
                         <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Downloads</th>
                         <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#555;border-bottom:1px solid #ddd">Bruto</th>
+                        <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#b88a00;border-bottom:1px solid #ddd">Aggregator</th>
                         <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#b88a00;border-bottom:1px solid #ddd">DJ·World</th>
                         <th style="text-align:right;padding:4px 6px;font-size:7pt;text-transform:uppercase;color:#1a7a3a;border-bottom:1px solid #ddd">Netto</th>
                       </tr>
@@ -357,6 +367,7 @@
                           <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#555">${eur(t.stream)}</td>
                           <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#555">${eur(t.download)}</td>
                           <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right">${eur(t.gross)}</td>
+                          <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#b88a00">-${eur(t.aggAmt)}</td>
                           <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#b88a00">-${eur(t.djAmt)}</td>
                           <td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;color:#1a7a3a;font-weight:bold">${eur(t.net)}</td>
                         </tr>
@@ -364,6 +375,7 @@
                       <tr style="background:#fafafa;font-weight:bold">
                         <td colspan="4" style="padding:4px 6px">Totaal ${a.name}</td>
                         <td style="padding:4px 6px;text-align:right">${eur(ab.gross)}</td>
+                        <td style="padding:4px 6px;text-align:right;color:#b88a00">-${eur(ab.agg)}</td>
                         <td style="padding:4px 6px;text-align:right;color:#b88a00">-${eur(ab.dj)}</td>
                         <td style="padding:4px 6px;text-align:right;color:#1a7a3a">${eur(ab.net)}</td>
                       </tr>
@@ -438,10 +450,11 @@
           y += 9
 
           // ── Samenvatting blokken ─────────────────────────────────
-          const bw  = (pw - 28 - 8) / 3
+          const bw  = (pw - 28 - 12) / 4
           const bh  = 18
           const boxes = [
             { label: 'Bruto inkomsten',            value: eur(grandGross), fill: [248,248,248], border: [220,220,220], valColor: DARK },
+            { label: `Aggregator ${COMMISSIONS.aggregatorPct}%`, value: `-${eur(grandAgg)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
             { label: `DJ·World ${COMMISSIONS.djworldPct}%`, value: `-${eur(grandDJ)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
             { label: 'Jouw netto',                 value: eur(grandNet),   fill: [237,250,242], border: [150,210,175], valColor: GREEN },
           ]
@@ -491,17 +504,19 @@
               },
               columnStyles: {
                 0: { cellWidth: 'auto' },
-                1: { cellWidth: 26, halign: 'right' },
-                2: { cellWidth: 26, halign: 'right' },
-                3: { cellWidth: 26, halign: 'right' },
-                4: { cellWidth: 26, halign: 'right' },
-                5: { cellWidth: 26, halign: 'right' },
+                1: { cellWidth: 23, halign: 'right' },
+                2: { cellWidth: 23, halign: 'right' },
+                3: { cellWidth: 23, halign: 'right' },
+                4: { cellWidth: 23, halign: 'right' },
+                5: { cellWidth: 23, halign: 'right' },
+                6: { cellWidth: 23, halign: 'right' },
               },
               columns: [
                 { header: 'Track',      dataKey: 'title' },
                 { header: 'Streams',    dataKey: 'stream' },
                 { header: 'Downloads',  dataKey: 'download' },
                 { header: 'Bruto',      dataKey: 'gross' },
+                { header: 'Aggregator', dataKey: 'agg' },
                 { header: 'DJ·World',   dataKey: 'dj' },
                 { header: 'Netto',      dataKey: 'net' },
               ],
@@ -509,11 +524,11 @@
                 ...ab.tracks.sort((ta, tb) => tb.net - ta.net).map(t => ({
                   title: t.title,
                   stream: eur(t.stream), download: eur(t.download),
-                  gross: eur(t.gross), dj: eurDJ(t.djAmt), net: eur(t.net),
+                  gross: eur(t.gross), agg: eurDJ(t.aggAmt), dj: eurDJ(t.djAmt), net: eur(t.net),
                 })),
                 {
                   title: `Totaal ${a.name}`, stream: '', download: '',
-                  gross: eur(ab.gross), dj: eurDJ(ab.dj), net: eur(ab.net)
+                  gross: eur(ab.gross), agg: eurDJ(ab.agg), dj: eurDJ(ab.dj), net: eur(ab.net)
                 }
               ],
               didParseCell: (d) => {
@@ -526,10 +541,13 @@
                 }
                 if (!isTotal && d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
                 if (!isTotal && d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
+                if (!isTotal && d.column.dataKey === 'agg') d.cell.styles.textColor = [...GOLD]
                 if (isTotal  && d.column.dataKey === 'net') d.cell.styles.textColor = [...GREEN]
                 if (isTotal  && d.column.dataKey === 'dj')  d.cell.styles.textColor = [...GOLD]
+                if (isTotal  && d.column.dataKey === 'agg') d.cell.styles.textColor = [...GOLD]
                 if (d.section === 'head' && d.column.dataKey === 'net') d.cell.styles.textColor = [180,255,180]
                 if (d.section === 'head' && d.column.dataKey === 'dj')  d.cell.styles.textColor = [255,235,150]
+                if (d.section === 'head' && d.column.dataKey === 'agg') d.cell.styles.textColor = [255,235,150]
               }
             })
             y = doc.lastAutoTable.finalY + 8

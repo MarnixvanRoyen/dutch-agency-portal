@@ -22,22 +22,32 @@
     #paper .lbl { width: 70px; }
     #paper .sep { width: 10px; }
 
-    #paper table.grid { margin-top: 22px; font-size: 8.5pt; }
+    /* Vaste kolombreedtes — anders bepaalt de inhoud de breedte en lijnt niets uit */
+    #paper table.grid { margin-top: 22px; font-size: 8.5pt; table-layout: fixed; width: 100%; }
     #paper table.grid th {
       font-weight: bold;
       text-align: left;
+      vertical-align: bottom;
       border-bottom: 1px solid #000;
-      padding: 2px 4px;
-      white-space: nowrap;
+      padding: 2px 5px;
+      line-height: 1.25;
     }
-    #paper table.grid th.num, #paper table.grid td.num { text-align: right; }
-    #paper table.grid td { padding: 1.5px 4px; border-bottom: 1px solid #e5e5e5; }
+    #paper table.grid th.num, #paper table.grid td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    #paper table.grid td {
+      padding: 1.5px 5px;
+      border-bottom: 1px solid #e5e5e5;
+      overflow-wrap: anywhere;
+    }
     #paper table.grid tbody tr:last-child td { border-bottom: 1px solid #000; }
 
-    #paper table.totals { margin-top: 10px; width: 100%; font-size: 9pt; }
-    #paper table.totals td { padding: 2px 4px; }
+    /* Zelfde vaste breedtes, zodat de totalen exact onder de bedragkolom vallen */
+    #paper table.totals { margin-top: 10px; width: 100%; font-size: 9pt; table-layout: fixed; }
+    #paper table.totals td { padding: 2px 5px; }
     #paper table.totals td.lbl2 { text-align: right; }
-    #paper table.totals td.val { text-align: right; width: 110px; }
+    #paper table.totals td.val { text-align: right; font-variant-numeric: tabular-nums; }
     #paper table.totals tr.final td { font-weight: bold; border-top: 1px solid #000; }
 
     @media print {
@@ -98,11 +108,15 @@
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:border-[#FFD100] focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Afrekenperiode (tekst)</label>
-          <input id="afrekper" type="text" placeholder="automatisch"
+          <label class="block text-xs text-gray-500 mb-1">Naam afrekenperiode</label>
+          <input id="afrekper" type="text" placeholder="bijv. 2026-Q1"
             class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-[#FFD100] focus:outline-none">
         </div>
       </div>
+      <p class="text-xs text-gray-600 mt-2">
+        Vooringevuld met de periodenamen uit de gekozen statements. Wat je hier neerzet komt op de uitdraai
+        bij <span class="text-gray-500">afrekper</span> én in de <span class="text-gray-500">period</span>-kolom te staan.
+      </p>
       <label class="flex items-center gap-2.5 mt-4 cursor-pointer">
         <input id="useSplit" type="checkbox" class="w-4 h-4 accent-[#FFD100]">
         <span class="text-xs text-gray-400">Split % per track toepassen <span class="text-gray-600">(stond niet in het oude sjabloon — laat uit voor een zuivere vergelijking)</span></span>
@@ -218,29 +232,23 @@
       return allStatements.filter(s => ids.includes(s.id))
     }
 
-    // ── Periode-tekst ───────────────────────────────────────
-    // "2025-2" → "2025-2 (31-12-2025)", "2026-03" → "2026-03 (31-03-2026)"
-    function periodLabel(p) {
-      if (!p) return ''
-      let m = /^(\d{4})-(\d)$/.exec(p.trim())
-      if (m) return `${p} (${m[2] === '1' ? '30-06' : '31-12'}-${m[1]})`
-      m = /^(\d{4})-(\d{2})$/.exec(p.trim())
-      if (m) {
-        const mo = parseInt(m[2], 10)
-        if (mo >= 1 && mo <= 12) {
-          const last = new Date(Date.UTC(+m[1], mo, 0)).getUTCDate()
-          return `${p} (${String(last).padStart(2, '0')}-${m[2]}-${m[1]})`
-        }
-      }
-      return p
+    // ── Periodes ────────────────────────────────────────────
+    // De periodenaam komt letterlijk uit het statement zoals bij uploaden opgegeven.
+    // Volgorde = volgorde van uploaden, dus geen gokwerk over notatie (2026-03 vs 03-2026).
+    function statementPeriods(stmts) {
+      return [...new Set(
+        stmts.slice()
+          .sort((a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at))
+          .map(s => s.period || s.filename)
+          .filter(Boolean)
+      )]
     }
 
+    // Prefill van de afrekenperiode — de gebruiker mag dit vrij overschrijven
     function autoPeriod() {
       const field = document.getElementById('afrekper')
       if (field.dataset.touched === '1') return
-      const sel = selectedStatements()
-      const periods = [...new Set(sel.map(s => s.period).filter(Boolean))].sort()
-      field.value = periods.map(periodLabel).join(', ')
+      field.value = statementPeriods(selectedStatements()).join(', ')
     }
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('afrekper').addEventListener('input', e => { e.target.dataset.touched = '1' })
@@ -290,7 +298,6 @@
 
       const artist  = findArtist(typed)
       const stmtIds = stmts.map(s => s.id)
-      const stmtPeriod = Object.fromEntries(stmts.map(s => [s.id, s.period || s.filename || '']))
 
       showToast('Bezig met ophalen...')
 
@@ -317,20 +324,19 @@
 
       const useSplit = document.getElementById('useSplit').checked
 
-      // Groeperen op periode + format + titel — één regel per combinatie
+      // Groeperen op format + titel — alle geselecteerde periodes vallen samen op één regel
       const groups = new Map()
       let nameOnly = 0
       lines.forEach(l => {
         if (!linkedIds.has(l.id)) nameOnly++
-        const period = l.period || stmtPeriod[l.statement_id] || ''
         const format = fmtFormat(l.usage_type)
         const title  = (l.track_title || '').trim() || (l.isrc ? `⚠️ ${l.isrc}` : '(geen titel)')
         const factor = (useSplit && l.track_id && splitByTrack[l.track_id] != null)
           ? splitByTrack[l.track_id] / 100 : 1
-        const key = `${period}|${format}|${title.toLowerCase()}`
+        const key = `${format}|${title.toLowerCase()}`
         if (!groups.has(key)) {
           groups.set(key, {
-            period, format, title,
+            format, title,
             artist: (l.artist_name || '').trim() || typed,
             qty: 0, amount: 0
           })
@@ -340,10 +346,9 @@
         g.amount += (parseFloat(l.nett_royalty) || 0) * factor
       })
 
-      // Sortering zoals het oude sjabloon: per periode, eerst str, dan dl, dan de rest
+      // Sortering zoals het oude sjabloon: eerst str, dan dl, dan de rest
       const fRank = f => ({ str: 0, dl: 1 }[f] ?? 2)
       const rows = [...groups.values()].sort((a, b) =>
-        a.period.localeCompare(b.period) ||
         fRank(a.format) - fRank(b.format) ||
         a.format.localeCompare(b.format) ||
         a.title.localeCompare(b.title, 'nl'))
@@ -366,9 +371,10 @@
         address: p?.street || ' ',
         city:    [p?.postal_code, p?.city].filter(Boolean).join(' ') || ' ',
         country: p?.country || ' ',
-        afrekper: document.getElementById('afrekper').value.trim() ||
-                  [...new Set(stmts.map(s => s.period).filter(Boolean))].sort().map(periodLabel).join(', ')
+        afrekper: document.getElementById('afrekper').value.trim() || statementPeriods(stmts).join(', ')
       }
+      // De period-kolom toont de naam die de gebruiker aan deze afrekening geeft
+      rows.forEach(r => { r.period = header.afrekper })
 
       const totals = { subTotal, aggPct, aggAmt, total, labelPct, labelAmt, artistAmt }
       lastDoc = { rows, totals, header, nameOnly, useSplit }
@@ -408,6 +414,11 @@
         </table>
 
         <table class="grid">
+          <colgroup>
+            <col style="width:12%"><col style="width:6%"><col style="width:14%"><col style="width:22%">
+            <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:5%">
+            <col style="width:9%"><col style="width:9%">
+          </colgroup>
           <thead>
             <tr>
               <th>period</th>
@@ -440,6 +451,7 @@
         </table>
 
         <table class="totals">
+          <colgroup><col style="width:92%"><col style="width:8%"></colgroup>
           <tr><td class="lbl2">Sub total</td><td class="val">${num2(totals.subTotal)}</td></tr>
           <tr><td class="lbl2">Deduction aggregator ${trimPct(totals.aggPct)}%</td><td class="val">${num2(totals.aggAmt)}</td></tr>
           <tr><td class="lbl2">Total</td><td class="val">${num2(totals.total)}</td></tr>

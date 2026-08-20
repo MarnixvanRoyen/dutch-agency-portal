@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financiën — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
+
+    <div class="flex items-start justify-between mb-6 gap-4">
+      <div>
+        <h1 class="text-xl font-bold">Financiën</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Spaarpot per persoon — wat er nog uitbetaald moet worden</p>
+      </div>
+      <span class="text-gray-600 text-xs border border-[#2a2a2a] rounded-lg px-3 py-1.5 whitespace-nowrap">alleen-lezen</span>
+    </div>
+
+    <!-- Kerncijfers -->
+    <div id="kerncijfers" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <p class="text-gray-600 text-sm col-span-4">Laden...</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+      <input type="text" id="zoek" oninput="render()" placeholder="Zoek op naam..."
+        class="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+      <div class="flex gap-2 flex-wrap" id="filterKnoppen"></div>
+    </div>
+
+    <!-- Tabel -->
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <th class="text-left  px-5 py-3 font-medium">Persoon</th>
+            <th class="text-right px-5 py-3 font-medium">Royalty's</th>
+            <th class="text-right px-5 py-3 font-medium">Uitbetaald</th>
+            <th class="text-right px-5 py-3 font-medium">Overig</th>
+            <th class="text-right px-5 py-3 font-medium">Saldo</th>
+            <th class="text-left  px-5 py-3 font-medium">Status</th>
+            <th class="text-right px-5 py-3 font-medium">Laatste mutatie</th>
+          </tr>
+        </thead>
+        <tbody id="tabel">
+          <tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-gray-600 text-xs mt-3">
+      "Overig" is alles wat geen royalty of uitbetaling is: beginsaldo, voorschotten,
+      doorbelaste kosten en correcties.
+    </p>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    let saldi  = []
+    let filter = 'alles'
+
+    async function loadPage() {
+      const session = await initPage('financien')
+      if (!session) return
+      tekenFilterKnoppen()
+      await laadSaldi()
+    }
+
+    async function laadSaldi() {
+      // Paginerend ophalen — Supabase geeft maximaal 1000 rijen per keer
+      saldi = []
+      let from = 0
+      while (true) {
+        const { data, error } = await db
+          .from('person_balances')
+          .select('*')
+          .order('last_name')
+          .range(from, from + 999)
+
+        if (error) {
+          document.getElementById('tabel').innerHTML =
+            `<tr><td colspan="7" class="px-5 py-6 text-red-400 text-sm">
+               Kon de saldi niet laden: ${error.message}<br>
+               <span class="text-gray-500 text-xs">Staat <code>person_balances</code> in de Data API-instellingen?</span>
+             </td></tr>`
+          return
+        }
+        if (!data || !data.length) break
+        saldi.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      render()
+    }
+
+    // ── Status per persoon ────────────────────────────────────
+    // De drempel is strikt: pas BOVEN het bedrag mag er uitbetaald worden.
+    function statusVan(saldo) {
+      if (saldo < 0)                 return { label: 'schuld',            kleur: 'text-red-400' }
+      if (saldo === 0)               return { label: 'geen saldo',        kleur: 'text-gray-600' }
+      if (saldo > FINADMIN.drempel)  return { label: 'klaar om te melden', kleur: 'text-green-400' }
+      return                                { label: 'aan het sparen',    kleur: 'text-gray-400' }
+    }
+
+    function tekenFilterKnoppen() {
+      const opties = [
+        ['alles',   'Iedereen'],
+        ['drempel', `Boven ${fmt(FINADMIN.drempel)}`],
+        ['negatief','Schuld'],
+        ['saldo',   'Met saldo'],
+      ]
+      document.getElementById('filterKnoppen').innerHTML = opties.map(([k, label]) => `
+        <button onclick="zetFilter('${k}')" data-filter="${k}"
+          class="filterKnop border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+          ${label}
+        </button>`).join('')
+      markeerFilter()
+    }
+
+    function zetFilter(k) { filter = k; markeerFilter(); render() }
+
+    function markeerFilter() {
+      document.querySelectorAll('.filterKnop').forEach(b => {
+        const aan = b.dataset.filter === filter
+        b.className = 'filterKnop border px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ' +
+          (aan ? 'border-[#FFD100] text-[#FFD100] bg-[#FFD100]/10'
+               : 'border-[#2a2a2a] text-gray-400 hover:text-white')
+      })
+    }
+
+    function render() {
+      const q = document.getElementById('zoek').value.trim().toLowerCase()
+
+      const rijen = saldi
+        .map(r => ({ ...r, saldoN: parseFloat(r.saldo) || 0 }))
+        .filter(r => {
+          const naam = `${r.first_name} ${r.last_name}`.toLowerCase()
+          if (q && !naam.includes(q)) return false
+          if (filter === 'drempel')  return r.saldoN >  FINADMIN.drempel
+          if (filter === 'negatief') return r.saldoN <  0
+          if (filter === 'saldo')    return r.saldoN !== 0
+          return true
+        })
+        .sort((a, b) => b.saldoN - a.saldoN)
+
+      tekenKerncijfers()
+
+      const tbody = document.getElementById('tabel')
+      if (!rijen.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Niemand gevonden met deze filters.</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = rijen.map(r => {
+        const st = statusVan(r.saldoN)
+        const saldoKleur = r.saldoN < 0 ? 'text-red-400'
+                         : r.saldoN > FINADMIN.drempel ? 'text-green-400'
+                         : 'text-white'
+        return `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+            <td class="px-5 py-3.5">
+              <div class="text-white">${r.first_name} ${r.last_name}</div>
+              <div class="text-gray-600 text-xs">${r.email || 'geen email'}</div>
+            </td>
+            <td class="px-5 py-3.5 text-right text-gray-400">${fmt(r.totaal_royalty)}</td>
+            <td class="px-5 py-3.5 text-right text-gray-400">${fmt(r.totaal_uitbetaald)}</td>
+            <td class="px-5 py-3.5 text-right text-gray-400">${fmt(r.totaal_overig)}</td>
+            <td class="px-5 py-3.5 text-right font-semibold ${saldoKleur}">${fmt(r.saldoN)}</td>
+            <td class="px-5 py-3.5 ${st.kleur} text-xs">${st.label}</td>
+            <td class="px-5 py-3.5 text-right text-gray-600 text-xs">${r.laatste_mutatie ? fmtDate(r.laatste_mutatie) : '—'}</td>
+          </tr>`
+      }).join('')
+    }
+
+    // Altijd over ALLE personen, niet over de filterselectie — anders verandert
+    // "wat moet Rob nog betalen" zodra je iets in het zoekveld typt.
+    function tekenKerncijfers() {
+      const alle = saldi.map(r => parseFloat(r.saldo) || 0)
+
+      const positief = alle.filter(s => s > 0)
+      const boven    = alle.filter(s => s > FINADMIN.drempel)
+      const negatief = alle.filter(s => s < 0)
+      const som      = a => a.reduce((s, v) => s + v, 0)
+
+      const tegel = (label, waarde, sub, kleur = 'text-white') => `
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">${label}</div>
+          <div class="${kleur} font-bold text-lg">${waarde}</div>
+          <div class="text-gray-600 text-xs mt-0.5">${sub}</div>
+        </div>`
+
+      document.getElementById('kerncijfers').innerHTML =
+        tegel('Openstaande verplichting', fmt(som(positief)),
+              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-[#FFD100]') +
+        tegel('Klaar om te melden', fmt(som(boven)),
+              `${boven.length} boven ${fmt(FINADMIN.drempel)}`, 'text-green-400') +
+        tegel('Openstaande schuld', fmt(som(negatief)),
+              `${negatief.length} ${negatief.length === 1 ? 'persoon' : 'personen'} negatief`,
+              negatief.length ? 'text-red-400' : 'text-gray-600') +
+        tegel('Personen', String(saldi.length),
+              `${alle.filter(s => s === 0).length} zonder saldo`, 'text-white')
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

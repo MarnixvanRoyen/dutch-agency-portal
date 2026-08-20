@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testbeheer — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-3xl">
+
+    <div class="mb-6">
+      <h1 class="text-xl font-bold">Testbeheer</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Financiële administratie leegmaken en opnieuw beginnen</p>
+    </div>
+
+    <!-- Slot staat erop: dan verder niets tonen -->
+    <div id="vergrendeld" class="hidden bg-[#1e1e1e] border border-green-500/30 rounded-xl p-6">
+      <div class="flex items-start gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <div>
+          <h2 class="text-white font-semibold text-sm mb-1">Het slot zit erop</h2>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            De testmodus staat uit, dus dit is de echte administratie. Er kan niets meer gewist
+            worden — niet vanaf deze pagina en ook niet via de database.
+            Een fout herstel je met een tegenboeking; een uitbetaling zet je op geannuleerd.
+          </p>
+          <p class="text-gray-600 text-xs mt-3">
+            Het slot er weer af halen kan alleen bewust, met een SQL-opdracht in Supabase.
+            Dat staat onderaan <span class="text-gray-500">migrate_v5b_testmodus.sql</span>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="testpaneel" class="hidden">
+
+      <!-- Waarschuwing -->
+      <div class="bg-[#FFD100]/10 border border-[#FFD100]/40 rounded-xl p-4 mb-6">
+        <div class="flex items-start gap-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#FFD100] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.5 0l-7.1 12.25A2 2 0 004.99 19z"/>
+          </svg>
+          <div class="text-sm">
+            <div class="text-[#FFD100] font-semibold mb-1">Testmodus staat aan</div>
+            <p class="text-gray-400 leading-relaxed">
+              Alles op deze pagina wist gegevens echt en definitief. Dat mag nu, want er is nog
+              niets uitbetaald. Zet het slot erop zodra Rob echt gaat betalen — daarna verdwijnt
+              deze pagina uit het menu.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Huidige stand -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-white">Huidige stand</h2>
+          <button onclick="laadStand()" class="text-xs text-gray-400 hover:text-white transition-colors">Verversen</button>
+        </div>
+        <div id="standGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <p class="text-gray-600 text-sm col-span-4">Laden...</p>
+        </div>
+      </div>
+
+      <!-- Statements ontboeken -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+        <h2 class="text-sm font-semibold text-white mb-1">Statements ontboeken</h2>
+        <p class="text-gray-500 text-xs mb-4">
+          Haalt de spaarpot-mutaties van dat statement weg. Daarna kun je het statement op de
+          pagina Statements verwijderen en opnieuw uploaden.
+        </p>
+        <div id="stmtLijst" class="space-y-2">
+          <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+
+      <!-- Grof geschut -->
+      <div class="bg-[#1e1e1e] border border-red-500/30 rounded-xl p-5 mb-4">
+        <h2 class="text-sm font-semibold text-white mb-1">Opnieuw beginnen</h2>
+        <p class="text-gray-500 text-xs mb-4">
+          Statements, personen, artiesten en tracks blijven staan. Alleen de financiële
+          administratie gaat leeg.
+        </p>
+
+        <div class="space-y-3">
+          <button onclick="wisUitbetalingen()"
+            class="w-full text-left border border-[#2a2a2a] hover:border-red-500/50 rounded-lg px-4 py-3 transition-colors group">
+            <div class="text-sm text-white group-hover:text-red-300">Alleen uitbetalingen wissen</div>
+            <div class="text-xs text-gray-600 mt-0.5">Uitbetalingen én hun afboekingen weg; de opgebouwde royalty's blijven staan</div>
+          </button>
+
+          <button onclick="wisAlles()"
+            class="w-full text-left border border-red-500/40 bg-red-500/5 hover:bg-red-500/10 rounded-lg px-4 py-3 transition-colors">
+            <div class="text-sm text-red-300 font-medium">Alles resetten</div>
+            <div class="text-xs text-gray-500 mt-0.5">Alle mutaties én alle uitbetalingen. Iedereen terug naar saldo nul.</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Slot erop -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-white mb-1">Klaar met testen</h2>
+        <p class="text-gray-500 text-xs mb-4">
+          Zet het slot erop zodra Rob echt gaat betalen. Vanaf dat moment kan er niets meer
+          gewist worden en verdwijnt deze pagina uit het menu. Terugdraaien kan daarna alleen
+          nog bewust via Supabase.
+        </p>
+        <button onclick="slotErop()"
+          class="border border-green-500/40 text-green-400 hover:bg-green-500/10 rounded-lg px-5 py-2.5 text-sm transition-colors">
+          Slot erop doen
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    // Filter die op alles matcht — Supabase wil een voorwaarde bij een delete
+    const ALLES = '00000000-0000-0000-0000-000000000000'
+
+    async function loadPage() {
+      const session = await initPage('testbeheer')
+      if (!session) return
+
+      if (!FINADMIN.testmodus) {
+        document.getElementById('vergrendeld').classList.remove('hidden')
+        return
+      }
+      document.getElementById('testpaneel').classList.remove('hidden')
+      await laadStand()
+    }
+
+    // ── Huidige stand ─────────────────────────────────────────
+    async function laadStand() {
+      const [mut, pay, betaald] = await Promise.all([
+        db.from('ledger_entries').select('amount'),
+        db.from('payouts').select('id', { count: 'exact', head: true }),
+        db.from('payouts').select('id', { count: 'exact', head: true }).eq('status', 'betaald'),
+      ])
+
+      const regels = mut.data || []
+      const totaal = regels.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+
+      const tegel = (label, waarde, kleur = 'text-white') => `
+        <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-4 py-3">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">${label}</div>
+          <div class="${kleur} font-bold">${waarde}</div>
+        </div>`
+
+      document.getElementById('standGrid').innerHTML =
+        tegel('Mutaties', regels.length) +
+        tegel('Uitbetalingen', pay.count ?? 0) +
+        tegel('Waarvan betaald', betaald.count ?? 0, (betaald.count ?? 0) > 0 ? 'text-[#FFD100]' : 'text-white') +
+        tegel('In spaarpotten', fmt(totaal), 'text-[#FFD100]')
+
+      await laadStatements()
+    }
+
+    // ── Statements met hun boekstatus ─────────────────────────
+    async function laadStatements() {
+      const [stmts, mutaties] = await Promise.all([
+        db.from('statements').select('id, period, filename, buiten_administratie').order('uploaded_at', { ascending: false }),
+        db.from('ledger_entries').select('statement_id, amount').eq('type', 'royalty'),
+      ])
+
+      const perStatement = {}
+      ;(mutaties.data || []).forEach(m => {
+        if (!m.statement_id) return
+        if (!perStatement[m.statement_id]) perStatement[m.statement_id] = { n: 0, bedrag: 0 }
+        perStatement[m.statement_id].n += 1
+        perStatement[m.statement_id].bedrag += parseFloat(m.amount) || 0
+      })
+
+      const lijst = stmts.data || []
+      const el = document.getElementById('stmtLijst')
+      if (!lijst.length) { el.innerHTML = '<p class="text-gray-600 text-sm">Geen statements.</p>'; return }
+
+      el.innerHTML = lijst.map(s => {
+        const geboekt = perStatement[s.id]
+        let status, knop = ''
+        if (s.buiten_administratie) {
+          status = '<span class="text-gray-600">buiten de administratie</span>'
+        } else if (geboekt) {
+          status = `<span class="text-green-400">geboekt — ${geboekt.n} ${geboekt.n === 1 ? 'persoon' : 'personen'}, ${fmt(geboekt.bedrag)}</span>`
+          knop = `<button onclick="ontboek('${s.id}', '${(s.period || s.filename).replace(/'/g, "\\'")}')"
+                    class="text-xs text-gray-400 hover:text-red-400 transition-colors shrink-0">Ontboeken</button>`
+        } else {
+          status = '<span class="text-gray-500">nog niet geboekt</span>'
+        }
+        return `
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+            <div class="min-w-0">
+              <div class="text-white text-sm truncate">${s.period || s.filename}</div>
+              <div class="text-xs mt-0.5">${status}</div>
+            </div>
+            ${knop}
+          </div>`
+      }).join('')
+    }
+
+    // ── Acties ────────────────────────────────────────────────
+    async function ontboek(id, naam) {
+      if (!confirm(`Alle spaarpot-mutaties van "${naam}" verwijderen?\n\nDaarna kun je dit statement verwijderen en opnieuw uploaden.`)) return
+      const { error } = await db.from('ledger_entries').delete().eq('statement_id', id).eq('type', 'royalty')
+      if (error) return toonFout(error)
+      showToast('Statement ontboekt.')
+      await laadStand()
+    }
+
+    async function wisUitbetalingen() {
+      if (!confirm('Alle uitbetalingen verwijderen, inclusief de afboekingen uit de spaarpotten?\n\nDe opgebouwde royalty\'s blijven staan.')) return
+      // Eerst de afboekingen, dan de uitbetalingen zelf — anders houdt de
+      // database de uitbetaling vast omdat er nog een mutatie naar verwijst.
+      const stap1 = await db.from('ledger_entries').delete().eq('type', 'uitbetaling')
+      if (stap1.error) return toonFout(stap1.error)
+      const stap2 = await db.from('payouts').delete().neq('id', ALLES)
+      if (stap2.error) return toonFout(stap2.error)
+      showToast('Uitbetalingen gewist.')
+      await laadStand()
+    }
+
+    async function wisAlles() {
+      const bevestiging = prompt('Dit wist ALLE mutaties en uitbetalingen. Iedereen gaat terug naar saldo nul.\n\nTyp RESET om door te gaan:')
+      if (bevestiging !== 'RESET') { showToast('Geannuleerd.', 'error'); return }
+
+      const stap1 = await db.from('ledger_entries').delete().neq('id', ALLES)
+      if (stap1.error) return toonFout(stap1.error)
+      const stap2 = await db.from('payouts').delete().neq('id', ALLES)
+      if (stap2.error) return toonFout(stap2.error)
+      showToast('Administratie leeg. Alle saldi staan op nul.')
+      await laadStand()
+    }
+
+    async function slotErop() {
+      if (!confirm('Het slot erop doen?\n\nDaarna kan er niets meer gewist worden en verdwijnt deze pagina uit het menu. Terugdraaien kan alleen nog via Supabase.')) return
+      const { error } = await db.from('settings').update({ value: 'uit' }).eq('key', 'finadmin_testmodus')
+      if (error) return toonFout(error)
+      FINADMIN.testmodus = false
+      showToast('Slot staat erop.')
+      setTimeout(() => window.location.reload(), 900)
+    }
+
+    // De database geeft bij een geblokkeerde verwijdering een eigen melding —
+    // die tonen we letterlijk, want die legt precies uit wat er aan de hand is.
+    function toonFout(error) {
+      showToast(error.message || 'Er ging iets mis', 'error')
+      console.error(error)
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

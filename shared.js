@@ -16,12 +16,21 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 // settings-tabel in Supabase; er is bewust geen scherm meer voor.
 let COMMISSIONS = { aggregatorPct: 30, djworldPct: 50 }
 
+// ── Financiële administratie ────────────────────────────────
+// testmodus : zolang die aan staat mag er gewist worden en is de tab
+//             Testbeheer zichtbaar. Staat hij uit, dan zit het slot erop en
+//             blokkeert de database elke verwijdering.
+// drempel   : uitbetalen vanaf strikt BOVEN dit bedrag.
+let FINADMIN = { testmodus: false, drempel: 25 }
+
 async function loadSettings() {
   const { data } = await db.from('settings').select('key, value')
   if (data) {
     data.forEach(s => {
-      if (s.key === 'aggregator_pct') COMMISSIONS.aggregatorPct = parseFloat(s.value) || 30
-      if (s.key === 'djworld_pct')    COMMISSIONS.djworldPct    = parseFloat(s.value) || 50
+      if (s.key === 'aggregator_pct')     COMMISSIONS.aggregatorPct = parseFloat(s.value) || 30
+      if (s.key === 'djworld_pct')        COMMISSIONS.djworldPct    = parseFloat(s.value) || 50
+      if (s.key === 'payout_threshold')   FINADMIN.drempel          = parseFloat(s.value) || 25
+      if (s.key === 'finadmin_testmodus') FINADMIN.testmodus        = s.value === 'aan'
     })
   }
 }
@@ -125,7 +134,10 @@ const NAV_LINKS = [
   { href: 'statements.html',     label: 'Statements',      id: 'statements', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' },
   { href: 'bulk-afrekening.html',label: 'Bulk afrekening', id: 'bulk',          icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' },
   { href: 'legacy-afrekening.html', label: 'Legacy Afrekeningen', id: 'legacy', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+  { href: 'financien.html',      label: 'Financiën',       id: 'financien',  icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
   { href: 'data-kwaliteit.html', label: 'Data Kwaliteit',  id: 'datakwaliteit', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+  // Alleen zichtbaar zolang de testmodus aan staat — zie renderNav()
+  { href: 'testbeheer.html',     label: 'Testbeheer',      id: 'testbeheer', testOnly: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' },
 ]
 
 // Controleer auth + render nav. Geeft session terug of null.
@@ -195,7 +207,7 @@ function renderNav(activePage, email) {
         </div>
       </div>
       <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        ${NAV_LINKS.map(l => `
+        ${NAV_LINKS.filter(l => !l.testOnly || FINADMIN.testmodus).map(l => `
           <a href="${l.href}" onclick="closeSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
             activePage === l.id
               ? 'bg-[#FFD100]/15 text-[#FFD100] font-medium'

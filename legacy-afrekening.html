@@ -94,18 +94,15 @@
 
     <!-- Stap 3: Instellingen -->
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
-      <h2 class="text-sm font-semibold text-white mb-1">Stap 3 — Percentages &amp; periode</h2>
-      <p class="text-gray-500 text-xs mb-4">Standaard overgenomen uit de instellingen, hier per afrekening aan te passen</p>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <h2 class="text-sm font-semibold text-white mb-1">Stap 3 — Tarieven &amp; periode</h2>
+      <p class="text-gray-500 text-xs mb-4">De percentages komen uit de gekozen statements en liggen daar vast</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Deduction aggregator %</label>
-          <input id="aggPct" type="number" step="0.01" min="0" max="100"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:border-[#FFD100] focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">Label %</label>
-          <input id="labelPct" type="number" step="0.01" min="0" max="100"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:border-[#FFD100] focus:outline-none">
+          <label class="block text-xs text-gray-500 mb-1">Tarieven uit de selectie</label>
+          <div id="tariefInfo"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-gray-600">
+            Kies eerst statements
+          </div>
         </div>
         <div>
           <label class="block text-xs text-gray-500 mb-1">Naam afrekenperiode</label>
@@ -164,11 +161,36 @@
     async function loadPage() {
       const session = await initPage('legacy')
       if (!session) return
-      document.getElementById('aggPct').value   = COMMISSIONS.aggregatorPct
-      document.getElementById('labelPct').value = COMMISSIONS.djworldPct
       await Promise.all([loadStatements(), loadArtists()])
       document.getElementById('artistInput').addEventListener('input', onArtistTyped)
-      document.getElementById('stmtList').addEventListener('change', autoPeriod)
+      document.getElementById('stmtList').addEventListener('change', () => {
+        autoPeriod()
+        updateTariefInfo()
+      })
+      updateTariefInfo()
+    }
+
+    // Welke tarieven horen bij de aangevinkte statements?
+    function selectedRates() {
+      return selectedStatements().map(s => STATEMENT_RATES[s.id]).filter(Boolean)
+    }
+
+    // Regel onder "Tarieven uit de selectie" bijwerken
+    function updateTariefInfo() {
+      const el = document.getElementById('tariefInfo')
+      if (!el) return
+      const rs = selectedRates()
+      if (!rs.length) {
+        el.textContent = 'Kies eerst statements'
+        el.className = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-gray-600'
+        return
+      }
+      const aggL = pctLabel(rs.map(r => r.agg))
+      const djL  = pctLabel(rs.map(r => r.dj))
+      const mix  = aggL === 'wisselend' || djL === 'wisselend'
+      el.textContent = `Aggregator ${aggL} · Label ${djL}` + (mix ? ' — specificatie op de uitdraai' : '')
+      el.className = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm ' +
+        (mix ? 'text-[#FFD100]' : 'text-white')
     }
 
     async function loadStatements() {
@@ -327,6 +349,11 @@
       // Groeperen op format + titel — alle geselecteerde periodes vallen samen op één regel
       const groups = new Map()
       let nameOnly = 0
+      // Commissies worden per regel berekend met het tarief van dát statement.
+      // Kies je statements uit 2025 én 2026 samen, dan krijgt elke regel dus zijn
+      // eigen percentage — nooit één gemiddelde over de hele uitdraai.
+      const tot = legeSplit()
+      const aggPcts = [], djPcts = []
       lines.forEach(l => {
         if (!linkedIds.has(l.id)) nameOnly++
         const format = fmtFormat(l.usage_type)
@@ -341,9 +368,15 @@
             qty: 0, amount: 0
           })
         }
+        const bedrag = (parseFloat(l.nett_royalty) || 0) * factor
         const g = groups.get(key)
         g.qty    += (parseInt(l.quantity) || 0)
-        g.amount += (parseFloat(l.nett_royalty) || 0) * factor
+        g.amount += bedrag
+
+        const s = splitBedrag(bedrag, l.statement_id)
+        aggPcts.push(s.aggPct)
+        djPcts.push(s.djPct)
+        telSplitOp(tot, s)
       })
 
       // Sortering zoals het oude sjabloon: eerst str, dan dl, dan de rest
@@ -358,12 +391,30 @@
       const subTotal = rows.reduce((s, r) => s + r.amount, 0)
       const rowsSum  = round2(rows.reduce((s, r) => s + round2(r.amount), 0))
 
-      const aggPct   = parseFloat(document.getElementById('aggPct').value)   || 0
-      const labelPct = parseFloat(document.getElementById('labelPct').value) || 0
-      const aggAmt   = subTotal * aggPct / 100
+      // Bedragen uit de per-regel berekening. Total en artistAmt leiden we af door
+      // aftrekken, zodat de uitdraai altijd sluitend optelt: sub − aggregator = total,
+      // total − label = artiest.
+      const aggAmt   = tot.aggAmt
       const total    = subTotal - aggAmt
-      const labelAmt = total * labelPct / 100
+      const labelAmt = tot.djAmt
       const artistAmt= total - labelAmt
+
+      // Kopteksten: één tarief → "30%", meerdere → "wisselend"
+      const aggLabel = pctLabel(aggPcts)
+      const djUniek  = [...new Set(djPcts)]
+      const labelLabel  = pctLabel(djPcts)
+      const artistLabel = djUniek.length === 1 ? fmtPct(100 - djUniek[0]) : 'wisselend'
+
+      // Bij gemengde tarieven een specificatie per periode, zodat de artiest
+      // kan narekenen welk percentage waar geldt.
+      const gebruikteStmts = new Set(lines.map(l => l.statement_id))
+      const gemengd  = aggLabel === 'wisselend' || labelLabel === 'wisselend'
+      const tariefSpec = !gemengd ? [] : stmts
+        .filter(s => gebruikteStmts.has(s.id))
+        .map(s => {
+          const r = STATEMENT_RATES[s.id] || {}
+          return { periode: s.period || s.filename, agg: fmtPct(r.agg), dj: fmtPct(r.dj) }
+        })
 
       const p = artist?.persons || null
       const header = {
@@ -376,7 +427,7 @@
       // De period-kolom toont de naam die de gebruiker aan deze afrekening geeft
       rows.forEach(r => { r.period = header.afrekper })
 
-      const totals = { subTotal, aggPct, aggAmt, total, labelPct, labelAmt, artistAmt }
+      const totals = { subTotal, aggLabel, aggAmt, total, labelLabel, labelAmt, artistLabel, artistAmt, tariefSpec }
       lastDoc = { rows, totals, header, nameOnly, useSplit }
 
       renderPaper()
@@ -453,11 +504,20 @@
         <table class="totals">
           <colgroup><col style="width:92%"><col style="width:8%"></colgroup>
           <tr><td class="lbl2">Sub total</td><td class="val">${num2(totals.subTotal)}</td></tr>
-          <tr><td class="lbl2">Deduction aggregator ${trimPct(totals.aggPct)}%</td><td class="val">${num2(totals.aggAmt)}</td></tr>
+          <tr><td class="lbl2">Deduction aggregator ${totals.aggLabel}</td><td class="val">${num2(totals.aggAmt)}</td></tr>
           <tr><td class="lbl2">Total</td><td class="val">${num2(totals.total)}</td></tr>
-          <tr><td class="lbl2">Label ${trimPct(totals.labelPct)}%</td><td class="val">${num2(totals.labelAmt)}</td></tr>
-          <tr class="final"><td class="lbl2">Total amount payable to artist ${trimPct(100 - totals.labelPct)}%</td><td class="val">${num2(totals.artistAmt)}</td></tr>
+          <tr><td class="lbl2">Label ${totals.labelLabel}</td><td class="val">${num2(totals.labelAmt)}</td></tr>
+          <tr class="final"><td class="lbl2">Total amount payable to artist ${totals.artistLabel}</td><td class="val">${num2(totals.artistAmt)}</td></tr>
         </table>
+
+        ${!totals.tariefSpec.length ? '' : `
+        <table class="totals" style="margin-top:6px">
+          <colgroup><col style="width:92%"><col style="width:8%"></colgroup>
+          <tr><td class="lbl2" colspan="2" style="padding-top:6px"><b>Rates applied per period</b></td></tr>
+          ${totals.tariefSpec.map(t => `
+            <tr><td class="lbl2">${esc(t.periode)} — aggregator ${t.agg}, label ${t.dj}</td><td class="val"></td></tr>
+          `).join('')}
+        </table>`}
       `
       document.getElementById('paperWrap').classList.remove('hidden')
     }
@@ -513,10 +573,16 @@
       const x = v => Math.round(v * 1e6) / 1e6   // float-ruis wegpoetsen
       rows.forEach(r => aoa.push([r.period, r.format, r.artist, r.title, '', r.qty || '', 'euro', 0, 0, x(r.amount)]))
       aoa.push(['', '', '', '', '', '', '', '', 'Sub total', x(totals.subTotal)])
-      aoa.push(['', '', '', '', '', '', '', '', `Deduction aggregator ${trimPct(totals.aggPct)}%`, x(totals.aggAmt)])
+      aoa.push(['', '', '', '', '', '', '', '', `Deduction aggregator ${totals.aggLabel}`, x(totals.aggAmt)])
       aoa.push(['', '', '', '', '', '', '', '', 'Total', x(totals.total)])
-      aoa.push(['', '', '', '', '', '', '', '', `Label ${trimPct(totals.labelPct)}%`, x(totals.labelAmt)])
-      aoa.push(['', '', '', '', '', '', '', '', `Total amount payable to artist ${trimPct(100 - totals.labelPct)}%`, x(totals.artistAmt)])
+      aoa.push(['', '', '', '', '', '', '', '', `Label ${totals.labelLabel}`, x(totals.labelAmt)])
+      aoa.push(['', '', '', '', '', '', '', '', `Total amount payable to artist ${totals.artistLabel}`, x(totals.artistAmt)])
+      if (totals.tariefSpec.length) {
+        aoa.push([])
+        aoa.push(['', '', '', '', '', '', '', '', 'Rates applied per period', ''])
+        totals.tariefSpec.forEach(t =>
+          aoa.push(['', '', '', '', '', '', '', '', `${t.periode} — aggregator ${t.agg}, label ${t.dj}`, '']))
+      }
 
       const ws = XLSX.utils.aoa_to_sheet(aoa)
       // Bedragkolommen op 2 decimalen tonen — Excel rondt zelf af, net als in het origineel
@@ -542,7 +608,6 @@
     }
     function round2(v) { return Math.round((v + Number.EPSILON) * 100) / 100 }
     function num2(v)   { const n = round2(v); return (Object.is(n, -0) ? 0 : n).toFixed(2) }
-    function trimPct(v){ return String(round2(v)).replace(/\.00$/, '') }
     function esc(s)    { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])) }
 
     loadPage()

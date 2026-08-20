@@ -46,6 +46,26 @@
         </div>
       </div>
 
+      <!-- Tarieven: horen bij DIT statement en worden bevroren bij opslaan -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
+          <input type="number" id="aggPct" min="0" max="100" step="0.01"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="20">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">DJ·World %</label>
+          <input type="number" id="djPct" min="0" max="100" step="0.01"
+            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            placeholder="50">
+        </div>
+      </div>
+      <p class="text-gray-600 text-xs mb-4">
+        Deze percentages horen bij <span class="text-gray-400">dit</span> statement en liggen na opslaan vast.
+        Wijzig je ze later ergens anders, dan verandert er niets aan dit statement.
+      </p>
+
       <!-- Progress -->
       <div id="uploadProgress" class="hidden mb-4">
         <div class="flex justify-between text-xs text-gray-500 mb-1">
@@ -86,12 +106,13 @@
             <th class="text-left px-5 py-3 font-medium">Periode</th>
             <th class="text-right px-5 py-3 font-medium">Regels</th>
             <th class="text-right px-5 py-3 font-medium">Totaal Royalties</th>
+            <th class="text-center px-5 py-3 font-medium">Tarieven</th>
             <th class="text-right px-5 py-3 font-medium">Geüpload</th>
             <th class="text-right px-5 py-3 font-medium">Actie</th>
           </tr>
         </thead>
         <tbody id="statementsTable">
-          <tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          <tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -120,6 +141,47 @@
             </thead>
             <tbody id="detailTable"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarieven wijzigen modal -->
+    <div id="tariefModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-base">Tarieven wijzigen</h2>
+          <button onclick="closeTarief()" class="text-gray-500 hover:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-xs text-red-300">
+            Let op: dit verandert met terugwerkende kracht álle bedragen van dit statement —
+            dashboard, artiestenoverzicht en afrekeningen. Is er al aan de hand van dit statement
+            uitbetaald, dan loopt de administratie uit de pas.
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
+            <input type="number" id="tariefAgg" min="0" max="100" step="0.01"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">DJ·World %</label>
+            <input type="number" id="tariefDj" min="0" max="100" step="0.01"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+          </div>
+          <div class="flex gap-3 pt-1">
+            <button onclick="saveTarief()"
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
+              Opslaan
+            </button>
+            <button onclick="closeTarief()"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
+              Annuleren
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -188,16 +250,30 @@
 
       const tbody = document.getElementById('statementsTable')
       if (!data?.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Nog geen statements geüpload.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Nog geen statements geüpload.</td></tr>'
         return
       }
 
-      tbody.innerHTML = data.map(s => `
+      // Tariefvelden voorvullen met die van het laatst geüploade statement.
+      // Nog nooit iets geüpload? Dan de standaardinstelling uit settings.
+      vulTarievenVoor(data[0])
+
+      tbody.innerHTML = data.map(s => {
+        const heeftTarief = s.aggregator_pct != null && s.djworld_pct != null
+        const tarief = heeftTarief
+          ? `${fmtPct(s.aggregator_pct)} / ${fmtPct(s.djworld_pct)}`
+          : '<span class="text-red-400">ontbreekt</span>'
+        return `
         <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
           <td class="px-5 py-3.5 text-white font-medium">${s.filename}</td>
           <td class="px-5 py-3.5 text-gray-500">${s.period || '—'}</td>
           <td class="px-5 py-3.5 text-right text-gray-400">${s.line_count || 0}</td>
           <td class="px-5 py-3.5 text-right text-[#FFD100] font-semibold">${fmt(s.total_royalties)}</td>
+          <td class="px-5 py-3.5 text-center whitespace-nowrap">
+            <span class="text-gray-400 text-xs">${tarief}</span>
+            <button onclick="openTarief('${s.id}')" title="Tarieven wijzigen"
+              class="text-gray-600 hover:text-[#FFD100] text-xs ml-2 transition-colors">wijzig</button>
+          </td>
           <td class="px-5 py-3.5 text-right text-gray-500 text-xs">${fmtDate(s.uploaded_at)}</td>
           <td class="px-5 py-3.5 text-right">
             <button onclick="viewDetail('${s.id}', '${s.filename.replace(/'/g, "\\'")}')"
@@ -206,7 +282,54 @@
               class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>
           </td>
         </tr>
-      `).join('')
+      `}).join('')
+    }
+
+    // Voorvullen van de twee tariefvelden — alleen als ze nog leeg zijn,
+    // zodat we nooit overschrijven wat je zelf hebt ingetypt.
+    function vulTarievenVoor(laatste) {
+      const a = document.getElementById('aggPct')
+      const d = document.getElementById('djPct')
+      if (a && a.value === '') {
+        a.value = laatste?.aggregator_pct != null ? parseFloat(laatste.aggregator_pct) : COMMISSIONS.aggregatorPct
+      }
+      if (d && d.value === '') {
+        d.value = laatste?.djworld_pct != null ? parseFloat(laatste.djworld_pct) : COMMISSIONS.djworldPct
+      }
+    }
+
+    // ---------- Tarieven achteraf wijzigen ----------
+    let tariefStatement = null
+
+    function openTarief(id) {
+      tariefStatement = id
+      const r = STATEMENT_RATES[id] || {}
+      document.getElementById('tariefAgg').value = isFinite(r.agg) ? r.agg : ''
+      document.getElementById('tariefDj').value  = isFinite(r.dj)  ? r.dj  : ''
+      document.getElementById('tariefModal').classList.remove('hidden')
+    }
+
+    function closeTarief() {
+      tariefStatement = null
+      document.getElementById('tariefModal').classList.add('hidden')
+    }
+
+    async function saveTarief() {
+      if (!tariefStatement) return
+      const agg = parseFloat(document.getElementById('tariefAgg').value)
+      const dj  = parseFloat(document.getElementById('tariefDj').value)
+      if (!isFinite(agg) || agg < 0 || agg > 100 || !isFinite(dj) || dj < 0 || dj > 100) {
+        showToast('Vul beide percentages in (0 t/m 100).', 'error')
+        return
+      }
+      const { error } = await db.from('statements')
+        .update({ aggregator_pct: agg, djworld_pct: dj })
+        .eq('id', tariefStatement)
+      if (error) { showToast('Fout: ' + error.message, 'error'); return }
+      showToast('Tarieven bijgewerkt.')
+      closeTarief()
+      await loadStatementRates()   // cache verversen, anders rekent de pagina met oude waarden
+      await loadStatements()
     }
 
     // ---------- CSV parsen (nieuw formaat met ISRC) ----------
@@ -599,13 +722,26 @@
       const { file, lines, total } = parsedData
       const period = document.getElementById('period').value.trim() || null
 
+      // Tarieven horen bij dit statement en worden hier bevroren.
+      // Verplicht: liever nu een foutmelding dan straks een verkeerde afrekening.
+      const aggPct = parseFloat(document.getElementById('aggPct').value)
+      const djPct  = parseFloat(document.getElementById('djPct').value)
+      if (!isFinite(aggPct) || aggPct < 0 || aggPct > 100 || !isFinite(djPct) || djPct < 0 || djPct > 100) {
+        showToast('Vul beide percentages in (0 t/m 100) voordat je opslaat.', 'error')
+        return
+      }
+
       document.getElementById('uploadBtn').disabled = true
       setProgress(true, 'Opslaan...', 10)
 
       // Statement record aanmaken
       const { data: stmt, error: stmtErr } = await db
         .from('statements')
-        .insert({ filename: file.name, period, total_royalties: total, line_count: lines.length })
+        .insert({
+          filename: file.name, period,
+          total_royalties: total, line_count: lines.length,
+          aggregator_pct: aggPct, djworld_pct: djPct,
+        })
         .select()
         .single()
 
@@ -802,6 +938,7 @@
       document.getElementById('uploadBtn').disabled = true
 
       setTimeout(() => setProgress(false), 1000)
+      await loadStatementRates()   // nieuw statement toevoegen aan de tarieven-cache
       await loadStatements()
     }
 
@@ -841,6 +978,10 @@
 
     document.getElementById('detailModal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeDetail()
+    })
+
+    document.getElementById('tariefModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeTarief()
     })
 
     // ---------- Verwijderen ----------

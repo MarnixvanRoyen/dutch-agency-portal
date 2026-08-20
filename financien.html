@@ -684,8 +684,8 @@
 
       showToast(`${rijen.length} ${rijen.length === 1 ? 'persoon' : 'personen'} bijgeschreven.`)
       sluitVoorbereiding(stmtId)
-      await laadBoeklijst()
-      await laadSaldi()
+      await laadSaldi()        // eerst de nieuwe stand...
+      await laadBoeklijst()    // ...dan pas de lijsten die daarop leunen
     }
 
 
@@ -712,7 +712,10 @@
         return
       }
       uitbetalingen = data || []
-      if (!saldi.length) await laadSaldi()
+      // Altijd verse saldi ophalen, niet alleen als ze nog leeg zijn. Deze weergave
+      // rekent met het saldo (wie staat er boven de drempel), dus met een oude stand
+      // blijft iemand in "klaar om te melden" staan die net betaald is.
+      await laadSaldi()
       tekenUitbetalingen()
     }
 
@@ -957,8 +960,7 @@
         showToast('Betaling vastgelegd.')
       }
       sluitModal('betaalModal')
-      await laadUitbetalingen()
-      await laadSaldi()
+      await laadUitbetalingen()   // ververst zelf ook de saldi
     }
 
     // ── Annuleren ─────────────────────────────────────────────

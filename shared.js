@@ -21,6 +21,8 @@ async function loadSettings() {
   }
 }
 
+// ⚠️ WORDT UITGEFASEERD — gebruikt de globale instelling en rekent oude
+// statements dus door met het huidige tarief. Gebruik splitBedrag() hieronder.
 // Factor die overblijft voor artiesten na alle commissies
 // Bruto × netFactor() = artiestenpot (vóór split)
 function netFactor() {
@@ -34,6 +36,89 @@ async function saveSettings(aggregatorPct, djworldPct) {
   ])
   COMMISSIONS.aggregatorPct = aggregatorPct
   COMMISSIONS.djworldPct    = djworldPct
+}
+
+// ── Tarieven per statement ──────────────────────────────────
+// Elk statement heeft een eigen aggregator_pct en djworld_pct, bevroren bij het
+// uploaden. Zo blijven oude afrekeningen kloppen als het tarief later wijzigt.
+// STATEMENT_RATES = { <statement_id>: { agg: 20, dj: 50 } }
+let STATEMENT_RATES = {}
+
+async function loadStatementRates() {
+  STATEMENT_RATES = {}
+  const PAGE = 1000
+  let from = 0
+  while (true) {
+    const { data, error } = await db
+      .from('statements')
+      .select('id, aggregator_pct, djworld_pct')
+      .range(from, from + PAGE - 1)
+    if (error) { console.error('Tarieven laden mislukt:', error.message); break }
+    if (!data || data.length === 0) break
+    data.forEach(s => {
+      STATEMENT_RATES[s.id] = {
+        agg: parseFloat(s.aggregator_pct),
+        dj:  parseFloat(s.djworld_pct),
+      }
+    })
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return STATEMENT_RATES
+}
+
+// Tarieven van één statement ophalen. Ontbreken ze, dan vallen we terug op de
+// standaardinstelling én piept-ie in de console — zodat het niet stil misgaat.
+function ratesFor(statementId) {
+  const r = STATEMENT_RATES[statementId]
+  if (r && isFinite(r.agg) && isFinite(r.dj)) return r
+  console.warn('Geen tarieven bij statement', statementId, '— standaard gebruikt')
+  return { agg: COMMISSIONS.aggregatorPct, dj: COMMISSIONS.djworldPct }
+}
+
+// DE rekenfunctie: de enige plek waar de commissieverdeling gebeurt.
+//   bruto = bedrag vóór aftrek (nett_royalty, eventueel al × split%)
+//   waar  = een statement-id  óf  een {agg, dj}-object
+// Model: eerst aggregator van bruto af, daarna DJ·World over wat overblijft.
+function splitBedrag(bruto, waar) {
+  const b = parseFloat(bruto) || 0
+  const r = (waar && typeof waar === 'object') ? waar : ratesFor(waar)
+  const aggPct = parseFloat(r.agg) || 0
+  const djPct  = parseFloat(r.dj)  || 0
+  const aggAmt = b * aggPct / 100
+  const rest   = b - aggAmt
+  const djAmt  = rest * djPct / 100
+  return { bruto: b, aggPct, djPct, aggAmt, djAmt, netAmt: rest - djAmt }
+}
+
+// Hulpjes om per regel te rekenen en dan pas op te tellen.
+// Nooit meer: eerst alles optellen en er één factor overheen.
+function legeSplit() {
+  return { bruto: 0, aggAmt: 0, djAmt: 0, netAmt: 0 }
+}
+
+// deel = uitkomst van splitBedrag(); factor = extra vermenigvuldiging (bijv. split%)
+function telSplitOp(totaal, deel, factor = 1) {
+  totaal.bruto  += deel.bruto  * factor
+  totaal.aggAmt += deel.aggAmt * factor
+  totaal.djAmt  += deel.djAmt  * factor
+  totaal.netAmt += deel.netAmt * factor
+  return totaal
+}
+
+// 20 → "20%", 22.5 → "22,5%"
+function fmtPct(p) {
+  const n = parseFloat(p) || 0
+  return (Number.isInteger(n) ? String(n) : String(n).replace('.', ',')) + '%'
+}
+
+// Label voor PDF's/kaarten: "30%" bij één tarief, "wisselend" bij meerdere.
+// pcts = array met alle percentages die in de selectie voorkomen
+function pctLabel(pcts) {
+  const uniek = [...new Set((pcts || []).filter(p => isFinite(p)))]
+  if (uniek.length === 0) return '—'
+  if (uniek.length === 1) return fmtPct(uniek[0])
+  return 'wisselend'
 }
 
 const NAV_LINKS = [
@@ -60,6 +145,7 @@ async function initPage(activePage) {
   const navType = performance.getEntriesByType('navigation')[0]?.type
   if (navType === 'reload') clearPageFilters(activePage)
   await loadSettings()
+  await loadStatementRates()
   renderNav(activePage, session.user.email)
   return session
 }

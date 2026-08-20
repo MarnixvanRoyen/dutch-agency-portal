@@ -24,6 +24,8 @@
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Saldi</button>
       <button onclick="zetWeergave('boeken')" data-weergave="boeken"
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Statements boeken</button>
+      <button onclick="zetWeergave('uitbetalen')" data-weergave="uitbetalen"
+        class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Uitbetalingen</button>
     </div>
 
     <!-- ══ WEERGAVE: SALDI ══════════════════════════════════ -->
@@ -82,6 +84,117 @@
       </div>
     </div>
 
+    <!-- ══ WEERGAVE: UITBETALINGEN ══════════════════════════ -->
+    <div id="vwUitbetalen" class="hidden">
+
+      <!-- Klaar om te melden -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-5">
+        <h2 class="text-sm font-semibold text-white mb-1">Klaar om te melden</h2>
+        <p class="text-gray-500 text-xs mb-4">
+          Iedereen met een saldo boven <span id="drempelTekst"></span>. Melden betekent: jij stuurt
+          het overzicht, en de tool onthoudt het bedrag van dat moment. Het saldo blijft ondertussen
+          gewoon doorlopen.
+        </p>
+        <div id="meldLijst" class="space-y-2">
+          <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+
+      <!-- Lopende uitbetalingen -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-5">
+        <h2 class="text-sm font-semibold text-white mb-1">Loopt nog</h2>
+        <p class="text-gray-500 text-xs mb-4">Gemeld of factuur ontvangen, maar nog niet betaald</p>
+        <div id="lopendLijst" class="space-y-2">
+          <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+
+      <!-- Afgehandeld -->
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-white">Afgehandeld</h2>
+          <span id="afgehandeldTotaal" class="text-gray-500 text-xs"></span>
+        </div>
+        <div id="klaarLijst" class="space-y-2">
+          <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: factuur boeken -->
+    <div id="factuurModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-base">Factuur boeken</h2>
+          <button onclick="sluitModal('factuurModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div id="factuurContext" class="text-gray-400 text-sm"></div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Factuurnummer</label>
+            <input type="text" id="fNummer"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Factuurdatum</label>
+              <input type="date" id="fDatum"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
+              <input type="number" id="fBedrag" step="0.01" min="0"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+          </div>
+          <div id="fWaarschuwing" class="hidden text-[#FFD100] text-xs"></div>
+          <div class="flex gap-3 pt-1">
+            <button onclick="bewaarFactuur()"
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Opslaan</button>
+            <button onclick="sluitModal('factuurModal')"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: betaling vastleggen -->
+    <div id="betaalModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-base">Betaling vastleggen</h2>
+          <button onclick="sluitModal('betaalModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div id="betaalContext" class="text-gray-400 text-sm"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Betaald op</label>
+              <input type="date" id="bDatum"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
+              <input type="number" id="bBedrag" step="0.01" min="0" oninput="toetsBetaling()"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Referentie (optioneel)</label>
+            <input type="text" id="bRef" placeholder="bijv. bankomschrijving"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-[#FFD100]">
+          </div>
+          <div id="bWaarschuwing" class="hidden text-[#FFD100] text-xs leading-relaxed"></div>
+          <div class="flex gap-3 pt-1">
+            <button onclick="bewaarBetaling()"
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Betaald melden</button>
+            <button onclick="sluitModal('betaalModal')"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <script src="shared.js"></script>
@@ -99,15 +212,17 @@
 
     // ── Weergave wisselen ─────────────────────────────────────
     function zetWeergave(w) {
-      document.getElementById('vwSaldi').classList.toggle('hidden',  w !== 'saldi')
-      document.getElementById('vwBoeken').classList.toggle('hidden', w !== 'boeken')
+      document.getElementById('vwSaldi').classList.toggle('hidden',      w !== 'saldi')
+      document.getElementById('vwBoeken').classList.toggle('hidden',     w !== 'boeken')
+      document.getElementById('vwUitbetalen').classList.toggle('hidden', w !== 'uitbetalen')
       document.querySelectorAll('.weergaveKnop').forEach(b => {
         const aan = b.dataset.weergave === w
         b.className = 'weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2 ' +
           (aan ? 'border-[#FFD100] text-[#FFD100]'
                : 'border-transparent text-gray-500 hover:text-white')
       })
-      if (w === 'boeken') laadBoeklijst()
+      if (w === 'boeken')     laadBoeklijst()
+      if (w === 'uitbetalen') laadUitbetalingen()
     }
 
     async function laadSaldi() {
@@ -572,6 +687,300 @@
       await laadBoeklijst()
       await laadSaldi()
     }
+
+
+    // ════════════════════════════════════════════════════════
+    //  UITBETALINGEN
+    // ════════════════════════════════════════════════════════
+    //  melden  →  factuur ontvangen  →  betaald
+    //
+    //  Het gemelde bedrag wordt BEVROREN: komen er daarna nieuwe royalty's
+    //  binnen, dan groeit de spaarpot door maar verandert het gemelde bedrag
+    //  niet. Bij het betalen gaat alleen het werkelijk betaalde bedrag eraf;
+    //  de rest blijft staan voor de volgende ronde.
+    //
+    //  De spaarpot gaat pas omlaag bij BETAALD — tot dan heeft de artiest
+    //  het geld nog niet.
+
+    let uitbetalingen = []
+
+    async function laadUitbetalingen() {
+      const { data, error } = await db.from('payouts').select('*').order('gemeld_op', { ascending: false })
+      if (error) {
+        document.getElementById('lopendLijst').innerHTML =
+          `<p class="text-red-400 text-sm">Kon uitbetalingen niet laden: ${error.message}</p>`
+        return
+      }
+      uitbetalingen = data || []
+      if (!saldi.length) await laadSaldi()
+      tekenUitbetalingen()
+    }
+
+    const naamVan = pid => {
+      const p = saldi.find(r => r.person_id === pid)
+      return p ? `${p.first_name} ${p.last_name}` : '(onbekend)'
+    }
+    const saldoVan = pid => {
+      const p = saldi.find(r => r.person_id === pid)
+      return p ? (parseFloat(p.saldo) || 0) : 0
+    }
+
+    function tekenUitbetalingen() {
+      document.getElementById('drempelTekst').textContent = fmt(FINADMIN.drempel)
+
+      // Iemand met een lopende uitbetaling melden we niet nog een keer —
+      // anders staan er twee open verzoeken voor dezelfde persoon.
+      const lopendPer = new Set(
+        uitbetalingen.filter(u => u.status === 'gemeld' || u.status === 'factuur_ontvangen')
+                     .map(u => u.person_id))
+
+      // ── Klaar om te melden ──
+      const teMelden = saldi
+        .map(r => ({ ...r, saldoN: parseFloat(r.saldo) || 0 }))
+        .filter(r => r.saldoN > FINADMIN.drempel && !lopendPer.has(r.person_id))
+        .sort((a, b) => b.saldoN - a.saldoN)
+
+      document.getElementById('meldLijst').innerHTML = teMelden.length
+        ? teMelden.map(r => `
+            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+              <div class="min-w-0">
+                <div class="text-white text-sm truncate">${r.first_name} ${r.last_name}</div>
+                <div class="text-gray-600 text-xs">${r.email || 'geen email'}</div>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <span class="text-green-400 font-semibold text-sm">${fmt(r.saldoN)}</span>
+                <button onclick="meldAan('${r.person_id}')"
+                  class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Melden</button>
+              </div>
+            </div>`).join('')
+        : `<p class="text-gray-600 text-sm">Niemand staat boven ${fmt(FINADMIN.drempel)}${lopendPer.size ? ' zonder lopende uitbetaling' : ''}.</p>`
+
+      // ── Loopt nog ──
+      const lopend = uitbetalingen.filter(u => u.status === 'gemeld' || u.status === 'factuur_ontvangen')
+      document.getElementById('lopendLijst').innerHTML = lopend.length
+        ? lopend.map(u => kaartLopend(u)).join('')
+        : '<p class="text-gray-600 text-sm">Niets in behandeling.</p>'
+
+      // ── Afgehandeld ──
+      const klaar = uitbetalingen.filter(u => u.status === 'betaald' || u.status === 'geannuleerd')
+      const betaaldSom = klaar.filter(u => u.status === 'betaald')
+                              .reduce((s, u) => s + (parseFloat(u.betaald_bedrag) || 0), 0)
+      document.getElementById('afgehandeldTotaal').textContent =
+        klaar.length ? `${fmt(betaaldSom)} uitbetaald` : ''
+      document.getElementById('klaarLijst').innerHTML = klaar.length
+        ? klaar.map(u => kaartKlaar(u)).join('')
+        : '<p class="text-gray-600 text-sm">Nog niets afgerond.</p>'
+    }
+
+    function kaartLopend(u) {
+      const naam    = naamVan(u.person_id)
+      const gemeld  = parseFloat(u.gemeld_bedrag) || 0
+      const nu      = saldoVan(u.person_id)
+      const gegroeid = nu - gemeld
+
+      const factuurRegel = u.status === 'factuur_ontvangen'
+        ? `<div class="text-gray-400 text-xs mt-1">
+             Factuur ${u.factuurnummer || '—'} · ${u.factuurdatum ? fmtDate(u.factuurdatum) : '—'} · ${fmt(u.factuurbedrag)}
+           </div>`
+        : ''
+
+      const knoppen = u.status === 'gemeld'
+        ? `<button onclick="openFactuur('${u.id}')"
+             class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Factuur boeken</button>`
+        : `<button onclick="openBetaling('${u.id}')"
+             class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Betaald melden</button>`
+
+      return `
+        <div class="px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-white text-sm">${naam}</div>
+              <div class="text-gray-500 text-xs mt-0.5">
+                ${u.status === 'gemeld' ? 'Gemeld' : 'Factuur ontvangen'} op ${fmtDate(u.gemeld_op)}
+                · gemeld bedrag ${fmt(gemeld)}
+              </div>
+              ${factuurRegel}
+              ${gegroeid > 0.005 ? `<div class="text-gray-600 text-xs mt-1">
+                  Saldo is inmiddels ${fmt(nu)} — ${fmt(gegroeid)} erbij gekomen na het melden.
+                  Dat blijft staan voor de volgende ronde.</div>` : ''}
+            </div>
+            <div class="flex flex-col items-end gap-2 shrink-0">
+              ${knoppen}
+              <button onclick="annuleerUitbetaling('${u.id}')"
+                class="text-gray-600 hover:text-red-400 text-xs transition-colors">Annuleren</button>
+            </div>
+          </div>
+        </div>`
+    }
+
+    function kaartKlaar(u) {
+      const naam = naamVan(u.person_id)
+      if (u.status === 'geannuleerd') {
+        return `<div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+                  <span class="text-gray-500 text-sm">${naam}</span>
+                  <span class="text-gray-600 text-xs">geannuleerd · gemeld ${fmtDate(u.gemeld_op)}</span>
+                </div>`
+      }
+      const betaald = parseFloat(u.betaald_bedrag) || 0
+      const gemeld  = parseFloat(u.gemeld_bedrag) || 0
+      const afwijking = Math.abs(betaald - gemeld) > 0.005
+      return `
+        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+          <div class="min-w-0">
+            <div class="text-white text-sm truncate">${naam}</div>
+            <div class="text-gray-600 text-xs">
+              betaald ${fmtDate(u.betaald_op)}${u.factuurnummer ? ' · factuur ' + u.factuurnummer : ''}${u.betaalreferentie ? ' · ' + u.betaalreferentie : ''}
+            </div>
+            ${afwijking ? `<div class="text-[#FFD100] text-xs mt-0.5">week af van het gemelde bedrag ${fmt(gemeld)}</div>` : ''}
+          </div>
+          <span class="text-green-400 font-semibold text-sm shrink-0">${fmt(betaald)}</span>
+        </div>`
+    }
+
+    // ── Melden ────────────────────────────────────────────────
+    async function meldAan(personId) {
+      const bedrag = saldoVan(personId)
+      if (!confirm(`${naamVan(personId)} melden voor ${fmt(bedrag)}?\n\nDit bedrag wordt vastgelegd. Stuur zelf het overzicht; de tool houdt alleen bij dat het gemeld is.`)) return
+
+      const { error } = await db.from('payouts').insert({
+        person_id: personId, status: 'gemeld', gemeld_bedrag: bedrag,
+      })
+      if (error) { showToast('Melden mislukt: ' + error.message, 'error'); return }
+      showToast('Gemeld. Vergeet het overzicht niet te sturen.')
+      await laadUitbetalingen()
+    }
+
+    // ── Factuur ───────────────────────────────────────────────
+    let actievePayout = null
+
+    function openFactuur(id) {
+      const u = uitbetalingen.find(x => x.id === id)
+      if (!u) return
+      actievePayout = u
+      document.getElementById('factuurContext').innerHTML =
+        `<b class="text-white">${naamVan(u.person_id)}</b> — gemeld voor ${fmt(u.gemeld_bedrag)} op ${fmtDate(u.gemeld_op)}`
+      document.getElementById('fNummer').value = u.factuurnummer || ''
+      document.getElementById('fDatum').value  = u.factuurdatum || vandaag()
+      document.getElementById('fBedrag').value = u.factuurbedrag ?? (parseFloat(u.gemeld_bedrag) || 0).toFixed(2)
+      document.getElementById('fWaarschuwing').classList.add('hidden')
+      document.getElementById('factuurModal').classList.remove('hidden')
+    }
+
+    async function bewaarFactuur() {
+      const nummer = document.getElementById('fNummer').value.trim()
+      const datum  = document.getElementById('fDatum').value
+      const bedrag = parseFloat(document.getElementById('fBedrag').value)
+
+      if (!nummer)                        return showToast('Vul een factuurnummer in.', 'error')
+      if (!datum)                         return showToast('Vul een factuurdatum in.', 'error')
+      if (!isFinite(bedrag) || bedrag < 0) return showToast('Vul een geldig bedrag in.', 'error')
+
+      const { error } = await db.from('payouts').update({
+        status: 'factuur_ontvangen',
+        factuurnummer: nummer, factuurdatum: datum, factuurbedrag: bedrag,
+      }).eq('id', actievePayout.id)
+
+      if (error) { showToast('Opslaan mislukt: ' + error.message, 'error'); return }
+      sluitModal('factuurModal')
+      showToast('Factuur geboekt.')
+      await laadUitbetalingen()
+    }
+
+    // ── Betaling ──────────────────────────────────────────────
+    function openBetaling(id) {
+      const u = uitbetalingen.find(x => x.id === id)
+      if (!u) return
+      actievePayout = u
+      document.getElementById('betaalContext').innerHTML =
+        `<b class="text-white">${naamVan(u.person_id)}</b> — factuur ${u.factuurnummer || '—'} van ${fmt(u.factuurbedrag)}
+         <div class="text-gray-600 text-xs mt-1">Huidig saldo: ${fmt(saldoVan(u.person_id))}</div>`
+      document.getElementById('bDatum').value  = vandaag()
+      document.getElementById('bBedrag').value = (parseFloat(u.factuurbedrag) || 0).toFixed(2)
+      document.getElementById('bRef').value    = ''
+      toetsBetaling()
+      document.getElementById('betaalModal').classList.remove('hidden')
+    }
+
+    // Waarschuwt bij een bedrag dat afwijkt van de factuur of hoger is dan het
+    // saldo. Blokkeert niets — soms is er een goede reden — maar je ziet het wel.
+    function toetsBetaling() {
+      if (!actievePayout) return
+      const bedrag  = parseFloat(document.getElementById('bBedrag').value)
+      const factuur = parseFloat(actievePayout.factuurbedrag) || 0
+      const saldo   = saldoVan(actievePayout.person_id)
+      const el = document.getElementById('bWaarschuwing')
+      const meldingen = []
+
+      if (isFinite(bedrag)) {
+        if (Math.abs(bedrag - factuur) > 0.005) {
+          meldingen.push(`Wijkt af van de factuur (${fmt(factuur)}). Het verschil van ${fmt(Math.abs(bedrag - factuur))} blijft in de spaarpot staan.`)
+        }
+        if (bedrag > saldo + 0.005) {
+          meldingen.push(`Hoger dan het saldo (${fmt(saldo)}). De persoon komt hierdoor negatief te staan.`)
+        }
+      }
+      el.innerHTML = meldingen.map(m => `<div>${m}</div>`).join('')
+      el.classList.toggle('hidden', !meldingen.length)
+    }
+
+    async function bewaarBetaling() {
+      const datum  = document.getElementById('bDatum').value
+      const bedrag = parseFloat(document.getElementById('bBedrag').value)
+      const ref    = document.getElementById('bRef').value.trim() || null
+
+      if (!datum)                          return showToast('Vul een betaaldatum in.', 'error')
+      if (!isFinite(bedrag) || bedrag <= 0) return showToast('Vul een bedrag groter dan nul in.', 'error')
+
+      const u = actievePayout
+
+      // Eerst de afboeking in het grootboek, dan pas de status op betaald.
+      // Andersom zou je bij een fout een "betaalde" uitbetaling houden zonder
+      // dat het saldo omlaag is gegaan — dan klopt de spaarpot niet meer.
+      const { error: mutErr } = await db.from('ledger_entries').insert({
+        person_id:    u.person_id,
+        type:         'uitbetaling',
+        amount:       -Math.abs(bedrag),        // moet negatief zijn, de database controleert dat
+        entry_date:   datum,
+        payout_id:    u.id,
+        omschrijving: 'Uitbetaling' + (u.factuurnummer ? ' factuur ' + u.factuurnummer : ''),
+      })
+      if (mutErr) { showToast('Afboeken mislukt: ' + mutErr.message, 'error'); return }
+
+      const { error } = await db.from('payouts').update({
+        status: 'betaald', betaald_op: datum, betaald_bedrag: bedrag, betaalreferentie: ref,
+      }).eq('id', u.id)
+
+      if (error) {
+        showToast('Let op: het bedrag is afgeboekt maar de status niet bijgewerkt — ' + error.message, 'error')
+        console.error(error)
+      } else {
+        showToast('Betaling vastgelegd.')
+      }
+      sluitModal('betaalModal')
+      await laadUitbetalingen()
+      await laadSaldi()
+    }
+
+    // ── Annuleren ─────────────────────────────────────────────
+    async function annuleerUitbetaling(id) {
+      const u = uitbetalingen.find(x => x.id === id)
+      if (!u) return
+      if (!confirm(`Uitbetaling voor ${naamVan(u.person_id)} annuleren?\n\nHet saldo blijft gewoon staan; alleen dit verzoek vervalt.`)) return
+      const { error } = await db.from('payouts').update({ status: 'geannuleerd' }).eq('id', id)
+      if (error) { showToast('Annuleren mislukt: ' + error.message, 'error'); return }
+      showToast('Geannuleerd.')
+      await laadUitbetalingen()
+    }
+
+    // ── Hulpjes ───────────────────────────────────────────────
+    function sluitModal(id) { document.getElementById(id).classList.add('hidden') }
+    function vandaag() { return new Date().toISOString().slice(0, 10) }
+
+    ;['factuurModal', 'betaalModal'].forEach(id => {
+      document.getElementById(id).addEventListener('click', e => {
+        if (e.target === e.currentTarget) sluitModal(id)
+      })
+    })
 
     loadPage()
   </script>

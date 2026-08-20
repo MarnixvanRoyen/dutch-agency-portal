@@ -107,12 +107,13 @@
             <th class="text-right px-5 py-3 font-medium">Regels</th>
             <th class="text-right px-5 py-3 font-medium">Totaal Royalties</th>
             <th class="text-center px-5 py-3 font-medium">Tarieven</th>
+            <th class="text-left   px-5 py-3 font-medium">Boeking</th>
             <th class="text-right px-5 py-3 font-medium">Geüpload</th>
             <th class="text-right px-5 py-3 font-medium">Actie</th>
           </tr>
         </thead>
         <tbody id="statementsTable">
-          <tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          <tr><td colspan="8" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -243,14 +244,24 @@
     }
 
     async function loadStatements() {
-      const { data, error } = await db
-        .from('statements')
-        .select('*')
-        .order('uploaded_at', { ascending: false })
+      // Boekstatus komt uit het grootboek zelf — we slaan nergens apart op of een
+      // statement geboekt is, want dan kan dat uit de pas gaan lopen.
+      const [{ data, error }, geboekt] = await Promise.all([
+        db.from('statements').select('*').order('uploaded_at', { ascending: false }),
+        db.from('ledger_entries').select('statement_id, amount').eq('type', 'royalty'),
+      ])
+
+      const boekingPer = {}
+      ;(geboekt.data || []).forEach(m => {
+        if (!m.statement_id) return
+        if (!boekingPer[m.statement_id]) boekingPer[m.statement_id] = { n: 0, bedrag: 0 }
+        boekingPer[m.statement_id].n += 1
+        boekingPer[m.statement_id].bedrag += parseFloat(m.amount) || 0
+      })
 
       const tbody = document.getElementById('statementsTable')
       if (!data?.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-6 text-gray-600 text-sm">Nog geen statements geüpload.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-6 text-gray-600 text-sm">Nog geen statements geüpload.</td></tr>'
         return
       }
 
@@ -263,6 +274,20 @@
         const tarief = heeftTarief
           ? `${fmtPct(s.aggregator_pct)} / ${fmtPct(s.djworld_pct)}`
           : '<span class="text-red-400">ontbreekt</span>'
+
+        // Boeken zelf gebeurt op de pagina Financiën — daar staat ook de berekening
+        // en het overzicht van wat er niet toegewezen kon worden. Hier alleen de stand.
+        const b = boekingPer[s.id]
+        let boeking
+        if (s.buiten_administratie) {
+          boeking = '<span class="text-gray-600">buiten de administratie</span>'
+        } else if (b) {
+          boeking = `<span class="text-green-400">geboekt</span>
+                     <span class="text-gray-600">— ${b.n} ${b.n === 1 ? 'persoon' : 'personen'}, ${fmt(b.bedrag)}</span>
+                     <a href="financien.html" class="text-gray-600 hover:text-[#FFD100] ml-1 transition-colors">bekijken</a>`
+        } else {
+          boeking = `<a href="financien.html" class="text-[#FFD100] hover:underline">nog niet geboekt</a>`
+        }
         return `
         <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
           <td class="px-5 py-3.5 text-white font-medium">${s.filename}</td>
@@ -274,6 +299,7 @@
             <button onclick="openTarief('${s.id}')" title="Tarieven wijzigen"
               class="text-gray-600 hover:text-[#FFD100] text-xs ml-2 transition-colors">wijzig</button>
           </td>
+          <td class="px-5 py-3.5 text-xs whitespace-nowrap">${boeking}</td>
           <td class="px-5 py-3.5 text-right text-gray-500 text-xs">${fmtDate(s.uploaded_at)}</td>
           <td class="px-5 py-3.5 text-right">
             <button onclick="viewDetail('${s.id}', '${s.filename.replace(/'/g, "\\'")}')"
@@ -988,12 +1014,22 @@
     async function deleteStatement(id) {
       if (!confirm('Weet je zeker dat je dit statement (en alle regels) wilt verwijderen?')) return
       const { error } = await db.from('statements').delete().eq('id', id)
-      if (error) {
-        showToast('Fout: ' + error.message, 'error')
-      } else {
+      if (!error) {
         showToast('Statement verwijderd.')
         await loadStatements()
+        return
       }
+
+      // Is het statement geboekt, dan houdt de database het vast: er hangen
+      // spaarpot-mutaties aan. Die rauwe foutmelding zegt de gebruiker niets,
+      // dus vertalen we hem naar wat er moet gebeuren.
+      const vastgehouden = /foreign key|ledger_entries/i.test(error.message || '')
+      showToast(
+        vastgehouden
+          ? 'Dit statement is geboekt. Ontboek het eerst op de pagina Testbeheer.'
+          : 'Fout: ' + error.message,
+        'error')
+      console.error(error)
     }
 
     // ── Export alle statement_lines naar Excel ────────────────

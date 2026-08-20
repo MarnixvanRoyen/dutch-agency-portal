@@ -13,13 +13,21 @@
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
-    <div class="flex items-start justify-between mb-6 gap-4">
-      <div>
-        <h1 class="text-xl font-bold">Financiën</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Spaarpot per persoon — wat er nog uitbetaald moet worden</p>
-      </div>
-      <span class="text-gray-600 text-xs border border-[#2a2a2a] rounded-lg px-3 py-1.5 whitespace-nowrap">alleen-lezen</span>
+    <div class="mb-5">
+      <h1 class="text-xl font-bold">Financiën</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Spaarpot per persoon — wat er nog uitbetaald moet worden</p>
     </div>
+
+    <!-- Weergave kiezen -->
+    <div class="flex gap-2 mb-6 border-b border-[#2a2a2a]">
+      <button onclick="zetWeergave('saldi')"  data-weergave="saldi"
+        class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Saldi</button>
+      <button onclick="zetWeergave('boeken')" data-weergave="boeken"
+        class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Statements boeken</button>
+    </div>
+
+    <!-- ══ WEERGAVE: SALDI ══════════════════════════════════ -->
+    <div id="vwSaldi">
 
     <!-- Kerncijfers -->
     <div id="kerncijfers" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -57,6 +65,22 @@
       "Overig" is alles wat geen royalty of uitbetaling is: beginsaldo, voorschotten,
       doorbelaste kosten en correcties.
     </p>
+    </div>
+
+    <!-- ══ WEERGAVE: BOEKEN ═════════════════════════════════ -->
+    <div id="vwBoeken" class="hidden">
+
+      <p class="text-gray-500 text-sm mb-5 max-w-2xl leading-relaxed">
+        Boeken schrijft per persoon bij wat hij aan dit statement verdiend heeft. Regels die
+        (nog) niet bij een persoon uitkomen worden overgeslagen en apart getoond. Koppelt Rob
+        later meer artiesten, druk dan opnieuw op boeken: al geboekte personen worden
+        overgeslagen, alleen de nieuwe komen erbij.
+      </p>
+
+      <div id="boekLijst" class="space-y-3">
+        <p class="text-gray-600 text-sm">Laden...</p>
+      </div>
+    </div>
 
   </main>
 
@@ -69,7 +93,21 @@
       const session = await initPage('financien')
       if (!session) return
       tekenFilterKnoppen()
+      zetWeergave('saldi')
       await laadSaldi()
+    }
+
+    // ── Weergave wisselen ─────────────────────────────────────
+    function zetWeergave(w) {
+      document.getElementById('vwSaldi').classList.toggle('hidden',  w !== 'saldi')
+      document.getElementById('vwBoeken').classList.toggle('hidden', w !== 'boeken')
+      document.querySelectorAll('.weergaveKnop').forEach(b => {
+        const aan = b.dataset.weergave === w
+        b.className = 'weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2 ' +
+          (aan ? 'border-[#FFD100] text-[#FFD100]'
+               : 'border-transparent text-gray-500 hover:text-white')
+      })
+      if (w === 'boeken') laadBoeklijst()
     }
 
     async function laadSaldi() {
@@ -211,6 +249,277 @@
               negatief.length ? 'text-red-400' : 'text-gray-600') +
         tegel('Personen', String(saldi.length),
               `${alle.filter(s => s === 0).length} zonder saldo`, 'text-white')
+    }
+
+
+    // ════════════════════════════════════════════════════════
+    //  STATEMENTS BOEKEN
+    // ════════════════════════════════════════════════════════
+    // Per persoon wordt bijgeschreven wat hij aan dít statement verdiend heeft:
+    //   regel → track → artiest (split%) → persoon
+    // Elke schakel kan ontbreken. Wat niet tot een persoon leidt wordt NIET
+    // stilzwijgend overgeslagen maar apart geteld en getoond.
+
+    let boekStatements = []
+    let voorbereid     = {}   // statement_id → uitkomst van berekenBoeking()
+
+    async function laadBoeklijst() {
+      const [stmts, geboekt] = await Promise.all([
+        db.from('statements').select('id, period, filename, buiten_administratie, total_royalties')
+          .order('uploaded_at', { ascending: false }),
+        db.from('ledger_entries').select('statement_id, person_id, amount').eq('type', 'royalty'),
+      ])
+
+      const perStatement = {}
+      ;(geboekt.data || []).forEach(m => {
+        if (!m.statement_id) return
+        if (!perStatement[m.statement_id]) perStatement[m.statement_id] = { n: 0, bedrag: 0, personen: new Set() }
+        perStatement[m.statement_id].n += 1
+        perStatement[m.statement_id].bedrag += parseFloat(m.amount) || 0
+        perStatement[m.statement_id].personen.add(m.person_id)
+      })
+
+      boekStatements = (stmts.data || []).map(st => ({ ...st, geboekt: perStatement[st.id] || null }))
+      tekenBoeklijst()
+    }
+
+    function tekenBoeklijst() {
+      const el = document.getElementById('boekLijst')
+      if (!boekStatements.length) { el.innerHTML = '<p class="text-gray-600 text-sm">Geen statements.</p>'; return }
+
+      el.innerHTML = boekStatements.map(st => {
+        const naam = st.period || st.filename
+        let status, knop
+
+        if (st.buiten_administratie) {
+          status = '<span class="text-gray-600">buiten de administratie</span>'
+          knop   = ''
+        } else if (st.geboekt) {
+          status = `<span class="text-green-400">geboekt — ${st.geboekt.n} ${st.geboekt.n === 1 ? 'persoon' : 'personen'}, ${fmt(st.geboekt.bedrag)}</span>`
+          knop   = `<button onclick="bereidVoor('${st.id}')"
+                      class="border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Opnieuw boeken</button>`
+        } else {
+          status = '<span class="text-gray-500">nog niet geboekt</span>'
+          knop   = `<button onclick="bereidVoor('${st.id}')"
+                      class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Boeken</button>`
+        }
+
+        return `
+          <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+            <div class="flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-white font-medium">${naam}</div>
+                <div class="text-xs mt-0.5">${status}</div>
+              </div>
+              ${knop}
+            </div>
+            <div id="vb_${st.id}"></div>
+          </div>`
+      }).join('')
+    }
+
+    // ── Berekenen (nog niets opslaan) ─────────────────────────
+    async function bereidVoor(stmtId) {
+      const vak = document.getElementById('vb_' + stmtId)
+      vak.innerHTML = '<div class="text-gray-500 text-sm mt-4">Berekenen...</div>'
+
+      let uitkomst
+      try {
+        uitkomst = await berekenBoeking(stmtId)
+      } catch (e) {
+        vak.innerHTML = `<div class="text-red-400 text-sm mt-4">Berekenen mislukt: ${e.message}</div>`
+        return
+      }
+      voorbereid[stmtId] = uitkomst
+      toonVoorbereiding(stmtId)
+    }
+
+    async function berekenBoeking(stmtId) {
+      // 1. Alle regels van dit statement
+      const lines = await paginerend(from =>
+        db.from('statement_lines').select('track_id, nett_royalty').eq('statement_id', stmtId).range(from, from + 999))
+
+      // 2. Splits per track (welke artiest krijgt welk deel)
+      const tas = await paginerend(from =>
+        db.from('track_artists').select('track_id, artist_id, split_percentage').range(from, from + 999))
+
+      // 3. Artiest → persoon
+      const artiesten = await paginerend(from =>
+        db.from('artists').select('id, name, person_id').range(from, from + 999))
+
+      const splitsPerTrack = {}
+      tas.forEach(t => {
+        if (!splitsPerTrack[t.track_id]) splitsPerTrack[t.track_id] = []
+        splitsPerTrack[t.track_id].push({ artist_id: t.artist_id, pct: (parseFloat(t.split_percentage) || 0) / 100 })
+      })
+      const artiestById = {}
+      artiesten.forEach(a => { artiestById[a.id] = a })
+
+      const perPersoon    = {}                    // person_id → netto bedrag
+      const zonderPersoon = {}                    // artiestnaam → bedrag
+      let bruto = 0, netto = 0
+      let geenTrack   = { n: 0, bedrag: 0 }       // regel niet aan een track gekoppeld
+      let geenArtiest = { n: 0, bedrag: 0 }       // track zonder artiest
+      let geenPersoon = { n: 0, bedrag: 0 }       // artiest zonder persoon
+
+      lines.forEach(l => {
+        const b = parseFloat(l.nett_royalty) || 0
+        bruto += b
+        // Commissies er per regel af, met het tarief van dít statement
+        const n = splitBedrag(b, stmtId).netAmt
+        netto += n
+
+        if (!l.track_id)                    { geenTrack.n++;   geenTrack.bedrag   += n; return }
+        const splits = splitsPerTrack[l.track_id]
+        if (!splits || !splits.length)      { geenArtiest.n++; geenArtiest.bedrag += n; return }
+
+        splits.forEach(({ artist_id, pct }) => {
+          const deel = n * pct
+          const a = artiestById[artist_id]
+          if (!a || !a.person_id) {
+            geenPersoon.bedrag += deel
+            const naam = a ? a.name : 'onbekende artiest'
+            zonderPersoon[naam] = (zonderPersoon[naam] || 0) + deel
+            return
+          }
+          perPersoon[a.person_id] = (perPersoon[a.person_id] || 0) + deel
+        })
+      })
+      geenPersoon.n = Object.keys(zonderPersoon).length
+
+      // 4. Wie is er al geboekt voor dit statement? Die slaan we over.
+      const { data: bestaand } = await db.from('ledger_entries')
+        .select('person_id').eq('statement_id', stmtId).eq('type', 'royalty')
+      const alGeboekt = new Set((bestaand || []).map(r => r.person_id))
+
+      // 5. Namen erbij voor de weergave
+      const { data: personen } = await db.from('persons').select('id, first_name, last_name')
+      const naamById = {}
+      ;(personen || []).forEach(p => { naamById[p.id] = `${p.first_name} ${p.last_name}` })
+
+      const nieuw = [], overgeslagen = []
+      Object.entries(perPersoon).forEach(([person_id, bedrag]) => {
+        // Afronden op 4 decimalen — zelfde precisie als de kolom, en het poetst
+        // de rekenruis van drijvende komma weg.
+        const afgerond = Math.round(bedrag * 10000) / 10000
+        if (afgerond === 0) return
+        const rij = { person_id, naam: naamById[person_id] || '(onbekend)', bedrag: afgerond }
+        if (alGeboekt.has(person_id)) overgeslagen.push(rij)
+        else nieuw.push(rij)
+      })
+      nieuw.sort((a, b) => b.bedrag - a.bedrag)
+
+      return { stmtId, bruto, netto, nieuw, overgeslagen,
+               geenTrack, geenArtiest, geenPersoon, zonderPersoon, regels: lines.length }
+    }
+
+    // Supabase geeft maximaal 1000 rijen per keer — dus altijd in stukjes ophalen
+    async function paginerend(bouwQuery) {
+      const uit = []
+      let from = 0
+      while (true) {
+        const { data, error } = await bouwQuery(from)
+        if (error) throw new Error(error.message)
+        if (!data || !data.length) break
+        uit.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      return uit
+    }
+
+    // ── Voorbereiding tonen ───────────────────────────────────
+    function toonVoorbereiding(stmtId) {
+      const u = voorbereid[stmtId]
+      const somNieuw = u.nieuw.reduce((s, r) => s + r.bedrag, 0)
+      const somOver  = u.overgeslagen.reduce((s, r) => s + r.bedrag, 0)
+
+      const regel = (label, bedrag, kleur, extra = '') => `
+        <div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-[#2a2a2a]/60 last:border-0">
+          <span class="${kleur} text-sm">${label}</span>
+          <span class="${kleur} text-sm font-medium whitespace-nowrap">${fmt(bedrag)}${extra}</span>
+        </div>`
+
+      const nietToegekend = u.geenTrack.bedrag + u.geenArtiest.bedrag + u.geenPersoon.bedrag
+
+      const artiestenLijst = Object.entries(u.zonderPersoon)
+        .sort((a, b) => b[1] - a[1])
+        .map(([naam, bedrag]) => `<div class="flex justify-between gap-3 text-xs text-gray-500 py-0.5">
+             <span class="truncate">${naam}</span><span class="whitespace-nowrap">${fmt(bedrag)}</span></div>`)
+        .join('')
+
+      document.getElementById('vb_' + stmtId).innerHTML = `
+        <div class="mt-4 pt-4 border-t border-[#2a2a2a]">
+          <div class="grid md:grid-cols-2 gap-5">
+
+            <div>
+              <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Wat er geboekt wordt</div>
+              ${regel('Bruto in dit statement', u.bruto, 'text-gray-400', ` <span class="text-gray-600">(${u.regels} regels)</span>`)}
+              ${regel('Netto voor artiesten', u.netto, 'text-gray-300')}
+              ${regel(`Wordt bijgeschreven bij ${u.nieuw.length} ${u.nieuw.length === 1 ? 'persoon' : 'personen'}`, somNieuw, 'text-green-400')}
+              ${u.overgeslagen.length ? regel(`Al geboekt, wordt overgeslagen (${u.overgeslagen.length})`, somOver, 'text-gray-600') : ''}
+            </div>
+
+            <div>
+              <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Wat blijft liggen</div>
+              ${nietToegekend > 0.00005 ? `
+                ${u.geenTrack.n   ? regel(`Regel niet aan een track gekoppeld (${u.geenTrack.n})`,   u.geenTrack.bedrag,   'text-[#FFD100]') : ''}
+                ${u.geenArtiest.n ? regel(`Track zonder artiest (${u.geenArtiest.n})`,               u.geenArtiest.bedrag, 'text-[#FFD100]') : ''}
+                ${u.geenPersoon.n ? regel(`Artiest zonder persoon (${u.geenPersoon.n})`,             u.geenPersoon.bedrag, 'text-[#FFD100]') : ''}
+                ${artiestenLijst ? `<div class="mt-2 pl-1">${artiestenLijst}</div>` : ''}
+                <p class="text-gray-600 text-xs mt-3 leading-relaxed">
+                  Dit geld gaat niet verloren. Koppel je later meer artiesten aan personen, druk dan
+                  opnieuw op boeken — dan komt alleen dit deel er alsnog bij.
+                </p>`
+              : '<div class="text-green-400 text-sm py-1.5">Alles is toe te wijzen aan een persoon.</div>'}
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3 mt-5">
+            <button onclick="boekDefinitief('${stmtId}')" ${u.nieuw.length ? '' : 'disabled'}
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              ${u.nieuw.length ? `Definitief boeken — ${fmt(somNieuw)}` : 'Niets nieuws te boeken'}
+            </button>
+            <button onclick="sluitVoorbereiding('${stmtId}')"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white px-5 py-2.5 rounded-lg text-sm transition-colors">
+              Annuleren
+            </button>
+          </div>
+        </div>`
+    }
+
+    function sluitVoorbereiding(stmtId) {
+      delete voorbereid[stmtId]
+      document.getElementById('vb_' + stmtId).innerHTML = ''
+    }
+
+    // ── Definitief wegschrijven ───────────────────────────────
+    async function boekDefinitief(stmtId) {
+      const u = voorbereid[stmtId]
+      if (!u || !u.nieuw.length) return
+
+      const st  = boekStatements.find(s => s.id === stmtId)
+      const per = st ? (st.period || st.filename) : ''
+
+      const rijen = u.nieuw.map(r => ({
+        person_id:    r.person_id,
+        type:         'royalty',
+        amount:       r.bedrag,
+        statement_id: stmtId,
+        omschrijving: `Royalty's ${per}`,
+      }))
+
+      const { error } = await db.from('ledger_entries').insert(rijen)
+      if (error) {
+        showToast('Boeken mislukt: ' + error.message, 'error')
+        console.error(error)
+        return
+      }
+
+      showToast(`${rijen.length} ${rijen.length === 1 ? 'persoon' : 'personen'} bijgeschreven.`)
+      sluitVoorbereiding(stmtId)
+      await laadBoeklijst()
+      await laadSaldi()
     }
 
     loadPage()

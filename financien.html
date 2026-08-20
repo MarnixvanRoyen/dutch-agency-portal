@@ -147,7 +147,11 @@
           if (filter === 'saldo')    return r.saldoN !== 0
           return true
         })
-        .sort((a, b) => b.saldoN - a.saldoN)
+        // Alfabetisch op voornaam, net als op de pagina Personen. localeCompare
+        // met 'nl' zodat namen met accenten op hun plek staan (Émile bij de E).
+        .sort((a, b) =>
+          (a.first_name || '').localeCompare(b.first_name || '', 'nl', { sensitivity: 'base' }) ||
+          (a.last_name  || '').localeCompare(b.last_name  || '', 'nl', { sensitivity: 'base' }))
 
       tekenKerncijfers()
 

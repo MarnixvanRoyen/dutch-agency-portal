@@ -93,7 +93,7 @@
         <h2 class="text-white font-semibold text-sm">Royalty verdeling</h2>
         <button onclick="toggleCommissieEdit()" id="commissieBtnEdit"
           class="text-gray-400 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1 rounded-lg transition-colors">
-          Aanpassen
+          Standaardtarief
         </button>
       </div>
 
@@ -125,7 +125,13 @@
 
       <!-- Edit paneel (verborgen) -->
       <div id="commissieEdit" class="hidden mt-5 pt-4 border-t border-[#2a2a2a]">
-        <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="text-white text-xs font-semibold mb-1">Standaard voor nieuwe statements</div>
+        <p class="text-gray-500 text-xs mb-4">
+          Hiermee worden de tariefvelden bij een nieuwe upload voorgevuld.
+          Bestaande statements houden het tarief waarmee ze zijn opgeslagen —
+          die pas je aan op de pagina Statements.
+        </p>
+        <div class="grid grid-cols-2 gap-4 mb-2">
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
             <input type="number" id="inputAggregator" min="0" max="100" step="0.1" value="30"
@@ -139,6 +145,7 @@
               oninput="previewCommissie()">
           </div>
         </div>
+        <div id="commissiePreview" class="text-gray-600 text-xs mb-4">&nbsp;</div>
         <div class="flex gap-3">
           <button onclick="toggleCommissieEdit()"
             class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-2.5 text-sm transition-colors">
@@ -281,7 +288,7 @@
       const total = allLines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
       document.getElementById('statRoyalties').textContent = fmt(total)
 
-      updateFlowCard(total)
+      updateFlowCard(allLines)
       updateTypeCard(allLines)
       populateDropdowns()
       restoreDashboardFilters()
@@ -391,49 +398,57 @@
 
     // ── Royalty flow kaart ───────────────────────────────────────────────
 
-    function updateFlowCard(bruto) {
-      const aPct  = COMMISSIONS.aggregatorPct
-      const dPct  = COMMISSIONS.djworldPct
-      const aAmt  = bruto * aPct / 100
-      const rest1 = bruto - aAmt
-      const dAmt  = rest1 * dPct / 100
-      const artAmt = rest1 - dAmt
-      const djWorldPctOfTotal = bruto > 0 ? (dAmt / bruto * 100) : (100 - aPct) * dPct / 100
-      const artPct = bruto > 0 ? (artAmt / bruto * 100) : (100 - aPct) * (1 - dPct / 100)
-      document.getElementById('flowAggregatorPct').textContent = aPct + '%'
-      document.getElementById('flowDJWorldPct').textContent    = djWorldPctOfTotal.toFixed(1) + '%'
-      document.getElementById('flowArtistPct').textContent     = artPct.toFixed(1) + '%'
-      document.getElementById('flowAggregatorAmt').textContent = fmt(aAmt)
-      document.getElementById('flowDJWorldAmt').textContent    = fmt(dAmt)
-      document.getElementById('flowArtistAmt').textContent     = fmt(artAmt)
+    // Krijgt de regels zelf, niet één totaalbedrag: elke regel wordt gesplitst met
+    // het tarief van zijn eigen statement en pas daarna opgeteld. De getoonde
+    // percentages zijn dus het feitelijke aandeel over de huidige selectie —
+    // bij statements met verschillende tarieven een gewogen gemiddelde.
+    function updateFlowCard(lines) {
+      const t = legeSplit()
+      ;(lines || []).forEach(l => telSplitOp(t, splitBedrag(l.nett_royalty, l.statement_id)))
+
+      const bruto = t.bruto
+      // Geen omzet in beeld? Val terug op de standaardinstelling, anders 0/0.
+      const aPct = bruto > 0 ? (t.aggAmt / bruto * 100) : COMMISSIONS.aggregatorPct
+      const dPct = bruto > 0 ? (t.djAmt  / bruto * 100)
+                             : (100 - COMMISSIONS.aggregatorPct) * COMMISSIONS.djworldPct / 100
+      const artPct = bruto > 0 ? (t.netAmt / bruto * 100) : 100 - aPct - dPct
+
+      const p1 = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + '%'
+
+      document.getElementById('flowAggregatorPct').textContent = p1(aPct)
+      document.getElementById('flowDJWorldPct').textContent    = p1(dPct)
+      document.getElementById('flowArtistPct').textContent     = p1(artPct)
+      document.getElementById('flowAggregatorAmt').textContent = fmt(t.aggAmt)
+      document.getElementById('flowDJWorldAmt').textContent    = fmt(t.djAmt)
+      document.getElementById('flowArtistAmt').textContent     = fmt(t.netAmt)
 
       document.getElementById('barAggregator').style.width = aPct + '%'
-      document.getElementById('barDJWorld').style.width    = (100 - aPct) * dPct / 100 + '%'
+      document.getElementById('barDJWorld').style.width    = dPct + '%'
       document.getElementById('barArtist').style.width     = artPct + '%'
 
-      // Inputs synchroniseren
-      document.getElementById('inputAggregator').value = aPct
-      document.getElementById('inputDJWorld').value    = dPct
+      // Inputs tonen de STANDAARD voor nieuwe uploads, niet de verdeling hierboven
+      document.getElementById('inputAggregator').value = COMMISSIONS.aggregatorPct
+      document.getElementById('inputDJWorld').value    = COMMISSIONS.djworldPct
     }
 
     function toggleCommissieEdit() {
       const el = document.getElementById('commissieEdit')
       el.classList.toggle('hidden')
+      if (!el.classList.contains('hidden')) previewCommissie()
     }
 
+    // Toont wat de standaardverdeling straks oplevert — puur informatief.
+    // De kaart hierboven blijft de werkelijke cijfers tonen, want bestaande
+    // statements hebben hun eigen bevroren tarief.
     function previewCommissie() {
-      // Live preview in de flow kaart terwijl je tikt
       const aPct = parseFloat(document.getElementById('inputAggregator').value) || 0
       const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
-      const rest1  = 100 - aPct
-      const djPctOfTotal = rest1 * dPct / 100
-      const artPct = rest1 - djPctOfTotal
-      document.getElementById('flowAggregatorPct').textContent = aPct + '%'
-      document.getElementById('flowDJWorldPct').textContent    = djPctOfTotal.toFixed(1) + '%'
-      document.getElementById('flowArtistPct').textContent     = artPct.toFixed(1) + '%'
-      document.getElementById('barAggregator').style.width = aPct + '%'
-      document.getElementById('barDJWorld').style.width    = (rest1 * dPct / 100) + '%'
-      document.getElementById('barArtist').style.width     = artPct + '%'
+      const rest = 100 - aPct
+      const dj   = rest * dPct / 100
+      const art  = rest - dj
+      const el = document.getElementById('commissiePreview')
+      if (el) el.textContent =
+        `Nieuw statement: aggregator ${fmtPct(aPct)}, DJ·World ${dj.toFixed(1)}% van bruto, artiest ${art.toFixed(1)}%.`
     }
 
     async function opslaanCommissie() {
@@ -441,9 +456,8 @@
       const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
       await saveSettings(aPct, dPct)
       toggleCommissieEdit()
-      // Herbereken alles met nieuwe percentages (flow + labels + artiesten + tracks)
-      applyFilters()
-      showToast('Commissies opgeslagen.')
+      // Bestaande statements veranderen NIET: die hebben hun eigen tarief.
+      showToast('Standaardtarief opgeslagen — geldt voor nieuwe uploads.')
     }
 
     // ── Streams vs Downloads kaart ───────────────────────────────────────
@@ -510,8 +524,7 @@
         return matchType && matchLabel && matchTrack && matchArtist && matchStatement
       })
 
-      const filteredTotal = filtered.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
-      updateFlowCard(filteredTotal)
+      updateFlowCard(filtered)
       updateTypeCard(filtered)
       renderBlocks(filtered)
       saveDashboardFilters()
@@ -564,16 +577,16 @@
         byTrack[k] = (byTrack[k] || 0) + (parseFloat(l.nett_royalty) || 0)
       })
 
-      // Per Artiest — via track_artists splits × netFactor()
-      // Alleen voor regels die aan een track gekoppeld zijn
+      // Per Artiest — netto na commissies × split%, per regel gerekend met het
+      // tarief van dat statement. Alleen regels die aan een track hangen.
       const byArtist = {}
       lines.forEach(l => {
         if (!l.track_id) return
         const splits = trackArtistMap[l.track_id]
         if (!splits) return
-        const bruto = parseFloat(l.nett_royalty) || 0
+        const net = splitBedrag(l.nett_royalty, l.statement_id).netAmt
         splits.forEach(({ name, pct }) => {
-          byArtist[name] = (byArtist[name] || 0) + bruto * netFactor() * pct
+          byArtist[name] = (byArtist[name] || 0) + net * pct
         })
       })
 
@@ -652,12 +665,14 @@
         const bruto        = lines.reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
         const streamTotal   = lines.filter(l => l.usage_type === 'stream').reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
         const downloadTotal = lines.filter(l => l.usage_type === 'download').reduce((s, l) => s + (parseFloat(l.nett_royalty) || 0), 0)
-        const aPct  = COMMISSIONS.aggregatorPct
-        const dPct  = COMMISSIONS.djworldPct
-        const aAmt  = bruto * aPct / 100
-        const rest1 = bruto - aAmt
-        const dAmt  = rest1 * dPct / 100
-        const artAmt = rest1 - dAmt
+        // Dit rapport gaat over één statement, dus één vast tariefpaar
+        const rates = ratesFor(stmtId)
+        const split = splitBedrag(bruto, rates)
+        const aPct  = split.aggPct
+        const dPct  = split.djPct
+        const aAmt  = split.aggAmt
+        const dAmt  = split.djAmt
+        const artAmt = split.netAmt
 
         // Data kwaliteit — samenvatting voor dit statement (matching rate)
         const matchedCount   = lines.filter(l => l.track_id).length
@@ -680,8 +695,8 @@
           if (!l.track_id) return
           const splits = trackArtistMap[l.track_id]
           if (!splits) return
-          const b = parseFloat(l.nett_royalty) || 0
-          splits.forEach(({ name, pct }) => { byArtist[name] = (byArtist[name] || 0) + b * netFactor() * pct })
+          const net = splitBedrag(l.nett_royalty, rates).netAmt
+          splits.forEach(({ name, pct }) => { byArtist[name] = (byArtist[name] || 0) + net * pct })
         })
 
         const top = (obj, n = 5) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n)
@@ -772,8 +787,8 @@
         // Rij 2 — royalty verdeling
         const bw3 = (pw - 28 - gap * 2) / 3
         drawStatBoxes(doc, [
-          { label: `Aggregator ${aPct}%`, value: '-' + fmt(aAmt),  fill: [253,238,238], border: [230,190,190], valColor: RED },
-          { label: `DJ·World ${dPct}%`,   value: '-' + fmt(dAmt),  fill: [255,250,230], border: [220,200,100], valColor: GOLD },
+          { label: `Aggregator ${fmtPct(aPct)}`, value: '-' + fmt(aAmt), fill: [253,238,238], border: [230,190,190], valColor: RED },
+          { label: `DJ·World ${fmtPct(dPct)}`,   value: '-' + fmt(dAmt), fill: [255,250,230], border: [220,200,100], valColor: GOLD },
           { label: 'Voor artiesten',      value: fmt(artAmt),      fill: [237,250,242], border: [150,210,175], valColor: GREEN },
         ], 14, y, bw3, 18, gap)
         y += 18 + 9

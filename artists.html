@@ -261,29 +261,30 @@
         from += 1000
       }
 
-      // Groepeer royalties per track
-      const royPerTrack = {}
+      // Groepeer royalties per track — al NETTO (na aggregator én DJ·World).
+      // Per regel rekenen met het tarief van dát statement, daarna pas optellen:
+      // regels uit verschillende statements kunnen verschillende tarieven hebben.
+      const netPerTrack = {}
       ;(lines || []).forEach(l => {
         if (!l.track_id) return
-        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
-        const amt = parseFloat(l.nett_royalty) || 0
-        royPerTrack[l.track_id].total += amt
-        if (l.usage_type === 'stream')   royPerTrack[l.track_id].stream   += amt
-        if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
+        if (!netPerTrack[l.track_id]) netPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
+        const net = splitBedrag(l.nett_royalty, l.statement_id).netAmt
+        netPerTrack[l.track_id].total += net
+        if (l.usage_type === 'stream')   netPerTrack[l.track_id].stream   += net
+        if (l.usage_type === 'download') netPerTrack[l.track_id].download += net
       })
 
-      // Bereken per artiest via split% EN commissies
+      // Bereken per artiest via split% (commissies zitten er al af)
       splitRoyalties = {}
       tracksByArtist  = {}
       ;(tas || []).forEach(ta => {
-        const roy = royPerTrack[ta.track_id]
+        const roy = netPerTrack[ta.track_id]
         if (!roy) return
-        const pct    = (parseFloat(ta.split_percentage) || 0) / 100
-        const factor = netFactor()
+        const pct = (parseFloat(ta.split_percentage) || 0) / 100
         if (!splitRoyalties[ta.artist_id]) splitRoyalties[ta.artist_id] = { total: 0, stream: 0, download: 0 }
-        splitRoyalties[ta.artist_id].total    += roy.total    * factor * pct
-        splitRoyalties[ta.artist_id].stream   += roy.stream   * factor * pct
-        splitRoyalties[ta.artist_id].download += roy.download * factor * pct
+        splitRoyalties[ta.artist_id].total    += roy.total    * pct
+        splitRoyalties[ta.artist_id].stream   += roy.stream   * pct
+        splitRoyalties[ta.artist_id].download += roy.download * pct
 
         // Track-breakdown per artiest opslaan
         if (!tracksByArtist[ta.artist_id]) tracksByArtist[ta.artist_id] = {}
@@ -295,7 +296,7 @@
             royalty: 0
           }
         }
-        tracksByArtist[ta.artist_id][trackKey].royalty += roy.total * factor * pct
+        tracksByArtist[ta.artist_id][trackKey].royalty += roy.total * pct
       })
     }
 
@@ -596,7 +597,7 @@
       const trackIds = tas.map(ta => ta.tracks?.id).filter(Boolean)
       const { data: lines } = await db
         .from('statement_lines')
-        .select('track_id, nett_royalty, usage_type, label_name, statements(period, filename)')
+        .select('track_id, nett_royalty, usage_type, label_name, statement_id, statements(period, filename)')
         .in('track_id', trackIds)
 
       const byTrack  = {}
@@ -608,12 +609,18 @@
       const splitMap = {}
       tas.forEach(ta => { if (ta.tracks?.id) splitMap[ta.tracks.id] = parseFloat(ta.split_percentage) / 100 })
 
+      const djPcts = []   // welke DJ·World-percentages komen hier voor?
+      let djTotal = 0
+
       ;(lines || []).forEach(l => {
-        const pct        = splitMap[l.track_id] || 0
-        const bruto      = parseFloat(l.nett_royalty) || 0
-        const naAggregator = bruto * (1 - COMMISSIONS.aggregatorPct / 100) * pct
-        const netRoyalty   = naAggregator * (1 - COMMISSIONS.djworldPct / 100)
-        brutoTotal += naAggregator   // na aggregator = wat DJ·World ontvangt
+        const pct = splitMap[l.track_id] || 0
+        // Per regel rekenen met het tarief van dát statement
+        const s = splitBedrag(l.nett_royalty, l.statement_id)
+        djPcts.push(s.djPct)
+        const naAggregator = (s.djAmt + s.netAmt) * pct   // wat DJ·World ontvangt
+        const netRoyalty   = s.netAmt * pct
+        brutoTotal += naAggregator
+        djTotal    += s.djAmt * pct
         total      += netRoyalty
         if (l.usage_type === 'stream')   streamTotal   += netRoyalty
         if (l.usage_type === 'download') downloadTotal += netRoyalty
@@ -628,8 +635,9 @@
         byPeriod[p] = (byPeriod[p] || 0) + netRoyalty
       })
 
-      // DJ·World aandeel
-      const djAmt = brutoTotal * COMMISSIONS.djworldPct / 100
+      // DJ·World aandeel — per regel opgeteld, niet één percentage over het totaal
+      const djAmt   = djTotal
+      const djLabel = pctLabel(djPcts)
 
       const trackEntries  = Object.entries(byTrack).sort((a, b) => b[1] - a[1])
       const labelEntries  = Object.entries(byLabel).sort((a, b) => b[1] - a[1])
@@ -661,7 +669,7 @@
               <div class="text-white font-bold text-base">${fmt(brutoTotal)}</div>
             </div>
             <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
-              <div class="text-[#FFD100] text-xs uppercase tracking-wider mb-1">DJ·World ${COMMISSIONS.djworldPct}%</div>
+              <div class="text-[#FFD100] text-xs uppercase tracking-wider mb-1">DJ·World ${djLabel}</div>
               <div class="text-[#FFD100] font-bold text-base">-${fmt(djAmt)}</div>
             </div>
             <div class="bg-[#0d0d0d] rounded-xl p-4 border border-green-500/20">

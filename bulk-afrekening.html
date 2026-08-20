@@ -191,7 +191,7 @@
       while (allTrackIds.length) {
         const { data: page } = await db
           .from('statement_lines')
-          .select('track_id, nett_royalty, usage_type')
+          .select('track_id, nett_royalty, usage_type, statement_id')
           .in('statement_id', selectedStmtIds)
           .in('track_id', allTrackIds)
           .range(from, from + 999)
@@ -204,24 +204,46 @@
       const { data: stmts } = await db.from('statements').select('id, period, filename').in('id', selectedStmtIds)
       const periods = (stmts || []).map(s => s.period || s.filename)
 
-      // Royalties per track
+      // Royalties per track. Elke regel wordt meteen gesplitst met het tarief van
+      // zijn eigen statement; pas daarna optellen. Anders zou een selectie met
+      // statements van 2025 én 2026 er één gemiddeld tarief overheen gooien.
       const royPerTrack = {}
+      const aggPcts = [], djPcts = []
       lines.forEach(l => {
         if (!l.track_id) return
-        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0 }
-        const amt = parseFloat(l.nett_royalty) || 0
-        royPerTrack[l.track_id].total    += amt
-        if (l.usage_type === 'stream')   royPerTrack[l.track_id].stream   += amt
-        if (l.usage_type === 'download') royPerTrack[l.track_id].download += amt
+        if (!royPerTrack[l.track_id]) royPerTrack[l.track_id] = { total: 0, stream: 0, download: 0, agg: 0, dj: 0, net: 0 }
+        const s = splitBedrag(l.nett_royalty, l.statement_id)
+        aggPcts.push(s.aggPct)
+        djPcts.push(s.djPct)
+        const r = royPerTrack[l.track_id]
+        r.total += s.bruto
+        r.agg   += s.aggAmt
+        r.dj    += s.djAmt
+        r.net   += s.netAmt
+        if (l.usage_type === 'stream')   r.stream   += s.bruto
+        if (l.usage_type === 'download') r.download += s.bruto
       })
+
+      // Labels: één tarief → "30%", meerdere → "wisselend"
+      const aggLabel = pctLabel(aggPcts)
+      const djLabel  = pctLabel(djPcts)
+      const gemengd  = aggLabel === 'wisselend' || djLabel === 'wisselend'
+
+      // Bij gemengde tarieven: specificatieregels per statement, zodat de
+      // artiest kan narekenen welk percentage waar is gebruikt.
+      const gebruikteStmts = new Set(lines.map(l => l.statement_id))
+      const tariefRegels = (stmts || [])
+        .filter(s => gebruikteStmts.has(s.id))
+        .map(s => {
+          const r = STATEMENT_RATES[s.id] || {}
+          return { periode: s.period || s.filename, agg: fmtPct(r.agg), dj: fmtPct(r.dj) }
+        })
 
       log(`Data geladen — ${lines.length} regels voor ${allTrackIds.length} tracks`, 'info')
 
       // ZIP aanmaken
       const renderEl = document.getElementById('pdfRender')
       const zip  = new JSZip()
-      const aggPct = COMMISSIONS.aggregatorPct / 100
-      const djPct  = COMMISSIONS.djworldPct / 100
       const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
       const eur = v => {
         if (Math.abs(v) < 0.005) v = 0
@@ -278,10 +300,9 @@
           if (!roy) return
           const splitPct = (parseFloat(ta.split_percentage) || 0) / 100
           const gross    = roy.total * splitPct
-          const aggAmt   = gross * aggPct
-          const afterAgg = gross - aggAmt
-          const djAmt    = afterAgg * djPct
-          const net      = afterAgg - djAmt
+          const aggAmt   = roy.agg   * splitPct
+          const djAmt    = roy.dj    * splitPct
+          const net      = roy.net   * splitPct
           if (!artistBreakdown[aid]) artistBreakdown[aid] = { tracks: [], gross: 0, agg: 0, dj: 0, net: 0 }
           artistBreakdown[aid].tracks.push({
             title: ta.tracks.title || `⚠️ ${ta.tracks.releases?.catalog_number || '?'}`,
@@ -324,11 +345,11 @@
                 <div style="font-size:11pt;font-weight:bold">${eur(grandGross)}</div>
               </div>
               <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
-                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Aggregator ${COMMISSIONS.aggregatorPct}%</div>
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Aggregator ${aggLabel}</div>
                 <div style="font-size:11pt;font-weight:bold;color:#b88a00">-${eur(grandAgg)}</div>
               </div>
               <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px">
-                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">DJ·World ${COMMISSIONS.djworldPct}%</div>
+                <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">DJ·World ${djLabel}</div>
                 <div style="font-size:11pt;font-weight:bold;color:#b88a00">-${eur(grandDJ)}</div>
               </div>
               <div style="border:1px solid #333;border-radius:5px;padding:8px 12px;background:#f9f9f9">
@@ -336,6 +357,15 @@
                 <div style="font-size:11pt;font-weight:bold;color:#1a7a3a">${eur(grandNet)}</div>
               </div>
             </div>
+
+            ${!gemengd ? '' : `
+            <div style="border:1px solid #ddd;border-radius:5px;padding:8px 12px;margin-bottom:14px">
+              <div style="font-size:6.5pt;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Gehanteerde tarieven per periode</div>
+              ${tariefRegels.map(t => `<div style="font-size:8pt;display:flex;justify-content:space-between;padding:1px 0">
+                <span>${t.periode}</span>
+                <span style="color:#666">Aggregator ${t.agg} &nbsp;·&nbsp; DJ·World ${t.dj}</span>
+              </div>`).join('')}
+            </div>`}
 
             ${p.artists.map(a => {
               const ab = artistBreakdown[a.id]
@@ -454,8 +484,8 @@
           const bh  = 18
           const boxes = [
             { label: 'Bruto inkomsten',            value: eur(grandGross), fill: [248,248,248], border: [220,220,220], valColor: DARK },
-            { label: `Aggregator ${COMMISSIONS.aggregatorPct}%`, value: `-${eur(grandAgg)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
-            { label: `DJ·World ${COMMISSIONS.djworldPct}%`, value: `-${eur(grandDJ)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
+            { label: `Aggregator ${aggLabel}`, value: `-${eur(grandAgg)}`, fill: [255,250,230], border: [220,200,100], valColor: GOLD },
+            { label: `DJ·World ${djLabel}`,   value: `-${eur(grandDJ)}`,  fill: [255,250,230], border: [220,200,100], valColor: GOLD },
             { label: 'Jouw netto',                 value: eur(grandNet),   fill: [237,250,242], border: [150,210,175], valColor: GREEN },
           ]
           boxes.forEach((b, idx) => {
@@ -469,6 +499,21 @@
           })
           doc.setTextColor(...DARK).setFont('helvetica','normal')
           y += bh + 8
+
+          // ── Specificatie bij gemengde tarieven ───────────────────
+          if (gemengd && tariefRegels.length) {
+            doc.setFontSize(6.5).setTextColor(...GRAY)
+            doc.text('GEHANTEERDE TARIEVEN PER PERIODE', 14, y)
+            y += 4
+            doc.setFontSize(7.5).setTextColor(...DARK)
+            tariefRegels.forEach(t => {
+              doc.text(t.periode, 14, y)
+              doc.text(`Aggregator ${t.agg}   ·   DJ·World ${t.dj}`, pw - 14, y, { align: 'right' })
+              y += 4
+            })
+            doc.setTextColor(...DARK)
+            y += 5
+          }
 
           // ── Per artiest ──────────────────────────────────────────
           p.artists.forEach(a => {

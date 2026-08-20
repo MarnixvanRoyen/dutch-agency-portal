@@ -671,7 +671,19 @@
 
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(...DARK)
         doc.text(`Samenvatting — ${periodLabel}`, 14, y)
-        y += 8
+        y += 6
+
+        // Geldende verdeling van dít statement, voluit. Staat ook klein bij de
+        // blokken hieronder, maar hier expliciet zodat het narekenbaar is.
+        const artShare = Math.round((100 - aPct) * (1 - dPct / 100) * 10) / 10
+        doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(...GRAY)
+        doc.text(
+          `Geldende verdeling: aggregator ${fmtPct(aPct)} van bruto  ·  ` +
+          `DJ·World ${fmtPct(dPct)} van het restant  ·  artiest ${fmtPct(artShare)} van bruto`,
+          14, y
+        )
+        doc.setTextColor(...DARK)
+        y += 7
 
         // Rij 1 — 4 kerncijfers
         const gap = 4

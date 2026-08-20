@@ -97,30 +97,21 @@
         </button>
       </div>
 
-      <!-- Visuele flow -->
+      <!-- Visuele flow — alleen bedragen; percentages verschillen per statement
+           en gaven een verwarrend gemiddelde -->
       <div id="commissieFlow" class="grid grid-cols-3 gap-3 mb-1">
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">Aggregator</div>
-          <div id="flowAggregatorPct" class="text-xl font-bold text-red-400">30%</div>
-          <div id="flowAggregatorAmt" class="text-gray-400 text-xs">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Aggregator</div>
+          <div id="flowAggregatorAmt" class="text-xl font-bold text-red-400">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">DJ·World</div>
-          <div id="flowDJWorldPct" class="text-xl font-bold text-[#FFD100]">50%</div>
-          <div id="flowDJWorldAmt" class="text-gray-400 text-xs">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ·World</div>
+          <div id="flowDJWorldAmt" class="text-xl font-bold text-[#FFD100]">—</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-0.5">Voor artiesten</div>
-          <div id="flowArtistPct" class="text-xl font-bold text-green-400">—%</div>
-          <div id="flowArtistAmt" class="text-gray-400 text-xs">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
+          <div id="flowArtistAmt" class="text-xl font-bold text-green-400">—</div>
         </div>
-      </div>
-
-      <!-- Progressiebalk -->
-      <div class="h-2 rounded-full overflow-hidden flex mt-3" id="flowBar">
-        <div id="barAggregator" class="h-2 bg-red-500/70 transition-all duration-500" style="width:30%"></div>
-        <div id="barDJWorld"    class="h-2 bg-[#FFD100]/70 transition-all duration-500" style="width:35%"></div>
-        <div id="barArtist"     class="h-2 bg-green-500/70 transition-all duration-500" style="width:35%"></div>
       </div>
 
       <!-- Edit paneel (verborgen) -->
@@ -399,32 +390,16 @@
     // ── Royalty flow kaart ───────────────────────────────────────────────
 
     // Krijgt de regels zelf, niet één totaalbedrag: elke regel wordt gesplitst met
-    // het tarief van zijn eigen statement en pas daarna opgeteld. De getoonde
-    // percentages zijn dus het feitelijke aandeel over de huidige selectie —
-    // bij statements met verschillende tarieven een gewogen gemiddelde.
+    // het tarief van zijn eigen statement en pas daarna opgeteld.
+    // Alleen bedragen — geen percentages en geen balk: die verschillen per statement
+    // en leverden een gewogen gemiddelde op dat nergens op sloeg.
     function updateFlowCard(lines) {
       const t = legeSplit()
       ;(lines || []).forEach(l => telSplitOp(t, splitBedrag(l.nett_royalty, l.statement_id)))
 
-      const bruto = t.bruto
-      // Geen omzet in beeld? Val terug op de standaardinstelling, anders 0/0.
-      const aPct = bruto > 0 ? (t.aggAmt / bruto * 100) : COMMISSIONS.aggregatorPct
-      const dPct = bruto > 0 ? (t.djAmt  / bruto * 100)
-                             : (100 - COMMISSIONS.aggregatorPct) * COMMISSIONS.djworldPct / 100
-      const artPct = bruto > 0 ? (t.netAmt / bruto * 100) : 100 - aPct - dPct
-
-      const p1 = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + '%'
-
-      document.getElementById('flowAggregatorPct').textContent = p1(aPct)
-      document.getElementById('flowDJWorldPct').textContent    = p1(dPct)
-      document.getElementById('flowArtistPct').textContent     = p1(artPct)
       document.getElementById('flowAggregatorAmt').textContent = fmt(t.aggAmt)
       document.getElementById('flowDJWorldAmt').textContent    = fmt(t.djAmt)
       document.getElementById('flowArtistAmt').textContent     = fmt(t.netAmt)
-
-      document.getElementById('barAggregator').style.width = aPct + '%'
-      document.getElementById('barDJWorld').style.width    = dPct + '%'
-      document.getElementById('barArtist').style.width     = artPct + '%'
 
       // Inputs tonen de STANDAARD voor nieuwe uploads, niet de verdeling hierboven
       document.getElementById('inputAggregator').value = COMMISSIONS.aggregatorPct

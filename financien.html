@@ -305,18 +305,25 @@
                        <span class="text-red-400/60">— koppeling of matching ontbreekt</span></div>`
           }
           knop   = `<button onclick="bereidVoor('${st.id}')"
-                      class="border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Opnieuw boeken</button>`
+                      class="border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Details</button>`
         } else {
           status = '<span class="text-gray-500">nog niet geboekt</span>'
           knop   = `<button onclick="bereidVoor('${st.id}')"
                       class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Boeken</button>`
         }
 
+        // Op de regel klikken doet hetzelfde als de knop — behalve bij statements
+        // die buiten de administratie vallen, daar valt niets te zien.
+        const klik = st.buiten_administratie
+          ? ''
+          : `onclick="bereidVoor('${st.id}')" class="flex items-center justify-between gap-4 cursor-pointer group"`
+        const klasse = st.buiten_administratie ? 'class="flex items-center justify-between gap-4"' : ''
+
         return `
           <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-            <div class="flex items-center justify-between gap-4">
+            <div ${klik || klasse}>
               <div class="min-w-0">
-                <div class="text-white font-medium">${naam}</div>
+                <div class="text-white font-medium ${st.buiten_administratie ? '' : 'group-hover:text-[#FFD100] transition-colors'}">${naam}</div>
                 <div class="text-xs mt-0.5">${status}</div>
               </div>
               ${knop}
@@ -396,8 +403,11 @@
       geenPersoon.n = Object.keys(zonderPersoon).length
 
       // 4. Wie is er al geboekt voor dit statement? Die slaan we over.
+      //    We halen ook het bedrag op: bij "al geboekt" hoor je te zien wat er
+      //    ECHT in de administratie staat, niet wat een herberekening nu zou geven.
+      //    Anders zou een gewijzigde split hier stilzwijgend een ander bedrag tonen.
       const { data: bestaand } = await db.from('ledger_entries')
-        .select('person_id').eq('statement_id', stmtId).eq('type', 'royalty')
+        .select('person_id, amount').eq('statement_id', stmtId).eq('type', 'royalty')
       const alGeboekt = new Set((bestaand || []).map(r => r.person_id))
 
       // 5. Namen erbij voor de weergave
@@ -405,17 +415,23 @@
       const naamById = {}
       ;(personen || []).forEach(p => { naamById[p.id] = `${p.first_name} ${p.last_name}` })
 
-      const nieuw = [], overgeslagen = []
+      const nieuw = []
       Object.entries(perPersoon).forEach(([person_id, bedrag]) => {
+        if (alGeboekt.has(person_id)) return          // staat al in de administratie
         // Afronden op 4 decimalen — zelfde precisie als de kolom, en het poetst
         // de rekenruis van drijvende komma weg.
         const afgerond = Math.round(bedrag * 10000) / 10000
         if (afgerond === 0) return
-        const rij = { person_id, naam: naamById[person_id] || '(onbekend)', bedrag: afgerond }
-        if (alGeboekt.has(person_id)) overgeslagen.push(rij)
-        else nieuw.push(rij)
+        nieuw.push({ person_id, naam: naamById[person_id] || '(onbekend)', bedrag: afgerond })
       })
       nieuw.sort((a, b) => b.bedrag - a.bedrag)
+
+      // Uit het grootboek zelf, dus altijd de werkelijke stand
+      const overgeslagen = (bestaand || []).map(r => ({
+        person_id: r.person_id,
+        naam:      naamById[r.person_id] || '(onbekend)',
+        bedrag:    parseFloat(r.amount) || 0,
+      })).sort((a, b) => b.bedrag - a.bedrag)
 
       return { stmtId, bruto, netto, nieuw, overgeslagen,
                geenTrack, geenArtiest, geenPersoon, zonderPersoon, regels: lines.length }
@@ -465,7 +481,7 @@
               ${regel('Bruto in dit statement', u.bruto, 'text-gray-400', ` <span class="text-gray-600">(${u.regels} regels)</span>`)}
               ${regel('Netto voor artiesten', u.netto, 'text-gray-300')}
               ${regel(`Wordt bijgeschreven bij ${u.nieuw.length} ${u.nieuw.length === 1 ? 'persoon' : 'personen'}`, somNieuw, 'text-green-400')}
-              ${u.overgeslagen.length ? regel(`Al geboekt, wordt overgeslagen (${u.overgeslagen.length})`, somOver, 'text-gray-600') : ''}
+              ${u.overgeslagen.length ? regel(`Stond er al (${u.overgeslagen.length} ${u.overgeslagen.length === 1 ? 'persoon' : 'personen'})`, somOver, 'text-gray-500') : ''}
             </div>
 
             <div>
@@ -483,6 +499,8 @@
             </div>
           </div>
 
+          ${lijstBlok(u)}
+
           <div class="flex flex-wrap gap-3 mt-5">
             <button onclick="boekDefinitief('${stmtId}')" ${u.nieuw.length ? '' : 'disabled'}
               class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
@@ -493,6 +511,31 @@
               Annuleren
             </button>
           </div>
+        </div>`
+    }
+
+    // Wie zit er precies achter die bedragen? Twee kolommen: wat er nieuw
+    // bijkomt en wat er al staat. Lange lijsten scrollen binnen hun eigen kader,
+    // zodat de knoppen eronder in beeld blijven.
+    function lijstBlok(u) {
+      const rijen = lijst => lijst
+        .sort((a, b) => b.bedrag - a.bedrag)
+        .map(r => `<div class="flex justify-between gap-3 py-1 text-sm border-b border-[#2a2a2a]/40 last:border-0">
+             <span class="text-gray-300 truncate">${r.naam}</span>
+             <span class="text-gray-400 whitespace-nowrap">${fmt(r.bedrag)}</span></div>`).join('')
+
+      const kolom = (titel, lijst, kleur) => !lijst.length ? '' : `
+        <div>
+          <div class="${kleur} text-xs uppercase tracking-wider mb-2">${titel} (${lijst.length})</div>
+          <div class="max-h-56 overflow-y-auto pr-1">${rijen(lijst)}</div>
+        </div>`
+
+      if (!u.nieuw.length && !u.overgeslagen.length) return ''
+
+      return `
+        <div class="mt-5 pt-4 border-t border-[#2a2a2a] grid md:grid-cols-2 gap-5">
+          ${kolom('Wordt nu bijgeschreven', u.nieuw,        'text-green-400')}
+          ${kolom('Al geboekt',             u.overgeslagen, 'text-gray-500')}
         </div>`
     }
 

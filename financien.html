@@ -295,7 +295,15 @@
           status = '<span class="text-gray-600">buiten de administratie</span>'
           knop   = ''
         } else if (st.geboekt) {
+          // Niet geboekt = netto van dit statement min wat er bij personen staat.
+          // Binnen één statement geldt overal hetzelfde tarief, dus dat mag zo.
+          const netto = splitBedrag(st.total_royalties, st.id).netAmt
+          const open  = netto - st.geboekt.bedrag
           status = `<span class="text-green-400">geboekt — ${st.geboekt.n} ${st.geboekt.n === 1 ? 'persoon' : 'personen'}, ${fmt(st.geboekt.bedrag)}</span>`
+          if (open > 0.005) {
+            status += `<div class="text-red-400 mt-0.5">${fmt(open)} niet geboekt
+                       <span class="text-red-400/60">— koppeling of matching ontbreekt</span></div>`
+          }
           knop   = `<button onclick="bereidVoor('${st.id}')"
                       class="border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Opnieuw boeken</button>`
         } else {

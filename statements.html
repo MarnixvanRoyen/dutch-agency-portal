@@ -282,9 +282,19 @@
         if (s.buiten_administratie) {
           boeking = '<span class="text-gray-600">buiten de administratie</span>'
         } else if (b) {
-          boeking = `<span class="text-green-400">geboekt</span>
+          // Wat er NIET geboekt kon worden is gewoon het verschil: het netto bedrag
+          // van dit statement min wat er bij personen terecht is gekomen. Binnen één
+          // statement geldt overal hetzelfde tarief, dus dat mag over het totaal.
+          // Niets extra opslaan — dit kan dus ook nooit verouderen.
+          const netto = splitBedrag(s.total_royalties, s.id).netAmt
+          const open  = netto - b.bedrag
+          boeking = `<div><span class="text-green-400">geboekt</span>
                      <span class="text-gray-600">— ${b.n} ${b.n === 1 ? 'persoon' : 'personen'}, ${fmt(b.bedrag)}</span>
-                     <a href="financien.html" class="text-gray-600 hover:text-[#FFD100] ml-1 transition-colors">bekijken</a>`
+                     <a href="financien.html" class="text-gray-600 hover:text-[#FFD100] ml-1 transition-colors">bekijken</a></div>`
+          if (open > 0.005) {
+            boeking += `<div class="text-red-400 mt-0.5">${fmt(open)} niet geboekt
+                        <span class="text-red-400/60">— koppeling of matching ontbreekt</span></div>`
+          }
         } else {
           boeking = `<a href="financien.html" class="text-[#FFD100] hover:underline">nog niet geboekt</a>`
         }

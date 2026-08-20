@@ -283,14 +283,3 @@ function showToast(msg, type = 'success') {
   document.body.appendChild(t)
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 2700)
 }
-
-// Toon/verberg laad-indicator in element
-function setLoading(el, loading) {
-  if (!el) return
-  if (loading) {
-    el.dataset.orig = el.innerHTML
-    el.innerHTML = '<div class="text-gray-500 text-sm py-4 text-center">Laden...</div>'
-  } else if (el.dataset.orig) {
-    el.innerHTML = el.dataset.orig
-  }
-}

@@ -7,10 +7,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── Standaardtarief voor NIEUWE statements ──────────────────
-// Uit de settings-tabel, geladen bij initPage(). Dit stuurt géén berekeningen aan:
-// het vult alleen de tariefvelden voor bij een nieuwe upload. De bedragen worden
-// gerekend met het tarief dat op het statement zelf staat — zie splitBedrag().
+// ── Terugvalwaarde voor de tariefvelden ─────────────────────
+// Uit de settings-tabel, geladen bij initPage(). Stuurt géén berekening aan.
+// Wordt alleen gebruikt als er nog geen enkel statement is om het tarief van
+// over te nemen (statements.html) en om de velden in legacy-afrekening.html
+// voor te vullen. De bedragen komen altijd van het tarief op het statement
+// zelf — zie splitBedrag(). Aanpassen kan alleen nog rechtstreeks in de
+// settings-tabel in Supabase; er is bewust geen scherm meer voor.
 let COMMISSIONS = { aggregatorPct: 30, djworldPct: 50 }
 
 async function loadSettings() {
@@ -26,14 +29,8 @@ async function loadSettings() {
 // netFactor() is per 2026-08-20 verwijderd. Die rekende met de globale instelling
 // en dus met terugwerkende kracht ook over oude statements. Gebruik splitBedrag().
 
-async function saveSettings(aggregatorPct, djworldPct) {
-  await Promise.all([
-    db.from('settings').upsert({ key: 'aggregator_pct', value: String(aggregatorPct) }),
-    db.from('settings').upsert({ key: 'djworld_pct',    value: String(djworldPct) }),
-  ])
-  COMMISSIONS.aggregatorPct = aggregatorPct
-  COMMISSIONS.djworldPct    = djworldPct
-}
+// saveSettings() is per 2026-08-20 verwijderd: het tarief wordt niet meer centraal
+// beheerd. Elk statement krijgt zijn eigen percentages op de pagina Statements.
 
 // ── Tarieven per statement ──────────────────────────────────
 // Elk statement heeft een eigen aggregator_pct en djworld_pct, bevroren bij het

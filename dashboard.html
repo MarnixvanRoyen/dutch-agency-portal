@@ -88,64 +88,23 @@
     </div>
 
     <!-- Royalty flow kaart -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-3 mb-6">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-white font-semibold text-sm">Royalty verdeling</h2>
-        <button onclick="toggleCommissieEdit()" id="commissieBtnEdit"
-          class="text-gray-400 hover:text-white text-xs border border-[#2a2a2a] px-3 py-1 rounded-lg transition-colors">
-          Standaardtarief
-        </button>
-      </div>
+    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 mb-6">
+      <h2 class="text-white font-semibold text-sm mb-3">Royalty verdeling</h2>
 
-      <!-- Visuele flow — alleen bedragen; percentages verschillen per statement
-           en gaven een verwarrend gemiddelde -->
-      <div id="commissieFlow" class="grid grid-cols-3 gap-3 mb-1">
+      <!-- Alleen bedragen. Tarieven worden per statement beheerd op de pagina
+           Statements — het dashboard laat ze niet meer zien of aanpassen. -->
+      <div id="commissieFlow" class="grid grid-cols-3 gap-3">
         <div class="text-center">
           <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Aggregator</div>
-          <div id="flowAggregatorAmt" class="text-xl font-bold text-red-400">—</div>
+          <div id="flowAggregatorAmt" class="text-xl font-bold text-red-400">&mdash;</div>
         </div>
         <div class="text-center">
-          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ·World</div>
-          <div id="flowDJWorldAmt" class="text-xl font-bold text-[#FFD100]">—</div>
+          <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ&middot;World</div>
+          <div id="flowDJWorldAmt" class="text-xl font-bold text-[#FFD100]">&mdash;</div>
         </div>
         <div class="text-center">
           <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
-          <div id="flowArtistAmt" class="text-xl font-bold text-green-400">—</div>
-        </div>
-      </div>
-
-      <!-- Edit paneel (verborgen) -->
-      <div id="commissieEdit" class="hidden mt-5 pt-4 border-t border-[#2a2a2a]">
-        <div class="text-white text-xs font-semibold mb-1">Standaard voor nieuwe statements</div>
-        <p class="text-gray-500 text-xs mb-4">
-          Hiermee worden de tariefvelden bij een nieuwe upload voorgevuld.
-          Bestaande statements houden het tarief waarmee ze zijn opgeslagen —
-          die pas je aan op de pagina Statements.
-        </p>
-        <div class="grid grid-cols-2 gap-4 mb-2">
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
-            <input type="number" id="inputAggregator" min="0" max="100" step="0.1" value="30"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-              oninput="previewCommissie()">
-          </div>
-          <div>
-            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">DJ·World %</label>
-            <input type="number" id="inputDJWorld" min="0" max="100" step="0.1" value="50"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
-              oninput="previewCommissie()">
-          </div>
-        </div>
-        <div id="commissiePreview" class="text-gray-600 text-xs mb-4">&nbsp;</div>
-        <div class="flex gap-3">
-          <button onclick="toggleCommissieEdit()"
-            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-2.5 text-sm transition-colors">
-            Annuleren
-          </button>
-          <button onclick="opslaanCommissie()"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-2.5 text-sm transition-colors">
-            Opslaan
-          </button>
+          <div id="flowArtistAmt" class="text-xl font-bold text-green-400">&mdash;</div>
         </div>
       </div>
     </div>
@@ -391,8 +350,7 @@
 
     // Krijgt de regels zelf, niet één totaalbedrag: elke regel wordt gesplitst met
     // het tarief van zijn eigen statement en pas daarna opgeteld.
-    // Alleen bedragen — geen percentages en geen balk: die verschillen per statement
-    // en leverden een gewogen gemiddelde op dat nergens op sloeg.
+    // Alleen bedragen — tarieven horen bij het statement, niet bij het dashboard.
     function updateFlowCard(lines) {
       const t = legeSplit()
       ;(lines || []).forEach(l => telSplitOp(t, splitBedrag(l.nett_royalty, l.statement_id)))
@@ -400,39 +358,6 @@
       document.getElementById('flowAggregatorAmt').textContent = fmt(t.aggAmt)
       document.getElementById('flowDJWorldAmt').textContent    = fmt(t.djAmt)
       document.getElementById('flowArtistAmt').textContent     = fmt(t.netAmt)
-
-      // Inputs tonen de STANDAARD voor nieuwe uploads, niet de verdeling hierboven
-      document.getElementById('inputAggregator').value = COMMISSIONS.aggregatorPct
-      document.getElementById('inputDJWorld').value    = COMMISSIONS.djworldPct
-    }
-
-    function toggleCommissieEdit() {
-      const el = document.getElementById('commissieEdit')
-      el.classList.toggle('hidden')
-      if (!el.classList.contains('hidden')) previewCommissie()
-    }
-
-    // Toont wat de standaardverdeling straks oplevert — puur informatief.
-    // De kaart hierboven blijft de werkelijke cijfers tonen, want bestaande
-    // statements hebben hun eigen bevroren tarief.
-    function previewCommissie() {
-      const aPct = parseFloat(document.getElementById('inputAggregator').value) || 0
-      const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
-      const rest = 100 - aPct
-      const dj   = rest * dPct / 100
-      const art  = rest - dj
-      const el = document.getElementById('commissiePreview')
-      if (el) el.textContent =
-        `Nieuw statement: aggregator ${fmtPct(aPct)}, DJ·World ${dj.toFixed(1)}% van bruto, artiest ${art.toFixed(1)}%.`
-    }
-
-    async function opslaanCommissie() {
-      const aPct = parseFloat(document.getElementById('inputAggregator').value) || 0
-      const dPct = parseFloat(document.getElementById('inputDJWorld').value) || 0
-      await saveSettings(aPct, dPct)
-      toggleCommissieEdit()
-      // Bestaande statements veranderen NIET: die hebben hun eigen tarief.
-      showToast('Standaardtarief opgeslagen — geldt voor nieuwe uploads.')
     }
 
     // ── Streams vs Downloads kaart ───────────────────────────────────────

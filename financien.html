@@ -188,11 +188,13 @@
       const negatief = alle.filter(s => s < 0)
       const som      = a => a.reduce((s, v) => s + v, 0)
 
+      // Vaste hoogte voor het label en de bijregel onderaan, zodat de bedragen
+      // over alle tegels op dezelfde lijn staan — ook als een tekst afbreekt.
       const tegel = (label, waarde, sub, kleur = 'text-white') => `
-        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">${label}</div>
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 flex flex-col">
+          <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
           <div class="${kleur} font-bold text-lg">${waarde}</div>
-          <div class="text-gray-600 text-xs mt-0.5">${sub}</div>
+          <div class="text-gray-600 text-xs mt-auto pt-1 leading-tight">${sub}</div>
         </div>`
 
       document.getElementById('kerncijfers').innerHTML =

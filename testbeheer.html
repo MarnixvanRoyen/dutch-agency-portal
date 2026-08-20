@@ -149,10 +149,12 @@
       const regels = mut.data || []
       const totaal = regels.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
 
+      // flex-col + vaste hoogte voor het label: dan staan de getallen op één lijn,
+      // ook als een label over twee regels loopt ("waarvan betaald").
       const tegel = (label, waarde, kleur = 'text-white') => `
-        <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-4 py-3">
-          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">${label}</div>
-          <div class="${kleur} font-bold">${waarde}</div>
+        <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-4 py-3 flex flex-col">
+          <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
+          <div class="${kleur} font-bold text-lg mt-auto">${waarde}</div>
         </div>`
 
       document.getElementById('standGrid').innerHTML =

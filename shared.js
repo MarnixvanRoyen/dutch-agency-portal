@@ -7,8 +7,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── Commissie instellingen (globaal) ────────────────────────
-// Worden geladen vanuit Supabase settings tabel bij initPage()
+// ── Standaardtarief voor NIEUWE statements ──────────────────
+// Uit de settings-tabel, geladen bij initPage(). Dit stuurt géén berekeningen aan:
+// het vult alleen de tariefvelden voor bij een nieuwe upload. De bedragen worden
+// gerekend met het tarief dat op het statement zelf staat — zie splitBedrag().
 let COMMISSIONS = { aggregatorPct: 30, djworldPct: 50 }
 
 async function loadSettings() {
@@ -21,13 +23,8 @@ async function loadSettings() {
   }
 }
 
-// ⚠️ WORDT UITGEFASEERD — gebruikt de globale instelling en rekent oude
-// statements dus door met het huidige tarief. Gebruik splitBedrag() hieronder.
-// Factor die overblijft voor artiesten na alle commissies
-// Bruto × netFactor() = artiestenpot (vóór split)
-function netFactor() {
-  return (1 - COMMISSIONS.aggregatorPct / 100) * (1 - COMMISSIONS.djworldPct / 100)
-}
+// netFactor() is per 2026-08-20 verwijderd. Die rekende met de globale instelling
+// en dus met terugwerkende kracht ook over oude statements. Gebruik splitBedrag().
 
 async function saveSettings(aggregatorPct, djworldPct) {
   await Promise.all([

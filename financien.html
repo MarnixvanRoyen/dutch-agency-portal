@@ -28,6 +28,8 @@
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Statements boeken</button>
       <button onclick="zetWeergave('uitbetalen')" data-weergave="uitbetalen"
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Uitbetalingen</button>
+      <button onclick="zetWeergave('mutaties')" data-weergave="mutaties"
+        class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Mutaties</button>
     </div>
 
     <!-- ══ WEERGAVE: SALDI ══════════════════════════════════ -->
@@ -119,6 +121,89 @@
         </div>
         <div id="klaarLijst" class="space-y-2">
           <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ WEERGAVE: MUTATIES ═══════════════════════════════ -->
+    <div id="vwMutaties" class="hidden">
+
+      <div class="flex flex-col sm:flex-row gap-3 mb-4">
+        <input type="text" id="mZoek" oninput="tekenMutaties()" placeholder="Zoek op naam of omschrijving..."
+          class="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+        <div class="flex gap-2 flex-wrap" id="mTypeKnoppen"></div>
+        <button onclick="openBoeking()"
+          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+          Handmatige boeking
+        </button>
+      </div>
+
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+              <th class="text-left  px-5 py-3 font-medium">Datum</th>
+              <th class="text-left  px-5 py-3 font-medium">Persoon</th>
+              <th class="text-left  px-5 py-3 font-medium">Soort</th>
+              <th class="text-left  px-5 py-3 font-medium">Omschrijving</th>
+              <th class="text-right px-5 py-3 font-medium">Bedrag</th>
+            </tr>
+          </thead>
+          <tbody id="mTabel">
+            <tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Laden...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p id="mTotaal" class="text-gray-600 text-xs mt-3"></p>
+    </div>
+
+    <!-- Modal: handmatige boeking -->
+    <div id="boekingModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-base">Handmatige boeking</h2>
+          <button onclick="sluitModal('boekingModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Persoon</label>
+            <select id="hPersoon" onchange="toetsBoeking()"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]"></select>
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Soort</label>
+            <select id="hType" onchange="toetsBoeking()"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+              <option value="voorschot">Voorschot — gaat van het saldo af</option>
+              <option value="kosten">Doorbelaste kosten — gaat van het saldo af</option>
+              <option value="beginsaldo">Beginsaldo — beginstand vastleggen</option>
+              <option value="correctie">Correctie — herstel van een fout</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Datum</label>
+              <input type="date" id="hDatum"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+            <div>
+              <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
+              <input type="number" id="hBedrag" step="0.01" oninput="toetsBoeking()"
+                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+            </div>
+          </div>
+          <div>
+            <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Omschrijving</label>
+            <input type="text" id="hOmschrijving" placeholder="waarom deze boeking?"
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-[#FFD100]">
+          </div>
+          <div id="hUitkomst" class="text-gray-500 text-xs leading-relaxed"></div>
+          <div class="flex gap-3 pt-1">
+            <button onclick="bewaarBoeking()"
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Boeken</button>
+            <button onclick="sluitModal('boekingModal')"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+          </div>
         </div>
       </div>
     </div>
@@ -217,6 +302,7 @@
       document.getElementById('vwSaldi').classList.toggle('hidden',      w !== 'saldi')
       document.getElementById('vwBoeken').classList.toggle('hidden',     w !== 'boeken')
       document.getElementById('vwUitbetalen').classList.toggle('hidden', w !== 'uitbetalen')
+      document.getElementById('vwMutaties').classList.toggle('hidden',   w !== 'mutaties')
       document.querySelectorAll('.weergaveKnop').forEach(b => {
         const aan = b.dataset.weergave === w
         b.className = 'weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2 ' +
@@ -225,6 +311,7 @@
       })
       if (w === 'boeken')     laadBoeklijst()
       if (w === 'uitbetalen') laadUitbetalingen()
+      if (w === 'mutaties')   laadMutaties()
     }
 
     async function laadSaldi() {
@@ -1293,6 +1380,162 @@
         .format(Math.abs(n))
       return (n < 0 ? '-€ ' : '€ ') + tekst          // min vóór het euroteken, overal hetzelfde
     }
+
+
+    // ════════════════════════════════════════════════════════
+    //  MUTATIES — het grootboek
+    // ════════════════════════════════════════════════════════
+    //  Alles wat er ooit is bijgeschreven of afgehaald, met de mogelijkheid om
+    //  handmatig te boeken: voorschot, doorbelaste kosten, beginsaldo, correctie.
+    //  Verwijderen kan hier niet — een fout herstel je met een tegenboeking.
+
+    let alleMutaties = []
+    let mTypeFilter  = 'alles'
+
+    const TYPE_LABEL = {
+      royalty: "Royalty's", uitbetaling: 'Uitbetaling', beginsaldo: 'Beginsaldo',
+      correctie: 'Correctie', voorschot: 'Voorschot', kosten: 'Kosten',
+    }
+
+    async function laadMutaties() {
+      await laadSaldi()                       // namen én actuele saldi
+      alleMutaties = await paginerend(from => db.from('ledger_entries')
+        .select('id, person_id, type, amount, entry_date, omschrijving, created_at, statements(period, filename)')
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, from + 999))
+      tekenTypeKnoppen()
+      tekenMutaties()
+    }
+
+    function tekenTypeKnoppen() {
+      const aanwezig = [...new Set(alleMutaties.map(m => m.type))]
+      const opties = [['alles', 'Alles'], ...aanwezig.map(t => [t, TYPE_LABEL[t] || t])]
+      document.getElementById('mTypeKnoppen').innerHTML = opties.map(([k, label]) => `
+        <button onclick="zetTypeFilter('${k}')" data-mtype="${k}"
+          class="mTypeKnop border px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">${label}</button>`).join('')
+      markeerTypeFilter()
+    }
+
+    function zetTypeFilter(k) { mTypeFilter = k; markeerTypeFilter(); tekenMutaties() }
+
+    function markeerTypeFilter() {
+      document.querySelectorAll('.mTypeKnop').forEach(b => {
+        const aan = b.dataset.mtype === mTypeFilter
+        b.className = 'mTypeKnop border px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ' +
+          (aan ? 'border-[#FFD100] text-[#FFD100] bg-[#FFD100]/10'
+               : 'border-[#2a2a2a] text-gray-400 hover:text-white')
+      })
+    }
+
+    function tekenMutaties() {
+      const q = document.getElementById('mZoek').value.trim().toLowerCase()
+
+      const rijen = alleMutaties.filter(m => {
+        if (mTypeFilter !== 'alles' && m.type !== mTypeFilter) return false
+        if (!q) return true
+        const tekst = `${naamVan(m.person_id)} ${omschrijvingVan(m)}`.toLowerCase()
+        return tekst.includes(q)
+      })
+
+      const tbody = document.getElementById('mTabel')
+      if (!rijen.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-gray-600 text-sm">Geen mutaties gevonden.</td></tr>'
+        document.getElementById('mTotaal').textContent = ''
+        return
+      }
+
+      tbody.innerHTML = rijen.map(m => {
+        const bedrag = parseFloat(m.amount) || 0
+        const kleur  = bedrag < 0 ? 'text-red-400' : 'text-green-400'
+        return `
+          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+            <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">${fmtDate(m.entry_date)}</td>
+            <td class="px-5 py-3 text-white">${naamVan(m.person_id)}</td>
+            <td class="px-5 py-3 text-gray-400 text-xs">${TYPE_LABEL[m.type] || m.type}</td>
+            <td class="px-5 py-3 text-gray-400">${omschrijvingVan(m)}</td>
+            <td class="px-5 py-3 text-right font-medium ${kleur} whitespace-nowrap">${fmt(bedrag)}</td>
+          </tr>`
+      }).join('')
+
+      const totaal = rijen.reduce((s, m) => s + (parseFloat(m.amount) || 0), 0)
+      document.getElementById('mTotaal').textContent =
+        `${rijen.length} ${rijen.length === 1 ? 'mutatie' : 'mutaties'} · samen ${fmt(totaal)}`
+    }
+
+    // ── Handmatig boeken ──────────────────────────────────────
+    function openBoeking() {
+      const keuze = document.getElementById('hPersoon')
+      keuze.innerHTML = saldi
+        .slice()
+        .sort((a, b) => (a.first_name || '').localeCompare(b.first_name || '', 'nl', { sensitivity: 'base' }))
+        .map(p => `<option value="${p.person_id}">${p.first_name} ${p.last_name} — saldo ${fmt(p.saldo)}</option>`)
+        .join('')
+      document.getElementById('hType').value = 'voorschot'
+      document.getElementById('hDatum').value = vandaag()
+      document.getElementById('hBedrag').value = ''
+      document.getElementById('hOmschrijving').value = ''
+      toetsBoeking()
+      document.getElementById('boekingModal').classList.remove('hidden')
+    }
+
+    // Voorschot en kosten gaan er ALTIJD af — daar hoef je geen minteken voor te
+    // typen. Bij correctie en beginsaldo bepaal je het teken zelf, want die kunnen
+    // beide kanten op.
+    const GAAT_ERAF = ['voorschot', 'kosten']
+
+    function bedragVanBoeking() {
+      const ruw  = parseFloat(document.getElementById('hBedrag').value)
+      const type = document.getElementById('hType').value
+      if (!isFinite(ruw)) return null
+      return GAAT_ERAF.includes(type) ? -Math.abs(ruw) : ruw
+    }
+
+    function toetsBoeking() {
+      const type   = document.getElementById('hType').value
+      const pid    = document.getElementById('hPersoon').value
+      const bedrag = bedragVanBoeking()
+      const el     = document.getElementById('hUitkomst')
+
+      if (bedrag === null || !pid) {
+        el.innerHTML = GAAT_ERAF.includes(type)
+          ? 'Dit bedrag wordt van het saldo afgehaald — een minteken hoef je niet te typen.'
+          : 'Positief bedrag telt op bij het saldo, een negatief bedrag gaat eraf.'
+        return
+      }
+      const nu = saldoVan(pid)
+      const na = nu + bedrag
+      el.innerHTML =
+        `Saldo gaat van <span class="text-white">${fmt(nu)}</span> naar
+         <span class="${na < 0 ? 'text-red-400' : 'text-white'}">${fmt(na)}</span>.` +
+        (na < 0 ? ' <span class="text-red-400">Deze persoon komt negatief te staan.</span>' : '')
+    }
+
+    async function bewaarBoeking() {
+      const pid    = document.getElementById('hPersoon').value
+      const type   = document.getElementById('hType').value
+      const datum  = document.getElementById('hDatum').value
+      const bedrag = bedragVanBoeking()
+      const oms    = document.getElementById('hOmschrijving').value.trim()
+
+      if (!pid)             return showToast('Kies een persoon.', 'error')
+      if (!datum)           return showToast('Vul een datum in.', 'error')
+      if (bedrag === null || bedrag === 0) return showToast('Vul een bedrag in dat niet nul is.', 'error')
+      if (!oms)             return showToast('Vul een omschrijving in — anders weet je later niet meer waarom.', 'error')
+
+      const { error } = await db.from('ledger_entries').insert({
+        person_id: pid, type, amount: bedrag, entry_date: datum, omschrijving: oms,
+      })
+      if (error) { showToast('Boeken mislukt: ' + error.message, 'error'); console.error(error); return }
+
+      sluitModal('boekingModal')
+      showToast('Mutatie geboekt.')
+      await laadMutaties()
+    }
+
+    document.getElementById('boekingModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) sluitModal('boekingModal')
+    })
 
     loadPage()
   </script>

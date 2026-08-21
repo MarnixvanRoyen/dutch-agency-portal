@@ -22,6 +22,8 @@
 
     <!-- Weergave kiezen -->
     <div class="flex gap-2 mb-6 border-b border-[#2a2a2a]">
+      <button onclick="zetWeergave('overzicht')" data-weergave="overzicht"
+        class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Overzicht</button>
       <button onclick="zetWeergave('saldi')"  data-weergave="saldi"
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Saldi</button>
       <button onclick="zetWeergave('boeken')" data-weergave="boeken"
@@ -32,8 +34,23 @@
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Mutaties</button>
     </div>
 
+    <!-- ══ WEERGAVE: OVERZICHT ══════════════════════════════ -->
+    <div id="vwOverzicht" class="hidden">
+      <div id="oKerncijfers" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <p class="text-gray-600 text-sm col-span-4">Laden...</p>
+      </div>
+
+      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-white mb-1">Aandachtspunten</h2>
+        <p class="text-gray-500 text-xs mb-4">Wat er blijft liggen als er niets gebeurt</p>
+        <div id="oAandacht" class="space-y-2">
+          <p class="text-gray-600 text-sm">Laden...</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ WEERGAVE: SALDI ══════════════════════════════════ -->
-    <div id="vwSaldi">
+    <div id="vwSaldi" class="hidden">
 
     <!-- Kerncijfers -->
     <div id="kerncijfers" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -293,12 +310,13 @@
       const session = await initPage('financien')
       if (!session) return
       tekenFilterKnoppen()
-      zetWeergave('saldi')
-      await laadSaldi()
+      await laadSaldi()           // de saldi-tabel alvast vullen op de achtergrond
+      zetWeergave('overzicht')    // hier land je: eerst het geheel, dan de details
     }
 
     // ── Weergave wisselen ─────────────────────────────────────
     function zetWeergave(w) {
+      document.getElementById('vwOverzicht').classList.toggle('hidden',  w !== 'overzicht')
       document.getElementById('vwSaldi').classList.toggle('hidden',      w !== 'saldi')
       document.getElementById('vwBoeken').classList.toggle('hidden',     w !== 'boeken')
       document.getElementById('vwUitbetalen').classList.toggle('hidden', w !== 'uitbetalen')
@@ -312,6 +330,7 @@
       if (w === 'boeken')     laadBoeklijst()
       if (w === 'uitbetalen') laadUitbetalingen()
       if (w === 'mutaties')   laadMutaties()
+      if (w === 'overzicht')  laadOverzicht()
     }
 
     async function laadSaldi() {
@@ -1536,6 +1555,117 @@
     document.getElementById('boekingModal').addEventListener('click', e => {
       if (e.target === e.currentTarget) sluitModal('boekingModal')
     })
+
+
+    // ════════════════════════════════════════════════════════
+    //  OVERZICHT
+    // ════════════════════════════════════════════════════════
+    //  De vier cijfers waar Rob op stuurt, en daaronder wat er blijft liggen
+    //  als niemand iets doet. Alles hier is afgeleid — er wordt niets opgeslagen.
+
+    async function laadOverzicht() {
+      const [saldiKlaar, payouts, stmts, geboekt, artiesten] = await Promise.all([
+        laadSaldi(),
+        db.from('payouts').select('*'),
+        db.from('statements').select('id, period, filename, total_royalties, buiten_administratie'),
+        db.from('ledger_entries').select('statement_id, amount').eq('type', 'royalty'),
+        db.from('artists').select('id, person_id'),
+      ])
+
+      const alleSaldi = saldi.map(r => parseFloat(r.saldo) || 0)
+      const positief  = alleSaldi.filter(v => v > 0)
+      const negatief  = alleSaldi.filter(v => v < 0)
+      const som = a => a.reduce((s, v) => s + v, 0)
+
+      const po = payouts.data || []
+      const lopend = po.filter(u => u.status === 'gemeld' || u.status === 'factuur_ontvangen')
+      const lopendPer = new Set(lopend.map(u => u.person_id))
+
+      const teMelden = saldi
+        .map(r => ({ pid: r.person_id, saldo: parseFloat(r.saldo) || 0 }))
+        .filter(r => r.saldo > FINADMIN.drempel && !lopendPer.has(r.pid))
+
+      const ditJaar = String(new Date().getFullYear())
+      const betaaldDitJaar = po.filter(u => u.status === 'betaald' && String(u.betaald_op || '').startsWith(ditJaar))
+
+      // ── Kerncijfers ──
+      const tegel = (label, waarde, sub, kleur = 'text-white') => `
+        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 flex flex-col">
+          <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
+          <div class="${kleur} font-bold text-lg">${waarde}</div>
+          <div class="text-gray-600 text-xs mt-auto pt-1 leading-tight">${sub}</div>
+        </div>`
+
+      document.getElementById('oKerncijfers').innerHTML =
+        tegel('Openstaande verplichting', fmt(som(positief)),
+              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-[#FFD100]') +
+        tegel('Klaar om te melden', fmt(som(teMelden.map(r => r.saldo))),
+              `${teMelden.length} boven ${fmt(FINADMIN.drempel)}`,
+              teMelden.length ? 'text-green-400' : 'text-gray-600') +
+        tegel('In behandeling', fmt(som(lopend.map(u => parseFloat(u.gemeld_bedrag) || 0))),
+              `${lopend.length} gemeld of gefactureerd`, lopend.length ? 'text-white' : 'text-gray-600') +
+        tegel(`Uitbetaald in ${ditJaar}`, fmt(som(betaaldDitJaar.map(u => parseFloat(u.betaald_bedrag) || 0))),
+              `${betaaldDitJaar.length} ${betaaldDitJaar.length === 1 ? 'betaling' : 'betalingen'}`, 'text-white')
+
+      // ── Aandachtspunten ──
+      const geboektPer = {}
+      ;(geboekt.data || []).forEach(m => {
+        if (!m.statement_id) return
+        geboektPer[m.statement_id] = (geboektPer[m.statement_id] || 0) + (parseFloat(m.amount) || 0)
+      })
+
+      const meetellend = (stmts.data || []).filter(st => !st.buiten_administratie)
+      const ongeboekt  = meetellend.filter(st => !geboektPer[st.id])
+
+      // Niet toegekend: van de wél geboekte statements het deel dat nergens
+      // terechtkwam. Verschil tussen netto en wat er bij personen staat.
+      let nietToegekend = 0
+      meetellend.filter(st => geboektPer[st.id]).forEach(st => {
+        const netto = splitBedrag(st.total_royalties, st.id).netAmt
+        nietToegekend += Math.max(0, netto - geboektPer[st.id])
+      })
+
+      const losseArtiesten = (artiesten.data || []).filter(a => !a.person_id).length
+
+      // Gemeld maar al twee weken geen factuur — daar blijft het meestal hangen
+      const grens = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+      const langWachten = po.filter(u => u.status === 'gemeld' && (u.gemeld_op || '') < grens)
+
+      const punten = []
+      const punt = (kleur, tekst, actie) => punten.push(`
+        <div onclick="${actie}" class="flex items-start gap-3 px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg cursor-pointer hover:border-gray-600 transition-colors">
+          <span class="w-2 h-2 rounded-full ${kleur} mt-1.5 shrink-0"></span>
+          <span class="text-sm text-gray-300">${tekst}</span>
+        </div>`)
+
+      if (ongeboekt.length) punt('bg-[#FFD100]',
+        `<b class="text-white">${ongeboekt.length}</b> ${ongeboekt.length === 1 ? 'statement is' : 'statements zijn'} nog niet geboekt — die tellen nog nergens mee.`,
+        "zetWeergave('boeken')")
+
+      if (nietToegekend > 0.005) punt('bg-red-500',
+        `<b class="text-white">${fmt(nietToegekend)}</b> is geboekt maar bij niemand terechtgekomen. Meestal een artiest zonder persoon of een regel die niet matchte.`,
+        "zetWeergave('boeken')")
+
+      if (losseArtiesten) punt('bg-red-500',
+        `<b class="text-white">${losseArtiesten}</b> ${losseArtiesten === 1 ? 'artiest hangt' : 'artiesten hangen'} nog niet aan een persoon. Zolang dat zo is kan hun geld niet geboekt worden.`,
+        "window.location.href='data-kwaliteit.html'")
+
+      if (negatief.length) punt('bg-red-500',
+        `<b class="text-white">${negatief.length}</b> ${negatief.length === 1 ? 'persoon staat' : 'personen staan'} negatief, samen <b class="text-white">${fmt(som(negatief))}</b>. Dat loopt vanzelf weg tegen nieuwe royalty's.`,
+        "zetWeergave('saldi'); zetFilter('negatief')")
+
+      if (langWachten.length) punt('bg-[#FFD100]',
+        `<b class="text-white">${langWachten.length}</b> ${langWachten.length === 1 ? 'melding wacht' : 'meldingen wachten'} al langer dan twee weken op een factuur.`,
+        "zetWeergave('uitbetalen')")
+
+      if (teMelden.length) punt('bg-green-500',
+        `<b class="text-white">${teMelden.length}</b> ${teMelden.length === 1 ? 'persoon zit' : 'personen zitten'} boven ${fmt(FINADMIN.drempel)} en ${teMelden.length === 1 ? 'kan' : 'kunnen'} gemeld worden.`,
+        "zetWeergave('uitbetalen')")
+
+      document.getElementById('oAandacht').innerHTML = punten.length
+        ? punten.join('')
+        : '<p class="text-green-400 text-sm">Niets dat aandacht vraagt. Alles is geboekt, toegewezen en afgehandeld.</p>'
+    }
 
     loadPage()
   </script>

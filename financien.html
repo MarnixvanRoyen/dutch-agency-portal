@@ -6,6 +6,8 @@
   <title>Financiën — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
 
@@ -809,8 +811,16 @@
             </div>
             <div class="flex flex-col items-end gap-2 shrink-0">
               ${knoppen}
-              <button onclick="annuleerUitbetaling('${u.id}')"
-                class="text-gray-600 hover:text-red-400 text-xs transition-colors">Annuleren</button>
+              <div class="flex items-center gap-3">
+                <button onclick="opnieuwOverzicht('${u.id}')"
+                  class="text-gray-500 hover:text-white text-xs transition-colors">Overzicht</button>
+                ${heeftEmail(u.person_id)
+                  ? `<button onclick="mailOverzicht('${u.id}')"
+                       class="text-gray-500 hover:text-white text-xs transition-colors">Mailen</button>`
+                  : `<span class="text-gray-700 text-xs" title="Deze persoon heeft geen e-mailadres">geen email</span>`}
+                <button onclick="annuleerUitbetaling('${u.id}')"
+                  class="text-gray-600 hover:text-red-400 text-xs transition-colors">Annuleren</button>
+              </div>
             </div>
           </div>
         </div>`
@@ -843,13 +853,19 @@
     // ── Melden ────────────────────────────────────────────────
     async function meldAan(personId) {
       const bedrag = saldoVan(personId)
-      if (!confirm(`${naamVan(personId)} melden voor ${fmt(bedrag)}?\n\nDit bedrag wordt vastgelegd. Stuur zelf het overzicht; de tool houdt alleen bij dat het gemeld is.`)) return
+      if (!confirm(`${naamVan(personId)} melden voor ${fmt(bedrag)}?\n\nHet bedrag wordt vastgelegd en je krijgt meteen het tegoedoverzicht als PDF.`)) return
 
       const { error } = await db.from('payouts').insert({
         person_id: personId, status: 'gemeld', gemeld_bedrag: bedrag,
       })
       if (error) { showToast('Melden mislukt: ' + error.message, 'error'); return }
-      showToast('Gemeld. Vergeet het overzicht niet te sturen.')
+
+      showToast('Gemeld — het overzicht wordt gedownload.')
+      // De PDF hangt niet aan het melden zelf: mislukt hij, dan staat de melding
+      // er nog steeds en kun je hem later opnieuw ophalen met de knop Overzicht.
+      try { await maakTegoedPdf(personId, bedrag) }
+      catch (e) { showToast('Melding staat, maar de PDF maken mislukte: ' + e.message, 'error'); console.error(e) }
+
       await laadUitbetalingen()
     }
 
@@ -963,6 +979,46 @@
       await laadUitbetalingen()   // ververst zelf ook de saldi
     }
 
+    // ── Overzicht opnieuw ophalen / mailen ────────────────────
+    const heeftEmail = pid => {
+      const p = saldi.find(r => r.person_id === pid)
+      return !!(p && p.email)
+    }
+
+    async function opnieuwOverzicht(id) {
+      const u = uitbetalingen.find(x => x.id === id)
+      if (!u) return
+      // Het GEMELDE bedrag, niet het huidige saldo — de artiest moet hetzelfde
+      // document terugkrijgen als hij de eerste keer heeft gehad.
+      try { await maakTegoedPdf(u.person_id, parseFloat(u.gemeld_bedrag) || 0) }
+      catch (e) { showToast('PDF maken mislukt: ' + e.message, 'error'); console.error(e) }
+    }
+
+    // Versturen vanuit de tool kan pas als dj-world.nl geverifieerd is. Tot die
+    // tijd: de PDF downloaden en een mail klaarzetten in je eigen mailprogramma.
+    // De bijlage moet je er zelf even bij slepen — een browser mag dat niet doen.
+    async function mailOverzicht(id) {
+      const u = uitbetalingen.find(x => x.id === id)
+      if (!u) return
+      let res
+      try { res = await maakTegoedPdf(u.person_id, parseFloat(u.gemeld_bedrag) || 0) }
+      catch (e) { showToast('PDF maken mislukt: ' + e.message, 'error'); return }
+      if (!res || !res.email) { showToast('Deze persoon heeft geen e-mailadres.', 'error'); return }
+
+      const bedrag = fmt(parseFloat(u.gemeld_bedrag) || 0)
+      const onderwerp = `Je royalty-tegoed bij DJ·World — ${bedrag}`
+      const tekst =
+        `Hoi ${res.naam.split(' ')[0]},\n\n` +
+        `Je hebt op dit moment een tegoed van ${bedrag} aan royalty's.\n` +
+        `In de bijlage vind je het overzicht met de specificatie per periode en per track.\n\n` +
+        `Wil je hiervoor een factuur sturen? Dan zetten we de betaling in gang.\n\n` +
+        `Met vriendelijke groet,\nRob Boskamp\nDJ·World`
+
+      window.location.href =
+        `mailto:${encodeURIComponent(res.email)}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`
+      showToast('PDF gedownload en mail klaargezet — bijlage nog zelf toevoegen.')
+    }
+
     // ── Annuleren ─────────────────────────────────────────────
     async function annuleerUitbetaling(id) {
       const u = uitbetalingen.find(x => x.id === id)
@@ -983,6 +1039,260 @@
         if (e.target === e.currentTarget) sluitModal(id)
       })
     })
+
+
+    // ════════════════════════════════════════════════════════
+    //  TEGOEDOVERZICHT (PDF)
+    // ════════════════════════════════════════════════════════
+    //  Het document dat de factuur uitlokt. Drie delen:
+    //   1. het te factureren bedrag
+    //   2. de opbouw van de spaarpot — alle mutaties, eindigend op dat bedrag
+    //   3. de trackspecificatie per periode
+    //
+    //  Deel 2 bevat ALTIJD alles, zodat het optelt tot het saldo en er niets
+    //  onverklaard blijft. Deel 3 beperkt zich tot de periodes die na de vorige
+    //  uitbetaling zijn bijgeschreven — anders krijgt een artiest die al jaren
+    //  meedoet elke keer zijn hele historie mee.
+
+    async function verzamelTegoed(personId) {
+      const mutaties = await paginerend(from => db.from('ledger_entries')
+        .select('type, amount, entry_date, omschrijving, statement_id, created_at, statements(period, filename)')
+        .eq('person_id', personId)
+        .order('entry_date').order('created_at').range(from, from + 999))
+
+      // Vanaf wanneer specificeren? Na de laatste uitbetaling.
+      const laatsteBetaling = mutaties.filter(m => m.type === 'uitbetaling').slice(-1)[0]
+      const grens = laatsteBetaling ? laatsteBetaling.created_at : null
+
+      const nieuweRoyalty = mutaties.filter(m =>
+        m.type === 'royalty' && m.statement_id && (!grens || m.created_at > grens))
+
+      const stmtIds = [...new Set(nieuweRoyalty.map(m => m.statement_id))]
+      const specificatie = stmtIds.length
+        ? await trackSpecificatie(personId, stmtIds, nieuweRoyalty)
+        : []
+
+      return { mutaties, specificatie, vanafVorigeBetaling: !!grens }
+    }
+
+    async function trackSpecificatie(personId, stmtIds, royaltyMutaties) {
+      const { data: artiesten } = await db.from('artists').select('id, name').eq('person_id', personId)
+      const artistIds = (artiesten || []).map(a => a.id)
+      if (!artistIds.length) return []
+
+      const tas = await paginerend(from => db.from('track_artists')
+        .select('track_id, artist_id, split_percentage, tracks(id, title)')
+        .in('artist_id', artistIds).range(from, from + 999))
+      if (!tas.length) return []
+
+      // Eén persoon kan met meerdere artiestennamen op dezelfde track staan;
+      // die aandelen tellen bij elkaar op.
+      const splitPerTrack = {}, titelPerTrack = {}
+      tas.forEach(t => {
+        splitPerTrack[t.track_id] = (splitPerTrack[t.track_id] || 0) + (parseFloat(t.split_percentage) || 0) / 100
+        titelPerTrack[t.track_id] = t.tracks?.title || '(geen titel)'
+      })
+      const trackIds = Object.keys(splitPerTrack)
+
+      const regels = []
+      for (let i = 0; i < trackIds.length; i += 120) {
+        const stuk = trackIds.slice(i, i + 120)
+        const deel = await paginerend(from => db.from('statement_lines')
+          .select('statement_id, track_id, nett_royalty, usage_type')
+          .in('statement_id', stmtIds).in('track_id', stuk).range(from, from + 999))
+        regels.push(...deel)
+      }
+
+      const perStatement = {}
+      regels.forEach(l => {
+        const pct = splitPerTrack[l.track_id] || 0
+        if (!pct) return
+        const s = splitBedrag(l.nett_royalty, l.statement_id)
+        if (!perStatement[l.statement_id]) perStatement[l.statement_id] = {}
+        const t = perStatement[l.statement_id]
+        if (!t[l.track_id]) t[l.track_id] = { titel: titelPerTrack[l.track_id], stream: 0, download: 0, bruto: 0, agg: 0, dj: 0, netto: 0 }
+        const r = t[l.track_id]
+        r.bruto += s.bruto  * pct
+        r.agg   += s.aggAmt * pct
+        r.dj    += s.djAmt  * pct
+        r.netto += s.netAmt * pct
+        if (l.usage_type === 'stream')   r.stream   += s.bruto * pct
+        if (l.usage_type === 'download') r.download += s.bruto * pct
+      })
+
+      return Object.entries(perStatement).map(([stmtId, tracks]) => {
+        const m = royaltyMutaties.find(x => x.statement_id === stmtId)
+        return {
+          periode: m?.statements?.period || m?.statements?.filename || 'onbekende periode',
+          tracks: Object.values(tracks).sort((a, b) => b.netto - a.netto),
+        }
+      }).sort((a, b) => a.periode.localeCompare(b.periode))
+    }
+
+    // ── Logo ophalen (zelfde patroon als bulk-afrekening) ─────
+    async function haalLogo() {
+      const el = document.querySelector('#sidebar img')
+      if (el?.complete && el.naturalWidth > 0) {
+        try {
+          const c = document.createElement('canvas')
+          c.width = el.naturalWidth; c.height = el.naturalHeight
+          c.getContext('2d').drawImage(el, 0, 0)
+          return { data: c.toDataURL('image/png'), aspect: el.naturalWidth / el.naturalHeight }
+        } catch (e) {}
+      }
+      return null
+    }
+
+    // ── Het document bouwen ───────────────────────────────────
+    async function maakTegoedPdf(personId, bedrag, opslaan = true) {
+      const { data: p } = await db.from('persons').select('*').eq('id', personId).single()
+      if (!p) { showToast('Persoon niet gevonden.', 'error'); return null }
+
+      const { mutaties, specificatie, vanafVorigeBetaling } = await verzamelTegoed(personId)
+
+      const { jsPDF } = window.jspdf
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pw = doc.internal.pageSize.getWidth()
+      const ph = doc.internal.pageSize.getHeight()
+      const GEEL = [255, 209, 0], GROEN = [26, 122, 58], DONKER = [30, 30, 30], GRIJS = [120, 120, 120]
+      const naam = `${p.first_name} ${p.last_name}`
+      const vandaagNL = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+      doc.setFillColor(...GEEL).rect(0, 0, pw, 7, 'F')
+
+      const logo = await haalLogo()
+      if (logo) doc.addImage(logo.data, 'PNG', 14, 10, Math.min(logo.aspect * 22, 62), 22)
+      else { doc.setFontSize(18).setFont('helvetica', 'bold').setTextColor(...DONKER); doc.text('DJ·World', 14, 24) }
+
+      doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...DONKER)
+      doc.text(naam, pw - 14, 14, { align: 'right' })
+      doc.setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...GRIJS)
+      let ay = 19
+      ;[p.street, [p.postal_code, p.city].filter(Boolean).join(' '), p.email]
+        .filter(Boolean).forEach(r => { doc.text(String(r), pw - 14, ay, { align: 'right' }); ay += 4.5 })
+
+      doc.setDrawColor(...DONKER).setLineWidth(0.4).line(14, 36, pw - 14, 36)
+      let y = 44
+
+      doc.setFontSize(15).setFont('helvetica', 'bold').setTextColor(...DONKER)
+      doc.text('Overzicht van je tegoed', 14, y); y += 6
+      doc.setFontSize(8.5).setFont('helvetica', 'normal').setTextColor(...GRIJS)
+      doc.text(`Opgemaakt op ${vandaagNL}`, 14, y); y += 9
+
+      // Te factureren bedrag
+      doc.setFillColor(237, 250, 242).setDrawColor(150, 210, 175).setLineWidth(0.4)
+      doc.roundedRect(14, y, pw - 28, 20, 2, 2, 'FD')
+      doc.setFontSize(7).setTextColor(...GRIJS)
+      doc.text('TE FACTUREREN BEDRAG', 18, y + 6.5)
+      doc.setFontSize(15).setFont('helvetica', 'bold').setTextColor(...GROEN)
+      doc.text(eurPdf(bedrag), 18, y + 15)
+      doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...GRIJS)
+      doc.text('Stuur hiervoor een factuur naar Rob Boskamp BV', pw - 18, y + 15, { align: 'right' })
+      y += 27
+
+      // Opbouw van de spaarpot
+      doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(...DONKER)
+      doc.text('Opbouw', 14, y); y += 2
+
+      let loop = 0
+      const opbouw = mutaties.map(m => {
+        const bedrag = parseFloat(m.amount) || 0
+        loop += bedrag
+        return [
+          fmtDate(m.entry_date),
+          omschrijvingVan(m),
+          eurPdf(bedrag),
+          eurPdf(loop),
+        ]
+      })
+
+      doc.autoTable({
+        startY: y + 2,
+        margin: { left: 14, right: 14 },
+        head: [['Datum', 'Omschrijving', rechts('Bedrag'), rechts('Saldo')]],
+        body: opbouw,
+        styles: { fontSize: 8, cellPadding: 2, textColor: [...DONKER] },
+        headStyles: { fillColor: [...DONKER], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: 24 }, 2: { cellWidth: 26, halign: 'right' }, 3: { cellWidth: 26, halign: 'right' } },
+      })
+      y = doc.lastAutoTable.finalY + 10
+
+      // Trackspecificatie per periode
+      if (specificatie.length) {
+        specificatie.forEach(blok => {
+          if (y > ph - 45) { doc.addPage(); y = 20 }
+          doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(...DONKER)
+          doc.text(`Specificatie ${blok.periode}`, 14, y)
+          doc.autoTable({
+            startY: y + 2,
+            margin: { left: 14, right: 14 },
+            head: [['Track', ...['Streams', 'Downloads', 'Bruto', 'Aggregator', 'DJ·World', 'Netto'].map(rechts)]],
+            body: blok.tracks.map(t => [
+              t.titel, eurPdf(t.stream), eurPdf(t.download), eurPdf(t.bruto),
+              eurPdf(-t.agg), eurPdf(-t.dj), eurPdf(t.netto),
+            ]),
+            // Ook hier per cel uitlijnen: footStyles wint van columnStyles, dus
+            // zonder dit schuift de totaalregel naar links onder de bedragen.
+            foot: [['Totaal', '', '',
+                    rechts(eurPdf(som(blok.tracks, 'bruto'))),
+                    rechts(eurPdf(-som(blok.tracks, 'agg'))),
+                    rechts(eurPdf(-som(blok.tracks, 'dj'))),
+                    rechts(eurPdf(som(blok.tracks, 'netto')))]],
+            styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [...DONKER] },
+            headStyles: { fillColor: [...DONKER], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' },
+            footStyles: { fillColor: [248, 248, 248], textColor: [...DONKER], fontStyle: 'bold', fontSize: 7.5 },
+            columnStyles: {
+              0: { cellWidth: 'auto' },
+              1: { cellWidth: 22, halign: 'right' }, 2: { cellWidth: 22, halign: 'right' },
+              3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 22, halign: 'right' },
+              5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 22, halign: 'right' },
+            },
+          })
+          y = doc.lastAutoTable.finalY + 9
+        })
+        if (vanafVorigeBetaling) {
+          if (y > ph - 20) { doc.addPage(); y = 20 }
+          doc.setFontSize(7.5).setFont('helvetica', 'italic').setTextColor(...GRIJS)
+          doc.text('De specificatie toont de periodes die na de vorige uitbetaling zijn bijgeschreven.', 14, y)
+        }
+      }
+
+      // Voettekst op elke pagina
+      const paginas = doc.internal.getNumberOfPages()
+      for (let i = 1; i <= paginas; i++) {
+        doc.setPage(i)
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(...GRIJS)
+        doc.text('DJ·World · Rob Boskamp BV', 14, ph - 8)
+        doc.text(`${i} / ${paginas}`, pw - 14, ph - 8, { align: 'right' })
+      }
+
+      const bestand = `DJWorld tegoed ${naam} ${new Date().toISOString().slice(0, 10)}.pdf`
+        .replace(/[\\/:*?"<>|]/g, '-')
+      if (opslaan) doc.save(bestand)
+      return { doc, bestand, naam, email: p.email }
+    }
+
+    function omschrijvingVan(m) {
+      if (m.omschrijving) return m.omschrijving
+      const periode = m.statements?.period || m.statements?.filename
+      const labels = { royalty: 'Royalty\'s', uitbetaling: 'Uitbetaling', beginsaldo: 'Beginsaldo',
+                       correctie: 'Correctie', voorschot: 'Voorschot', kosten: 'Doorbelaste kosten' }
+      return (labels[m.type] || m.type) + (periode ? ' ' + periode : '')
+    }
+
+    const som = (rijen, veld) => rijen.reduce((s, r) => s + r[veld], 0)
+
+    // Kolomkop rechts uitlijnen, zodat hij boven de bedragen staat en niet ernaast
+    const rechts = tekst => ({ content: tekst, styles: { halign: 'right' } })
+
+    // Eigen euro-opmaak voor de PDF: fmt() zet er een niet-brekende spatie in
+    // die in sommige PDF-lettertypen als een vreemd teken uitkomt.
+    function eurPdf(v) {
+      const n = Math.abs(v) < 0.005 ? 0 : v          // voorkomt "-€ 0,00"
+      const tekst = new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        .format(Math.abs(n))
+      return (n < 0 ? '-€ ' : '€ ') + tekst          // min vóór het euroteken, overal hetzelfde
+    }
 
     loadPage()
   </script>

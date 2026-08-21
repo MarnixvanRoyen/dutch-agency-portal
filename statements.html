@@ -88,8 +88,9 @@
           Controleren
         </button>
         <button onclick="uploadStatement()" id="uploadBtn" disabled
-          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          Opslaan in database
+          title="Druk eerst op Controleren"
+          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:bg-[#2a2a2a] disabled:text-gray-500 disabled:cursor-not-allowed">
+          Eerst controleren
         </button>
       </div>
     </div>
@@ -146,6 +147,37 @@
       </div>
     </div>
 
+    <!-- Onbekend formaat modal -->
+    <div id="formaatModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div class="bg-[#1e1e1e] border border-red-500/40 rounded-2xl w-full max-w-lg shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+          <h2 class="text-white font-semibold text-base">Dit formaat herkennen we niet</h2>
+          <button onclick="sluitFormaatModal()" class="text-gray-500 hover:text-white transition-colors">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-gray-300 text-sm leading-relaxed">
+            Het bestand is niet ingelezen. De kolommen komen niet overeen met een van de formaten
+            die het portaal kent, en er is <span class="text-white">niets opgeslagen</span>.
+          </p>
+          <p class="text-[#FFD100] text-sm font-medium">Neem contact op met support.</p>
+          <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg p-4">
+            <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Stuur dit mee</div>
+            <div id="formaatDetails" class="text-gray-400 text-xs font-mono break-all leading-relaxed"></div>
+          </div>
+          <div class="flex gap-3 pt-1">
+            <button onclick="kopieerFormaatDetails()"
+              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
+              Gegevens kopiëren
+            </button>
+            <button onclick="sluitFormaatModal()"
+              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
+              Sluiten
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Tarieven wijzigen modal -->
     <div id="tariefModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
@@ -192,6 +224,10 @@
   <script src="shared.js"></script>
   <script>
     let parsedData = null
+    // Gevuld als er tabbladen zijn overgeslagen omdat hun koprij afweek. Dat is
+    // gemist geld, dus het moet in beeld blijven staan — niet in een toast die
+    // na drie seconden weg is.
+    let sheetWaarschuwing = ''
     // catalogMap: { 'bbr184-12': { release_id, tracks: [{id, titleLower}] } }
     let catalogMap   = {}
     let isrcToTrackId = {}  // tracks.isrc → track_id (voor directe ISRC-matching, nieuw formaat)
@@ -369,17 +405,12 @@
     }
 
     // ---------- CSV parsen (nieuw formaat met ISRC) ----------
-    async function parseCsvFile(file, text) {
-      setProgress(true, 'CSV verwerken...', 10)
-
-      const rows = text.replace(/\r/g, '').split('\n').map(l => l.split(';'))
-      if (rows.length < 2) { showToast('CSV heeft geen data.', 'error'); setProgress(false); return }
-
-      const headers = rows[0].map(h => h.trim())
-      const h = headers.map(x => x.toLowerCase().trim())
-
-      // Kolomindices voor het nieuwe formaat
-      const cols = {
+    // Kolommen van het nieuwe formaat opzoeken. De aanleveraar wisselt weleens
+    // van naam voor de bedragkolom (Royalty, GrossRoyalty, NettRoyalty), dus
+    // daar zijn we ruimhartig in — de rest moet exact kloppen.
+    function nieuweFormaatKolommen(headerRij) {
+      const h = (headerRij || []).map(x => String(x ?? '').toLowerCase().trim())
+      return {
         labelName:  h.findIndex(x => x === 'labelname'),
         catalog:    h.findIndex(x => x === 'catalognumber'),
         isrc:       h.findIndex(x => x === 'isrc'),
@@ -389,30 +420,50 @@
         delivery:   h.findIndex(x => x === 'deliverytype'),
         period:     h.findIndex(x => x === 'period'),
         quantity:   h.findIndex(x => x === 'quantity'),
-        royalty:    h.findIndex(x => x === 'royalty'),
+        royalty:    h.findIndex(x => x.endsWith('royalty') || x === 'royalty'),
       }
+    }
+
+    // Herkennen we het nieuwe formaat aan de koprij? Dan maakt het niet uit of
+    // het bestand .csv of .xlsx heet — de inhoud bepaalt hoe we hem lezen.
+    function isNieuwFormaat(headerRij) {
+      const c = nieuweFormaatKolommen(headerRij)
+      return c.labelName >= 0 && c.catalog >= 0 && c.royalty >= 0
+    }
+
+    // rows = array van arrays; rij 0 is de koprij. Werkt voor CSV én Excel.
+    async function verwerkNieuwFormaat(file, rows) {
+      setProgress(true, 'Bestand verwerken...', 10)
+
+      if (!rows || rows.length < 2) { meldOnbekendFormaat(file.name, rows && rows[0]); return }
+
+      const headers = (rows[0] || []).map(h => String(h ?? '').trim())
+      const cols = nieuweFormaatKolommen(rows[0])
 
       if (cols.catalog < 0 || cols.royalty < 0) {
-        showToast('CSV-kolommen niet herkend. Verwacht: LabelName;CatalogNumber;ISRC;Artist;...', 'error')
-        setProgress(false)
+        meldOnbekendFormaat(file.name, rows[0])
         return
       }
+
+      // Excel levert getallen en lege cellen, CSV levert alleen tekst.
+      // Alles eerst naar tekst, dan pas bewerken.
+      const cel = (row, idx) => idx >= 0 ? String(row[idx] ?? '').trim() : ''
 
       const allLines = []
       let totalRoyalties = 0
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i]
-        if (!row || row.length < 3 || row.every(c => !c.trim())) continue
+        if (!row || row.length < 3 || row.every(c => !String(c ?? '').trim())) continue
 
-        // Royalty: Dutch decimaalnotatie (komma → punt)
-        const royaltyStr = cols.royalty >= 0 ? String(row[cols.royalty] || '0').trim().replace(',', '.') : '0'
-        const royaltyVal = parseFloat(royaltyStr) || 0
+        // Bedrag: CSV gebruikt soms een komma als decimaalteken, Excel levert
+        // gewoon een getal. Beide komen hier als tekst binnen.
+        const royaltyVal = parseFloat(cel(row, cols.royalty).replace(',', '.')) || 0
 
-        const catalogVal = cols.catalog  >= 0 ? (row[cols.catalog]  || '').trim() || null : null
-        const isrcVal    = cols.isrc     >= 0 ? (row[cols.isrc]     || '').trim() || null : null
-        const trackName  = cols.trackName >= 0 ? (row[cols.trackName] || '').trim() || null : null
-        const mixName    = cols.mixName  >= 0 ? (row[cols.mixName]  || '').trim() || null : null
+        const catalogVal = cel(row, cols.catalog)   || null
+        const isrcVal    = cel(row, cols.isrc)      || null
+        const trackName  = cel(row, cols.trackName) || null
+        const mixName    = cel(row, cols.mixName)   || null
 
         // Track titel = alleen TrackName (MixName weggooien)
         const trackTitle = trackName || null
@@ -435,17 +486,17 @@
         }
 
         allLines.push({
-          label_name:   cols.labelName >= 0 ? (row[cols.labelName] || '').trim() || null : null,
-          artist_name:  cols.artist    >= 0 ? (row[cols.artist]    || '').trim() || null : null,
+          label_name:   cel(row, cols.labelName) || null,
+          artist_name:  cel(row, cols.artist)    || null,
           track_title:  trackTitle,
           isrc:         catalogVal,   // CatalogNumber → statement_lines.isrc (release-matching)
           _actual_isrc: isrcVal,      // echte ISRC → tracks.isrc (wordt niet in statement_lines opgeslagen)
           track_id,
           nett_royalty: royaltyVal,
-          period:       cols.period   >= 0 ? (row[cols.period]   || '').trim() || null : null,
-          usage_type:   cols.delivery >= 0 ? (row[cols.delivery] || '').trim().toLowerCase() || null : null,
-          quantity:     cols.quantity >= 0 ? (parseInt(row[cols.quantity]) || null) : null,
-          raw_data:     Object.fromEntries(headers.map((hh, idx) => [hh, row[idx] || null])),
+          period:       cel(row, cols.period) || null,
+          usage_type:   cel(row, cols.delivery).toLowerCase() || null,
+          quantity:     parseInt(cel(row, cols.quantity)) || null,
+          raw_data:     Object.fromEntries(headers.map((hh, idx) => [hh, row[idx] ?? null])),
         })
         totalRoyalties += royaltyVal
       }
@@ -514,7 +565,8 @@
         </div>` : `<div class="mt-2 text-xs text-green-400">✓ Geen nieuwe releases, tracks of artiesten gevonden.</div>`
 
       document.getElementById('previewContent').innerHTML = `
-        <div class="font-medium text-white mb-2">${file.name} <span class="text-xs text-blue-400 font-normal ml-2">CSV · ISRC inbegrepen</span></div>
+        ${sheetWaarschuwing ? `<div class="mb-3 p-3 bg-red-500/10 border border-red-500/40 rounded-lg text-red-300 text-xs leading-relaxed">${sheetWaarschuwing}</div>` : ''}
+        <div class="font-medium text-white mb-2">${file.name} <span class="text-xs text-blue-400 font-normal ml-2">${cols.isrc >= 0 ? 'ISRC inbegrepen' : 'zonder ISRC-kolom'}</span></div>
         <div class="text-gray-400 mb-1">
           ${Object.keys(labelCounts).length} label(s) · ${allLines.length} regels · Totaal: <span class="text-[#FFD100] font-semibold">${fmt(totalRoyalties)}</span>
         </div>
@@ -530,7 +582,7 @@
         </div>
       `
       document.getElementById('parsePreview').classList.remove('hidden')
-      document.getElementById('uploadBtn').disabled = false
+      zetOpslaanKnop(true)
 
       parsedData = { file, lines: allLines, total: totalRoyalties, sheetCount: Object.keys(labelCounts).length, isCsv: true }
       setTimeout(() => setProgress(false), 1000)
@@ -556,19 +608,53 @@
 
       setProgress(true, 'Bestand lezen...', 5)
 
-      // Nieuw CSV-formaat (LabelName;CatalogNumber;ISRC;...)
+      // Het FORMAAT bepaalt hoe we lezen, niet de bestandsnaam. Dezelfde
+      // aanlevering komt soms als .csv en soms als .xlsx binnen; alleen op de
+      // extensie afgaan leverde dan een statement op met de sheetnaam als label.
       if (file.name.toLowerCase().endsWith('.csv')) {
         const text = await file.text()
-        await parseCsvFile(file, text)
+        const rows = text.replace(/\r/g, '').split('\n').map(l => l.split(';'))
+        sheetWaarschuwing = ''
+        await verwerkNieuwFormaat(file, rows)
         return
       }
 
       const buffer = await file.arrayBuffer()
       const wb     = XLSX.read(buffer, { type: 'array' })
 
+      // Excel met een LabelName-kolom = het nieuwe formaat in een Excel-jasje
+      const eersteSheet = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null })
+      if (isNieuwFormaat(eersteSheet[0])) {
+        // De kolomposities komen van het eerste tabblad. Een tabblad met een
+        // andere kolomvolgorde zou dan verkeerd gelezen worden, dus die slaan we
+        // over en melden we. Lege cellen aan het eind negeren we — daar verschilt
+        // een tabblad weleens in zonder dat het iets betekent.
+        const kopSleutel = rij => (rij || [])
+          .map(x => String(x ?? '').trim().toLowerCase()).filter(Boolean).join('|')
+        const sleutel = kopSleutel(eersteSheet[0])
+
+        const alle = [eersteSheet[0]]
+        const overgeslagen = []
+        wb.SheetNames.forEach(naam => {
+          const r = XLSX.utils.sheet_to_json(wb.Sheets[naam], { header: 1, defval: null })
+          if (r.length < 2) return
+          if (kopSleutel(r[0]) !== sleutel) { overgeslagen.push(naam); return }
+          alle.push(...r.slice(1))
+        })
+
+        sheetWaarschuwing = overgeslagen.length
+          ? `<b>${overgeslagen.length} tabblad(en) overgeslagen</b> omdat de kolommen afwijken van het eerste tabblad: ${overgeslagen.join(', ')}.<br>De bedragen van die tabbladen zitten <b>niet</b> in dit statement. Neem contact op met support voordat je opslaat.`
+          : ''
+
+        await verwerkNieuwFormaat(file, alle)
+        return
+      }
+
       const allLines = []
       const sheetNames = wb.SheetNames
       let totalRoyalties = 0
+      let bruikbareSheets = 0
+      const onbruikbareSheets = []
 
       sheetNames.forEach((sheetName, idx) => {
         setProgress(true, `Sheet ${idx + 1}/${sheetNames.length}: ${sheetName}`, 5 + Math.round(idx / sheetNames.length * 85))
@@ -588,6 +674,15 @@
         const headers = rows[headerRowIdx].map(x => String(x || ''))
         const cols    = detectCols(headers)
         const dataRows = rows.slice(headerRowIdx + 1)
+
+        // Zonder bedrag- én ISRC-kolom valt er niets zinnigs te lezen. Zo'n sheet
+        // overslaan in plaats van regels met nul euro binnenhalen — dat laatste
+        // ziet er op het scherm uit alsof het gelukt is.
+        if (cols.royalty < 0 || cols.isrc < 0) {
+          onbruikbareSheets.push({ naam: sheetName, headers })
+          return
+        }
+        bruikbareSheets++
 
         dataRows.forEach(row => {
           if (!row || row.every(c => c === null || c === '')) return
@@ -630,6 +725,13 @@
           totalRoyalties += royaltyVal || 0
         })
       })
+
+      // Geen enkele sheet bruikbaar, of niets gevonden? Dan kennen we dit formaat niet.
+      if (!bruikbareSheets || !allLines.length) {
+        const eerste = onbruikbareSheets[0]
+        meldOnbekendFormaat(file.name, eerste ? eerste.headers : null)
+        return
+      }
 
       setProgress(true, 'Klaar!', 100)
 
@@ -745,7 +847,7 @@
         </div>
       `
       document.getElementById('parsePreview').classList.remove('hidden')
-      document.getElementById('uploadBtn').disabled = false
+      zetOpslaanKnop(true)
 
       parsedData = { file, lines: allLines, total: totalRoyalties, sheetCount: sheetNames.length }
 
@@ -767,7 +869,7 @@
         return
       }
 
-      document.getElementById('uploadBtn').disabled = true
+      zetOpslaanKnop(false)
       setProgress(true, 'Opslaan...', 10)
 
       // Statement record aanmaken
@@ -783,7 +885,7 @@
 
       if (stmtErr) {
         showToast('Fout bij aanmaken statement: ' + stmtErr.message, 'error')
-        document.getElementById('uploadBtn').disabled = false
+        zetOpslaanKnop(true)
         setProgress(false)
         return
       }
@@ -971,11 +1073,41 @@
       document.getElementById('fileInput').value = ''
       document.getElementById('period').value = ''
       document.getElementById('parsePreview').classList.add('hidden')
-      document.getElementById('uploadBtn').disabled = true
+      zetOpslaanKnop(false)
 
       setTimeout(() => setProgress(false), 1000)
       await loadStatementRates()   // nieuw statement toevoegen aan de tarieven-cache
       await loadStatements()
+    }
+
+    // De opslaanknop staat uit tot het bestand gecontroleerd is. De tekst zegt
+    // dat er ook: een knop die niets doet zonder uit te leggen waarom is een val.
+    function zetOpslaanKnop(aan) {
+      const b = document.getElementById('uploadBtn')
+      if (!b) return
+      b.disabled    = !aan
+      b.textContent = aan ? 'Opslaan in database' : 'Eerst controleren'
+      b.title       = aan ? '' : 'Druk eerst op Controleren'
+    }
+
+    // Onbekend formaat: niets inlezen, niets opslaan, en laten zien wát er dan
+    // wél in het bestand staat — dat is precies wat support nodig heeft.
+    function meldOnbekendFormaat(bestandsnaam, koppen) {
+      const lijst = (koppen || []).map(k => String(k ?? '').trim()).filter(Boolean)
+      document.getElementById('formaatDetails').innerHTML =
+        `Bestand: ${bestandsnaam}<br>Gevonden kolommen: ${lijst.length ? lijst.join(' · ') : '(geen koprij gevonden)'}`
+      document.getElementById('formaatModal').classList.remove('hidden')
+      setProgress(false)
+      zetOpslaanKnop(false)
+    }
+
+    function sluitFormaatModal() { document.getElementById('formaatModal').classList.add('hidden') }
+
+    function kopieerFormaatDetails() {
+      const tekst = document.getElementById('formaatDetails').innerText
+      navigator.clipboard?.writeText(tekst)
+        .then(() => showToast('Gekopieerd.'))
+        .catch(() => showToast('Kopiëren lukte niet — selecteer de tekst handmatig.', 'error'))
     }
 
     function setProgress(show, label = '', pct = 0) {

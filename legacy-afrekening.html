@@ -24,9 +24,13 @@
     #paper .lbl { width: 70px; }
     #paper .sep { width: 10px; }
 
-    /* Vaste kolombreedtes — anders bepaalt de inhoud de breedte en lijnt niets uit */
-    #paper table.grid { margin-top: 22px; font-size: 8.5pt; table-layout: fixed; width: 100%; }
-    #paper table.grid th {
+    /* Vaste kolombreedtes — anders bepaalt de inhoud de breedte en lijnt niets uit.
+       LET OP: deze tabel heette 'grid'. Tailwind heeft een utility .grid { display:grid },
+       die won en maakte er een grid-container van: kop en body werden twee losse
+       tabellen met elk hun eigen kolombreedtes. Gebruik op deze pagina nooit een
+       klassenaam die ook een Tailwind-utility is (grid, table, block, flex, fixed, ...). */
+    #paper table.sheet { margin-top: 22px; font-size: 8.5pt; table-layout: fixed; width: 100%; }
+    #paper table.sheet th {
       font-weight: bold;
       text-align: left;
       vertical-align: bottom;
@@ -34,16 +38,18 @@
       padding: 2px 5px;
       line-height: 1.25;
     }
-    #paper table.grid th.num, #paper table.grid td.num {
+    #paper table.sheet th.num, #paper table.sheet td.num {
       text-align: right;
       font-variant-numeric: tabular-nums;
     }
-    #paper table.grid td {
+    /* Bedragen en aantallen nooit over twee regels afbreken */
+    #paper table.sheet td.num { white-space: nowrap; overflow-wrap: normal; }
+    #paper table.sheet td {
       padding: 1.5px 5px;
       border-bottom: 1px solid #e5e5e5;
       overflow-wrap: anywhere;
     }
-    #paper table.grid tbody tr:last-child td { border-bottom: 1px solid #000; }
+    #paper table.sheet tbody tr:last-child td { border-bottom: 1px solid #000; }
 
     /* Zelfde vaste breedtes, zodat de totalen exact onder de bedragkolom vallen */
     #paper table.totals { margin-top: 10px; width: 100%; font-size: 9pt; table-layout: fixed; }
@@ -466,11 +472,14 @@
           </tr>
         </table>
 
-        <table class="grid">
+        <table class="sheet">
           <colgroup>
-            <col style="width:12%"><col style="width:6%"><col style="width:14%"><col style="width:22%">
-            <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:5%">
-            <col style="width:9%"><col style="width:9%">
+            <!-- period, format, artist, tittle -->
+            <col style="width:14%"><col style="width:7%"><col style="width:16%"><col style="width:18%">
+            <!-- sales channels (leeg in dit format), sales, currency, ppd -->
+            <col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:5%">
+            <!-- advance in euro, total amount in euro -->
+            <col style="width:9%"><col style="width:11%">
           </colgroup>
           <thead>
             <tr>

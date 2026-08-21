@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Financiën — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
@@ -21,7 +23,7 @@
     </div>
 
     <!-- Weergave kiezen -->
-    <div class="flex gap-2 mb-6 border-b border-[#2a2a2a]">
+    <div class="flex gap-2 mb-6 border-b border-line">
       <button onclick="zetWeergave('overzicht')" data-weergave="overzicht"
         class="weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2">Overzicht</button>
       <button onclick="zetWeergave('saldi')"  data-weergave="saldi"
@@ -40,7 +42,7 @@
         <p class="text-gray-600 text-sm col-span-4">Laden...</p>
       </div>
 
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <h2 class="text-sm font-semibold text-white mb-1">Aandachtspunten</h2>
         <p class="text-gray-500 text-xs mb-4">Wat er blijft liggen als er niets gebeurt</p>
         <div id="oAandacht" class="space-y-2">
@@ -60,15 +62,15 @@
     <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="zoek" oninput="render()" placeholder="Zoek op naam..."
-        class="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+        class="flex-1 bg-card border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors">
       <div class="flex gap-2 flex-wrap" id="filterKnoppen"></div>
     </div>
 
     <!-- Tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+    <div class="bg-card border border-line rounded-xl overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
             <th class="text-left  px-5 py-3 font-medium">Persoon</th>
             <th class="text-right px-5 py-3 font-medium">Royalty's</th>
             <th class="text-right px-5 py-3 font-medium">Uitbetaald</th>
@@ -109,7 +111,7 @@
     <div id="vwUitbetalen" class="hidden">
 
       <!-- Klaar om te melden -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-5">
+      <div class="bg-card border border-line rounded-xl p-5 mb-5">
         <h2 class="text-sm font-semibold text-white mb-1">Klaar om te melden</h2>
         <p class="text-gray-500 text-xs mb-4">
           Iedereen met een saldo boven <span id="drempelTekst"></span>. Melden betekent: jij stuurt
@@ -122,7 +124,7 @@
       </div>
 
       <!-- Lopende uitbetalingen -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-5">
+      <div class="bg-card border border-line rounded-xl p-5 mb-5">
         <h2 class="text-sm font-semibold text-white mb-1">Loopt nog</h2>
         <p class="text-gray-500 text-xs mb-4">Gemeld of factuur ontvangen, maar nog niet betaald</p>
         <div id="lopendLijst" class="space-y-2">
@@ -131,7 +133,7 @@
       </div>
 
       <!-- Afgehandeld -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-semibold text-white">Afgehandeld</h2>
           <span id="afgehandeldTotaal" class="text-gray-500 text-xs"></span>
@@ -147,18 +149,18 @@
 
       <div class="flex flex-col sm:flex-row gap-3 mb-4">
         <input type="text" id="mZoek" oninput="tekenMutaties()" placeholder="Zoek op naam of omschrijving..."
-          class="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+          class="flex-1 bg-card border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors">
         <div class="flex gap-2 flex-wrap" id="mTypeKnoppen"></div>
         <button onclick="openBoeking()"
-          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+          class="bg-brand hover:bg-brand-dark text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
           Handmatige boeking
         </button>
       </div>
 
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+      <div class="bg-card border border-line rounded-xl overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+            <tr class="border-b border-line text-gray-500 text-xs uppercase">
               <th class="text-left  px-5 py-3 font-medium">Datum</th>
               <th class="text-left  px-5 py-3 font-medium">Persoon</th>
               <th class="text-left  px-5 py-3 font-medium">Soort</th>
@@ -176,8 +178,8 @@
 
     <!-- Modal: handmatige boeking -->
     <div id="boekingModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-line rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 class="text-white font-semibold text-base">Handmatige boeking</h2>
           <button onclick="sluitModal('boekingModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
         </div>
@@ -185,12 +187,12 @@
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Persoon</label>
             <select id="hPersoon" onchange="toetsBoeking()"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]"></select>
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand"></select>
           </div>
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Soort</label>
             <select id="hType" onchange="toetsBoeking()"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
               <option value="voorschot">Voorschot — gaat van het saldo af</option>
               <option value="kosten">Doorbelaste kosten — gaat van het saldo af</option>
               <option value="beginsaldo">Beginsaldo — beginstand vastleggen</option>
@@ -201,25 +203,25 @@
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Datum</label>
               <input type="date" id="hDatum"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
               <input type="number" id="hBedrag" step="0.01" oninput="toetsBoeking()"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
           </div>
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Omschrijving</label>
             <input type="text" id="hOmschrijving" placeholder="waarom deze boeking?"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-[#FFD100]">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-brand">
           </div>
           <div id="hUitkomst" class="text-gray-500 text-xs leading-relaxed"></div>
           <div class="flex gap-3 pt-1">
             <button onclick="bewaarBoeking()"
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Boeken</button>
+              class="bg-brand hover:bg-brand-dark text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Boeken</button>
             <button onclick="sluitModal('boekingModal')"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+              class="border border-line text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
           </div>
         </div>
       </div>
@@ -227,8 +229,8 @@
 
     <!-- Modal: factuur boeken -->
     <div id="factuurModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-line rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 class="text-white font-semibold text-base">Factuur boeken</h2>
           <button onclick="sluitModal('factuurModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
         </div>
@@ -237,26 +239,26 @@
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Factuurnummer</label>
             <input type="text" id="fNummer"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Factuurdatum</label>
               <input type="date" id="fDatum"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
               <input type="number" id="fBedrag" step="0.01" min="0"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
           </div>
-          <div id="fWaarschuwing" class="hidden text-[#FFD100] text-xs"></div>
+          <div id="fWaarschuwing" class="hidden text-brand text-xs"></div>
           <div class="flex gap-3 pt-1">
             <button onclick="bewaarFactuur()"
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Opslaan</button>
+              class="bg-brand hover:bg-brand-dark text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Opslaan</button>
             <button onclick="sluitModal('factuurModal')"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+              class="border border-line text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
           </div>
         </div>
       </div>
@@ -264,8 +266,8 @@
 
     <!-- Modal: betaling vastleggen -->
     <div id="betaalModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-line rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 class="text-white font-semibold text-base">Betaling vastleggen</h2>
           <button onclick="sluitModal('betaalModal')" class="text-gray-500 hover:text-white transition-colors">✕</button>
         </div>
@@ -275,25 +277,25 @@
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Betaald op</label>
               <input type="date" id="bDatum"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
             <div>
               <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Bedrag</label>
               <input type="number" id="bBedrag" step="0.01" min="0" oninput="toetsBetaling()"
-                class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100]">
+                class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand">
             </div>
           </div>
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Referentie (optioneel)</label>
             <input type="text" id="bRef" placeholder="bijv. bankomschrijving"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-[#FFD100]">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:border-brand">
           </div>
-          <div id="bWaarschuwing" class="hidden text-[#FFD100] text-xs leading-relaxed"></div>
+          <div id="bWaarschuwing" class="hidden text-brand text-xs leading-relaxed"></div>
           <div class="flex gap-3 pt-1">
             <button onclick="bewaarBetaling()"
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Betaald melden</button>
+              class="bg-brand hover:bg-brand-dark text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">Betaald melden</button>
             <button onclick="sluitModal('betaalModal')"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
+              class="border border-line text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">Annuleren</button>
           </div>
         </div>
       </div>
@@ -324,7 +326,7 @@
       document.querySelectorAll('.weergaveKnop').forEach(b => {
         const aan = b.dataset.weergave === w
         b.className = 'weergaveKnop px-4 py-2.5 text-sm transition-colors border-b-2 ' +
-          (aan ? 'border-[#FFD100] text-[#FFD100]'
+          (aan ? 'border-brand text-brand'
                : 'border-transparent text-gray-500 hover:text-white')
       })
       if (w === 'boeken')     laadBoeklijst()
@@ -378,7 +380,7 @@
       ]
       document.getElementById('filterKnoppen').innerHTML = opties.map(([k, label]) => `
         <button onclick="zetFilter('${k}')" data-filter="${k}"
-          class="filterKnop border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+          class="filterKnop border border-line text-gray-400 hover:text-white px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
           ${label}
         </button>`).join('')
       markeerFilter()
@@ -390,8 +392,8 @@
       document.querySelectorAll('.filterKnop').forEach(b => {
         const aan = b.dataset.filter === filter
         b.className = 'filterKnop border px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ' +
-          (aan ? 'border-[#FFD100] text-[#FFD100] bg-[#FFD100]/10'
-               : 'border-[#2a2a2a] text-gray-400 hover:text-white')
+          (aan ? 'border-brand text-brand bg-brand/10'
+               : 'border-line text-gray-400 hover:text-white')
       })
     }
 
@@ -428,7 +430,7 @@
                          : r.saldoN > FINADMIN.drempel ? 'text-green-400'
                          : 'text-white'
         return `
-          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+          <tr class="border-t border-line hover:bg-line/30 transition-colors">
             <td class="px-5 py-3.5">
               <div class="text-white">${r.first_name} ${r.last_name}</div>
               <div class="text-gray-600 text-xs">${r.email || 'geen email'}</div>
@@ -456,7 +458,7 @@
       // Vaste hoogte voor het label en de bijregel onderaan, zodat de bedragen
       // over alle tegels op dezelfde lijn staan — ook als een tekst afbreekt.
       const tegel = (label, waarde, sub, kleur = 'text-white') => `
-        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 flex flex-col">
+        <div class="bg-card border border-line rounded-xl px-5 py-4 flex flex-col">
           <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
           <div class="${kleur} font-bold text-lg">${waarde}</div>
           <div class="text-gray-600 text-xs mt-auto pt-1 leading-tight">${sub}</div>
@@ -464,7 +466,7 @@
 
       document.getElementById('kerncijfers').innerHTML =
         tegel('Openstaande verplichting', fmt(som(positief)),
-              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-[#FFD100]') +
+              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-brand') +
         tegel('Klaar om te melden', fmt(som(boven)),
               `${boven.length} boven ${fmt(FINADMIN.drempel)}`, 'text-green-400') +
         tegel('Openstaande schuld', fmt(som(negatief)),
@@ -528,11 +530,11 @@
                        <span class="text-red-400/60">— koppeling of matching ontbreekt</span></div>`
           }
           knop   = `<button onclick="bereidVoor('${st.id}')"
-                      class="border border-[#2a2a2a] text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Details</button>`
+                      class="border border-line text-gray-400 hover:text-white px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Details</button>`
         } else {
           status = '<span class="text-gray-500">nog niet geboekt</span>'
           knop   = `<button onclick="bereidVoor('${st.id}')"
-                      class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Boeken</button>`
+                      class="bg-brand hover:bg-brand-dark text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">Boeken</button>`
         }
 
         // Op de regel klikken doet hetzelfde als de knop — behalve bij statements
@@ -543,10 +545,10 @@
         const klasse = st.buiten_administratie ? 'class="flex items-center justify-between gap-4"' : ''
 
         return `
-          <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+          <div class="bg-card border border-line rounded-xl p-5">
             <div ${klik || klasse}>
               <div class="min-w-0">
-                <div class="text-white font-medium ${st.buiten_administratie ? '' : 'group-hover:text-[#FFD100] transition-colors'}">${naam}</div>
+                <div class="text-white font-medium ${st.buiten_administratie ? '' : 'group-hover:text-brand transition-colors'}">${naam}</div>
                 <div class="text-xs mt-0.5">${status}</div>
               </div>
               ${knop}
@@ -682,7 +684,7 @@
       const somOver  = u.overgeslagen.reduce((s, r) => s + r.bedrag, 0)
 
       const regel = (label, bedrag, kleur, extra = '') => `
-        <div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-[#2a2a2a]/60 last:border-0">
+        <div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-line/60 last:border-0">
           <span class="${kleur} text-sm">${label}</span>
           <span class="${kleur} text-sm font-medium whitespace-nowrap">${fmt(bedrag)}${extra}</span>
         </div>`
@@ -696,7 +698,7 @@
         .join('')
 
       document.getElementById('vb_' + stmtId).innerHTML = `
-        <div class="mt-4 pt-4 border-t border-[#2a2a2a]">
+        <div class="mt-4 pt-4 border-t border-line">
           <div class="grid md:grid-cols-2 gap-5">
 
             <div>
@@ -710,9 +712,9 @@
             <div>
               <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Wat blijft liggen</div>
               ${nietToegekend > 0.00005 ? `
-                ${u.geenTrack.n   ? regel(`Regel niet aan een track gekoppeld (${u.geenTrack.n})`,   u.geenTrack.bedrag,   'text-[#FFD100]') : ''}
-                ${u.geenArtiest.n ? regel(`Track zonder artiest (${u.geenArtiest.n})`,               u.geenArtiest.bedrag, 'text-[#FFD100]') : ''}
-                ${u.geenPersoon.n ? regel(`Artiest zonder persoon (${u.geenPersoon.n})`,             u.geenPersoon.bedrag, 'text-[#FFD100]') : ''}
+                ${u.geenTrack.n   ? regel(`Regel niet aan een track gekoppeld (${u.geenTrack.n})`,   u.geenTrack.bedrag,   'text-brand') : ''}
+                ${u.geenArtiest.n ? regel(`Track zonder artiest (${u.geenArtiest.n})`,               u.geenArtiest.bedrag, 'text-brand') : ''}
+                ${u.geenPersoon.n ? regel(`Artiest zonder persoon (${u.geenPersoon.n})`,             u.geenPersoon.bedrag, 'text-brand') : ''}
                 ${artiestenLijst ? `<div class="mt-2 pl-1">${artiestenLijst}</div>` : ''}
                 <p class="text-gray-600 text-xs mt-3 leading-relaxed">
                   Dit geld gaat niet verloren. Koppel je later meer artiesten aan personen, druk dan
@@ -726,11 +728,11 @@
 
           <div class="flex flex-wrap gap-3 mt-5">
             <button onclick="boekDefinitief('${stmtId}')" ${u.nieuw.length ? '' : 'disabled'}
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              class="bg-brand hover:bg-brand-dark text-black font-bold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               ${u.nieuw.length ? `Definitief boeken — ${fmt(somNieuw)}` : 'Niets nieuws te boeken'}
             </button>
             <button onclick="sluitVoorbereiding('${stmtId}')"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white px-5 py-2.5 rounded-lg text-sm transition-colors">
+              class="border border-line text-gray-400 hover:text-white px-5 py-2.5 rounded-lg text-sm transition-colors">
               Annuleren
             </button>
           </div>
@@ -743,7 +745,7 @@
     function lijstBlok(u) {
       const rijen = lijst => lijst
         .sort((a, b) => b.bedrag - a.bedrag)
-        .map(r => `<div class="flex justify-between gap-3 py-1 text-sm border-b border-[#2a2a2a]/40 last:border-0">
+        .map(r => `<div class="flex justify-between gap-3 py-1 text-sm border-b border-line/40 last:border-0">
              <span class="text-gray-300 truncate">${r.naam}</span>
              <span class="text-gray-400 whitespace-nowrap">${fmt(r.bedrag)}</span></div>`).join('')
 
@@ -756,7 +758,7 @@
       if (!u.nieuw.length && !u.overgeslagen.length) return ''
 
       return `
-        <div class="mt-5 pt-4 border-t border-[#2a2a2a] grid md:grid-cols-2 gap-5">
+        <div class="mt-5 pt-4 border-t border-line grid md:grid-cols-2 gap-5">
           ${kolom('Wordt nu bijgeschreven', u.nieuw,        'text-green-400')}
           ${kolom('Al geboekt',             u.overgeslagen, 'text-gray-500')}
         </div>`
@@ -853,7 +855,7 @@
 
       document.getElementById('meldLijst').innerHTML = teMelden.length
         ? teMelden.map(r => `
-            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-ink border border-line rounded-lg">
               <div class="min-w-0">
                 <div class="text-white text-sm truncate">${r.first_name} ${r.last_name}</div>
                 <div class="text-gray-600 text-xs">${r.email || 'geen email'}</div>
@@ -861,7 +863,7 @@
               <div class="flex items-center gap-3 shrink-0">
                 <span class="text-green-400 font-semibold text-sm">${fmt(r.saldoN)}</span>
                 <button onclick="meldAan('${r.person_id}')"
-                  class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Melden</button>
+                  class="bg-brand hover:bg-brand-dark text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Melden</button>
               </div>
             </div>`).join('')
         : `<p class="text-gray-600 text-sm">Niemand staat boven ${fmt(FINADMIN.drempel)}${lopendPer.size ? ' zonder lopende uitbetaling' : ''}.</p>`
@@ -897,12 +899,12 @@
 
       const knoppen = u.status === 'gemeld'
         ? `<button onclick="openFactuur('${u.id}')"
-             class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Factuur boeken</button>`
+             class="bg-brand hover:bg-brand-dark text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Factuur boeken</button>`
         : `<button onclick="openBetaling('${u.id}')"
-             class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Betaald melden</button>`
+             class="bg-brand hover:bg-brand-dark text-black font-bold px-4 py-2 rounded-lg text-xs transition-colors">Betaald melden</button>`
 
       return `
-        <div class="px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+        <div class="px-4 py-3 bg-ink border border-line rounded-lg">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <div class="text-white text-sm">${naam}</div>
@@ -935,7 +937,7 @@
     function kaartKlaar(u) {
       const naam = naamVan(u.person_id)
       if (u.status === 'geannuleerd') {
-        return `<div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+        return `<div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-ink border border-line rounded-lg">
                   <span class="text-gray-500 text-sm">${naam}</span>
                   <span class="text-gray-600 text-xs">geannuleerd · gemeld ${fmtDate(u.gemeld_op)}</span>
                 </div>`
@@ -944,13 +946,13 @@
       const gemeld  = parseFloat(u.gemeld_bedrag) || 0
       const afwijking = Math.abs(betaald - gemeld) > 0.005
       return `
-        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-ink border border-line rounded-lg">
           <div class="min-w-0">
             <div class="text-white text-sm truncate">${naam}</div>
             <div class="text-gray-600 text-xs">
               betaald ${fmtDate(u.betaald_op)}${u.factuurnummer ? ' · factuur ' + u.factuurnummer : ''}${u.betaalreferentie ? ' · ' + u.betaalreferentie : ''}
             </div>
-            ${afwijking ? `<div class="text-[#FFD100] text-xs mt-0.5">week af van het gemelde bedrag ${fmt(gemeld)}</div>` : ''}
+            ${afwijking ? `<div class="text-brand text-xs mt-0.5">week af van het gemelde bedrag ${fmt(gemeld)}</div>` : ''}
           </div>
           <span class="text-green-400 font-semibold text-sm shrink-0">${fmt(betaald)}</span>
         </div>`
@@ -1442,8 +1444,8 @@
       document.querySelectorAll('.mTypeKnop').forEach(b => {
         const aan = b.dataset.mtype === mTypeFilter
         b.className = 'mTypeKnop border px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ' +
-          (aan ? 'border-[#FFD100] text-[#FFD100] bg-[#FFD100]/10'
-               : 'border-[#2a2a2a] text-gray-400 hover:text-white')
+          (aan ? 'border-brand text-brand bg-brand/10'
+               : 'border-line text-gray-400 hover:text-white')
       })
     }
 
@@ -1468,7 +1470,7 @@
         const bedrag = parseFloat(m.amount) || 0
         const kleur  = bedrag < 0 ? 'text-red-400' : 'text-green-400'
         return `
-          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+          <tr class="border-t border-line hover:bg-line/30 transition-colors">
             <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">${fmtDate(m.entry_date)}</td>
             <td class="px-5 py-3 text-white">${naamVan(m.person_id)}</td>
             <td class="px-5 py-3 text-gray-400 text-xs">${TYPE_LABEL[m.type] || m.type}</td>
@@ -1590,7 +1592,7 @@
 
       // ── Kerncijfers ──
       const tegel = (label, waarde, sub, kleur = 'text-white') => `
-        <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 flex flex-col">
+        <div class="bg-card border border-line rounded-xl px-5 py-4 flex flex-col">
           <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
           <div class="${kleur} font-bold text-lg">${waarde}</div>
           <div class="text-gray-600 text-xs mt-auto pt-1 leading-tight">${sub}</div>
@@ -1598,7 +1600,7 @@
 
       document.getElementById('oKerncijfers').innerHTML =
         tegel('Openstaande verplichting', fmt(som(positief)),
-              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-[#FFD100]') +
+              `${positief.length} ${positief.length === 1 ? 'persoon' : 'personen'} met tegoed`, 'text-brand') +
         tegel('Klaar om te melden', fmt(som(teMelden.map(r => r.saldo))),
               `${teMelden.length} boven ${fmt(FINADMIN.drempel)}`,
               teMelden.length ? 'text-green-400' : 'text-gray-600') +
@@ -1633,12 +1635,12 @@
 
       const punten = []
       const punt = (kleur, tekst, actie) => punten.push(`
-        <div onclick="${actie}" class="flex items-start gap-3 px-4 py-3 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg cursor-pointer hover:border-gray-600 transition-colors">
+        <div onclick="${actie}" class="flex items-start gap-3 px-4 py-3 bg-ink border border-line rounded-lg cursor-pointer hover:border-gray-600 transition-colors">
           <span class="w-2 h-2 rounded-full ${kleur} mt-1.5 shrink-0"></span>
           <span class="text-sm text-gray-300">${tekst}</span>
         </div>`)
 
-      if (ongeboekt.length) punt('bg-[#FFD100]',
+      if (ongeboekt.length) punt('bg-brand',
         `<b class="text-white">${ongeboekt.length}</b> ${ongeboekt.length === 1 ? 'statement is' : 'statements zijn'} nog niet geboekt — die tellen nog nergens mee.`,
         "zetWeergave('boeken')")
 
@@ -1654,7 +1656,7 @@
         `<b class="text-white">${negatief.length}</b> ${negatief.length === 1 ? 'persoon staat' : 'personen staan'} negatief, samen <b class="text-white">${fmt(som(negatief))}</b>. Dat loopt vanzelf weg tegen nieuwe royalty's.`,
         "zetWeergave('saldi'); zetFilter('negatief')")
 
-      if (langWachten.length) punt('bg-[#FFD100]',
+      if (langWachten.length) punt('bg-brand',
         `<b class="text-white">${langWachten.length}</b> ${langWachten.length === 1 ? 'melding wacht' : 'meldingen wachten'} al langer dan twee weken op een factuur.`,
         "zetWeergave('uitbetalen')")
 

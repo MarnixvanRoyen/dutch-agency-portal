@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Testbeheer — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-3xl">
 
@@ -19,7 +21,7 @@
     </div>
 
     <!-- Slot staat erop: dan verder niets tonen -->
-    <div id="vergrendeld" class="hidden bg-[#1e1e1e] border border-green-500/30 rounded-xl p-6">
+    <div id="vergrendeld" class="hidden bg-card border border-green-500/30 rounded-xl p-6">
       <div class="flex items-start gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -42,13 +44,13 @@
     <div id="testpaneel" class="hidden">
 
       <!-- Waarschuwing -->
-      <div class="bg-[#FFD100]/10 border border-[#FFD100]/40 rounded-xl p-4 mb-6">
+      <div class="bg-brand/10 border border-brand/40 rounded-xl p-4 mb-6">
         <div class="flex items-start gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#FFD100] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-brand shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.5 0l-7.1 12.25A2 2 0 004.99 19z"/>
           </svg>
           <div class="text-sm">
-            <div class="text-[#FFD100] font-semibold mb-1">Testmodus staat aan</div>
+            <div class="text-brand font-semibold mb-1">Testmodus staat aan</div>
             <p class="text-gray-400 leading-relaxed">
               Alles op deze pagina wist gegevens echt en definitief. Dat mag nu, want er is nog
               niets uitbetaald. Zet het slot erop zodra Rob echt gaat betalen — daarna verdwijnt
@@ -59,7 +61,7 @@
       </div>
 
       <!-- Huidige stand -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+      <div class="bg-card border border-line rounded-xl p-5 mb-4">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-semibold text-white">Huidige stand</h2>
           <button onclick="laadStand()" class="text-xs text-gray-400 hover:text-white transition-colors">Verversen</button>
@@ -70,7 +72,7 @@
       </div>
 
       <!-- Statements ontboeken -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+      <div class="bg-card border border-line rounded-xl p-5 mb-4">
         <h2 class="text-sm font-semibold text-white mb-1">Statements ontboeken</h2>
         <p class="text-gray-500 text-xs mb-4">
           Haalt de spaarpot-mutaties van dat statement weg. Daarna kun je het statement op de
@@ -82,7 +84,7 @@
       </div>
 
       <!-- Grof geschut -->
-      <div class="bg-[#1e1e1e] border border-red-500/30 rounded-xl p-5 mb-4">
+      <div class="bg-card border border-red-500/30 rounded-xl p-5 mb-4">
         <h2 class="text-sm font-semibold text-white mb-1">Opnieuw beginnen</h2>
         <p class="text-gray-500 text-xs mb-4">
           Statements, personen, artiesten en tracks blijven staan. Alleen de financiële
@@ -91,7 +93,7 @@
 
         <div class="space-y-3">
           <button onclick="wisUitbetalingen()"
-            class="w-full text-left border border-[#2a2a2a] hover:border-red-500/50 rounded-lg px-4 py-3 transition-colors group">
+            class="w-full text-left border border-line hover:border-red-500/50 rounded-lg px-4 py-3 transition-colors group">
             <div class="text-sm text-white group-hover:text-red-300">Alleen uitbetalingen wissen</div>
             <div class="text-xs text-gray-600 mt-0.5">Uitbetalingen én hun afboekingen weg; de opgebouwde royalty's blijven staan</div>
           </button>
@@ -105,7 +107,7 @@
       </div>
 
       <!-- Slot erop -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <h2 class="text-sm font-semibold text-white mb-1">Klaar met testen</h2>
         <p class="text-gray-500 text-xs mb-4">
           Zet het slot erop zodra Rob echt gaat betalen. Vanaf dat moment kan er niets meer
@@ -152,7 +154,7 @@
       // flex-col + vaste hoogte voor het label: dan staan de getallen op één lijn,
       // ook als een label over twee regels loopt ("waarvan betaald").
       const tegel = (label, waarde, kleur = 'text-white') => `
-        <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-4 py-3 flex flex-col">
+        <div class="bg-ink border border-line rounded-lg px-4 py-3 flex flex-col">
           <div class="text-gray-500 text-xs uppercase tracking-wider leading-tight min-h-[2rem]">${label}</div>
           <div class="${kleur} font-bold text-lg mt-auto">${waarde}</div>
         </div>`
@@ -160,8 +162,8 @@
       document.getElementById('standGrid').innerHTML =
         tegel('Mutaties', regels.length) +
         tegel('Uitbetalingen', pay.count ?? 0) +
-        tegel('Waarvan betaald', betaald.count ?? 0, (betaald.count ?? 0) > 0 ? 'text-[#FFD100]' : 'text-white') +
-        tegel('In spaarpotten', fmt(totaal), 'text-[#FFD100]')
+        tegel('Waarvan betaald', betaald.count ?? 0, (betaald.count ?? 0) > 0 ? 'text-brand' : 'text-white') +
+        tegel('In spaarpotten', fmt(totaal), 'text-brand')
 
       await laadStatements()
     }
@@ -198,7 +200,7 @@
           status = '<span class="text-gray-500">nog niet geboekt</span>'
         }
         return `
-          <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg">
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-ink border border-line rounded-lg">
             <div class="min-w-0">
               <div class="text-white text-sm truncate">${s.period || s.filename}</div>
               <div class="text-xs mt-0.5">${status}</div>

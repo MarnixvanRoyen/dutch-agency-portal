@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deal Memo — DJ·World</title>
+  <link rel="stylesheet" href="theme.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -18,7 +19,7 @@
 
     /* Print knop — verdwijnt bij afdrukken */
     #printBar {
-      background: #1e1e1e;
+      background: var(--card);
       color: #fff;
       padding: 12px 20px;
       display: flex;
@@ -28,7 +29,7 @@
       font-size: 13px;
     }
     #printBar button {
-      background: #FFD100;
+      background: var(--brand);
       color: #000;
       border: none;
       font-weight: bold;
@@ -144,7 +145,7 @@
     <span id="printTitle">Deal Memo</span>
     <div style="display:flex;gap:10px">
       <button onclick="window.print()">🖨️ Afdrukken / PDF</button>
-      <button onclick="window.close(); setTimeout(()=>{ if(!window.closed) window.history.back() },300)" style="background:#2a2a2a;color:#fff">Sluiten</button>
+      <button onclick="window.close(); setTimeout(()=>{ if(!window.closed) window.history.back() },300)" style="background:var(--line);color:#fff">Sluiten</button>
     </div>
   </div>
 

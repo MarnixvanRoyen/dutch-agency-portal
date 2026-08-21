@@ -164,7 +164,7 @@ function renderNav(activePage, email) {
     topBar.id = 'mobileTopBar'
     document.body.insertBefore(topBar, document.body.firstChild)
   }
-  topBar.className = 'md:hidden fixed top-0 left-0 right-0 h-14 bg-[#1e1e1e] border-b border-[#2a2a2a] flex items-center px-4 z-50'
+  topBar.className = 'md:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-line flex items-center px-4 z-50'
   topBar.innerHTML = `
     <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white mr-3 transition-colors p-1">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -189,7 +189,7 @@ function renderNav(activePage, email) {
   if (!el) return
   el.innerHTML = `
     <div class="flex flex-col h-full">
-      <div class="px-4 py-3 border-b border-[#2a2a2a] flex items-center justify-between">
+      <div class="px-4 py-3 border-b border-line flex items-center justify-between">
         <img src="https://marnixvanroyen.github.io/dutch-agency-portal/djworld-logo.png" alt="DJ World" class="h-24 object-contain" onerror="this.style.display='none'">
         <button onclick="closeSidebar()" class="md:hidden text-gray-500 hover:text-white transition-colors p-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,9 +197,9 @@ function renderNav(activePage, email) {
           </svg>
         </button>
       </div>
-      <div class="p-4 border-b border-[#2a2a2a] flex items-center gap-3">
+      <div class="p-4 border-b border-line flex items-center gap-3">
         <img src="https://marnixvanroyen.github.io/dutch-agency-portal/rob.jpg" alt="Rob Boskamp"
-          class="w-14 h-14 rounded-full object-cover border border-[#2a2a2a]"
+          class="w-14 h-14 rounded-full object-cover border border-line"
           onerror="this.style.display='none'">
         <div>
           <div class="text-white text-xs font-medium">Rob Boskamp</div>
@@ -210,18 +210,18 @@ function renderNav(activePage, email) {
         ${NAV_LINKS.filter(l => !l.testOnly || FINADMIN.testmodus).map(l => `
           <a href="${l.href}" onclick="closeSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
             activePage === l.id
-              ? 'bg-[#FFD100]/15 text-[#FFD100] font-medium'
-              : 'text-gray-500 hover:text-white hover:bg-[#2a2a2a]'
+              ? 'bg-brand/15 text-brand font-medium'
+              : 'text-gray-500 hover:text-white hover:bg-line'
           }">
             ${l.icon}
             <span>${l.label}</span>
           </a>
         `).join('')}
       </nav>
-      <div class="p-4 border-t border-[#2a2a2a]">
+      <div class="p-4 border-t border-line">
         <div class="text-gray-600 text-xs truncate mb-3 px-1">${email}</div>
         <button onclick="logout()"
-          class="w-full flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-white hover:bg-[#2a2a2a] rounded-lg text-sm transition-all">
+          class="w-full flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-white hover:bg-line rounded-lg text-sm transition-all">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
@@ -289,7 +289,7 @@ function fmtDate(dateStr) {
 function showToast(msg, type = 'success') {
   const t = document.createElement('div')
   t.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl text-sm font-medium shadow-xl z-50 transition-all ${
-    type === 'success' ? 'bg-[#FFD100] text-black font-bold' : 'bg-red-600 text-white'
+    type === 'success' ? 'bg-brand text-black font-bold' : 'bg-red-600 text-white'
   }`
   t.textContent = msg
   document.body.appendChild(t)

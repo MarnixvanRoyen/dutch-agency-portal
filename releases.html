@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verzamelingen — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
@@ -19,7 +21,7 @@
         <p class="text-gray-500 text-sm mt-0.5">CatalogNumbers met meerdere tracks</p>
       </div>
       <button onclick="openReleaseModal()"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -31,25 +33,25 @@
     <!-- Zoek + filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op catalogusnummer..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-72 placeholder-gray-600"
+        class="bg-card border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full sm:w-72 placeholder-gray-600"
         oninput="filterTable()">
       <select id="labelFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        class="bg-card border border-line text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full sm:w-auto"
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
       <select id="statementFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        class="bg-card border border-line text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full sm:w-auto"
         onchange="onStatementChange()">
         <option value="">Alle statements</option>
       </select>
     </div>
 
     <!-- Tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+    <div class="bg-card border border-line rounded-xl overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium w-8"></th>
             <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
             <th class="text-left px-5 py-3 font-medium">Label</th>
@@ -69,9 +71,9 @@
       <span id="pageInfo"></span>
       <div class="flex gap-2">
         <button id="prevBtn" onclick="prevPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">← Vorige</button>
+          class="px-3 py-1.5 bg-card border border-line rounded-lg hover:text-white transition-colors">← Vorige</button>
         <button id="nextBtn" onclick="nextPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">Volgende →</button>
+          class="px-3 py-1.5 bg-card border border-line rounded-lg hover:text-white transition-colors">Volgende →</button>
       </div>
     </div>
 
@@ -79,30 +81,30 @@
 
   <!-- ── Release modal ──────────────────────────────────────────── -->
   <div id="releaseModal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
+    <div class="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
       <h2 id="releaseModalTitle" class="text-white font-semibold text-base mb-5">Release toevoegen</h2>
       <form id="releaseForm" class="space-y-4">
         <input type="hidden" id="releaseId">
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
           <input type="text" id="releaseCatalog" required
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="bijv. BBR184-12">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
           <select id="releaseLabel"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors">
             <option value="">— Geen label —</option>
           </select>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeReleaseModal()"
-            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 border border-line text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-brand hover:bg-brand-dark text-black font-bold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -112,7 +114,7 @@
 
   <!-- ── Track modal (binnen een release) ──────────────────────── -->
   <div id="trackModal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
+    <div class="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-2xl my-8">
       <h2 id="trackModalTitle" class="text-white font-semibold text-base mb-1">Track toevoegen</h2>
       <p id="trackModalSub" class="text-gray-500 text-xs mb-5"></p>
       <form id="trackForm" class="space-y-4">
@@ -121,16 +123,16 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Tracknaam</label>
           <input type="text" id="trackTitle"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="Leeg laten → ⚠️ onbekende track">
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeTrackModal()"
-            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 border border-line text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-brand hover:bg-brand-dark text-black font-bold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -265,7 +267,7 @@
         const hasNoName  = tracks.some(t => !t.title)
 
         const mainRow = `
-          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors cursor-pointer" onclick="toggleExpand('${r.id}')">
+          <tr class="border-t border-line hover:bg-line/30 transition-colors cursor-pointer" onclick="toggleExpand('${r.id}')">
             <td class="px-5 py-3 text-gray-500">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -276,12 +278,12 @@
             <td class="px-5 py-3 text-right text-xs ${hasNoName ? 'text-amber-400' : 'text-gray-400'}">
               ${trackCount} ${hasNoName ? '⚠️' : ''}
             </td>
-            <td class="px-5 py-3 text-right text-xs font-semibold ${releaseRoy ? 'text-[#FFD100]' : 'text-gray-600'}">
+            <td class="px-5 py-3 text-right text-xs font-semibold ${releaseRoy ? 'text-brand' : 'text-gray-600'}">
               ${releaseRoy ? fmt(releaseRoy) : '—'}
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
               <button onclick="openTrackModal('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
-                class="text-gray-500 hover:text-[#FFD100] text-xs mr-3 transition-colors">+ Track</button>
+                class="text-gray-500 hover:text-brand text-xs mr-3 transition-colors">+ Track</button>
               <button onclick="editRelease(${JSON.stringify(r).replace(/"/g, '&quot;')})"
                 class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deleteRelease('${r.id}', '${r.catalog_number.replace(/'/g, "\\'")}')"
@@ -291,7 +293,7 @@
         `
 
         const expandedRow = isExpanded ? `
-          <tr id="expand_${r.id}" class="border-t border-[#2a2a2a]/50 bg-[#161616]">
+          <tr id="expand_${r.id}" class="border-t border-line/50 bg-sunken">
             <td></td>
             <td colspan="6" class="px-5 py-3">
               ${tracks.length === 0
@@ -306,7 +308,7 @@
                           ${t.artist ? `<span class="text-gray-600 text-xs">${t.artist}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-4">
-                          <span class="text-xs font-semibold ${royByTrack[t.id] ? 'text-[#FFD100]' : 'text-gray-600'}">
+                          <span class="text-xs font-semibold ${royByTrack[t.id] ? 'text-brand' : 'text-gray-600'}">
                             ${royByTrack[t.id] ? fmt(royByTrack[t.id]) : '—'}
                           </span>
                           <div class="flex gap-3">

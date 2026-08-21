@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bulk Afrekening — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-3xl">
 
@@ -22,20 +24,20 @@
     </div>
 
     <!-- Stap 1: Statements -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+    <div class="bg-card border border-line rounded-xl p-5 mb-4">
       <h2 class="text-sm font-semibold text-white mb-1">Stap 1 &mdash; Selecteer statements</h2>
       <p class="text-gray-500 text-xs mb-4">Kies de periodes die meegenomen worden in de afrekening</p>
 
       <div class="relative" id="wrap_stmt">
         <button type="button" onclick="toggleDropdown('stmt')"
-          class="w-full flex items-center justify-between bg-[#0d0d0d] border border-[#2a2a2a] hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
+          class="w-full flex items-center justify-between bg-ink border border-line hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
           <span id="stmtSummary" class="text-white">Laden...</span>
           <svg id="chev_stmt" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-        <div id="dd_stmt" class="hidden absolute left-0 right-0 mt-1 z-30 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg shadow-2xl overflow-hidden">
-          <div class="flex gap-4 px-3 py-2 border-b border-[#2a2a2a] bg-[#161616]">
+        <div id="dd_stmt" class="hidden absolute left-0 right-0 mt-1 z-30 bg-card border border-line rounded-lg shadow-2xl overflow-hidden">
+          <div class="flex gap-4 px-3 py-2 border-b border-line bg-sunken">
             <button type="button" onclick="selectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
             <button type="button" onclick="deselectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
           </div>
@@ -47,22 +49,22 @@
     </div>
 
     <!-- Stap 2: Personen -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+    <div class="bg-card border border-line rounded-xl p-5 mb-4">
       <h2 class="text-sm font-semibold text-white mb-1">Stap 2 &mdash; Personen</h2>
       <p class="text-gray-500 text-xs mb-4">Alle personen met gekoppelde artiesten</p>
 
       <div class="relative" id="wrap_person">
         <button type="button" onclick="toggleDropdown('person')"
-          class="w-full flex items-center justify-between bg-[#0d0d0d] border border-[#2a2a2a] hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
+          class="w-full flex items-center justify-between bg-ink border border-line hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
           <span id="personSummary" class="text-white">Laden...</span>
           <svg id="chev_person" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-        <div id="dd_person" class="hidden absolute left-0 right-0 mt-1 z-30 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg shadow-2xl overflow-hidden">
-          <div class="px-3 pt-2.5 pb-2 border-b border-[#2a2a2a] bg-[#161616]">
+        <div id="dd_person" class="hidden absolute left-0 right-0 mt-1 z-30 bg-card border border-line rounded-lg shadow-2xl overflow-hidden">
+          <div class="px-3 pt-2.5 pb-2 border-b border-line bg-sunken">
             <input type="text" id="personSearch" oninput="filterPersons()" placeholder="Zoek op naam..."
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-1.5 text-xs mb-2 focus:outline-none focus:border-[#FFD100] transition-colors">
+              class="w-full bg-ink border border-line text-white rounded-lg px-3 py-1.5 text-xs mb-2 focus:outline-none focus:border-brand transition-colors">
             <div class="flex gap-4">
               <button type="button" onclick="selectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
               <button type="button" onclick="deselectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
@@ -78,14 +80,14 @@
     <!-- Actieknoppen -->
     <div class="flex gap-3 mb-6">
       <button id="btnGenereer" onclick="startBulk('pdf')"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-3 rounded-lg text-sm transition-colors">
+        class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-black font-bold px-5 py-3 rounded-lg text-sm transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
         Genereer alle PDF's (ZIP)
       </button>
       <button id="btnEmail" disabled title="Domein nog niet geverifieerd in Resend"
-        class="flex items-center gap-2 border border-[#2a2a2a] text-gray-600 px-5 py-3 rounded-lg text-sm cursor-not-allowed opacity-50">
+        class="flex items-center gap-2 border border-line text-gray-600 px-5 py-3 rounded-lg text-sm cursor-not-allowed opacity-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
         </svg>
@@ -94,13 +96,13 @@
     </div>
 
     <!-- Voortgang -->
-    <div id="progressSection" class="hidden bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+    <div id="progressSection" class="hidden bg-card border border-line rounded-xl p-5">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-white" id="progressTitle">Bezig...</h2>
         <span id="progressCount" class="text-gray-500 text-xs"></span>
       </div>
-      <div class="w-full bg-[#2a2a2a] rounded-full h-2 mb-4">
-        <div id="progressBar" class="bg-[#FFD100] h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+      <div class="w-full bg-line rounded-full h-2 mb-4">
+        <div id="progressBar" class="bg-brand h-2 rounded-full transition-all duration-300" style="width:0%"></div>
       </div>
       <div id="progressLog" class="space-y-1 max-h-48 overflow-y-auto text-xs text-gray-400"></div>
     </div>
@@ -131,8 +133,8 @@
         return
       }
       list.innerHTML = allStatements.map(s => `
-        <label class="flex items-center gap-3 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
-          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-[#FFD100]" onchange="updateStmtSummary()" checked>
+        <label class="flex items-center gap-3 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-line transition-colors">
+          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-brand" onchange="updateStmtSummary()" checked>
           <span class="text-white text-sm">${s.period || s.filename}</span>
         </label>
       `).join('')
@@ -161,10 +163,10 @@
         const hasEmail   = !!p.email
         const naam       = `${p.first_name} ${p.last_name}`
         return `
-          <div class="personRow flex items-center justify-between py-2 px-1 border-b border-[#2a2a2a]/50 last:border-0"
+          <div class="personRow flex items-center justify-between py-2 px-1 border-b border-line/50 last:border-0"
                data-naam="${naam.toLowerCase()}">
             <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-              <input type="checkbox" value="${p.id}" class="personCheck w-4 h-4 accent-[#FFD100] shrink-0"
+              <input type="checkbox" value="${p.id}" class="personCheck w-4 h-4 accent-brand shrink-0"
                 onchange="updatePersonSummary()" ${hasArtists ? 'checked' : 'disabled'}>
               <div class="truncate">
                 <span class="text-sm ${hasArtists ? 'text-white' : 'text-gray-600'}">${naam}</span>
@@ -261,7 +263,7 @@
 
     function log(msg, type = 'normal') {
       const el = document.getElementById('progressLog')
-      const colors = { normal: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', info: 'text-[#FFD100]' }
+      const colors = { normal: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', info: 'text-brand' }
       const safe = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       el.innerHTML += `<div class="${colors[type]}">${safe}</div>`
       el.scrollTop = el.scrollHeight

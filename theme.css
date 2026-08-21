@@ -1,0 +1,77 @@
+/* ==========================================================================
+   DJ·World — themalaag
+   --------------------------------------------------------------------------
+   Dit bestand is de ENIGE plek waar kleur, afronding, lettertype en
+   animatieduur worden vastgelegd. Wil je het portaal er anders uit laten
+   zien? Pas hieronder de waardes aan en elke pagina volgt automatisch.
+
+   Kleuren staan als losse RGB-getallen ("13 13 13" in plaats van "#0d0d0d").
+   Dat is nodig omdat Tailwind daarmee doorzichtigheid kan toevoegen:
+   bg-line/50 wordt dan rgb(42 42 42 / 0.5). Onder elke groep staat ook een
+   gewone variabele (--line) voor gebruik in losse CSS en style-attributen.
+
+   theme.js vertaalt deze variabelen naar Tailwind-klassennamen.
+   ========================================================================== */
+
+:root {
+
+  /* --- Vlakken, van donker naar licht ---------------------------------- */
+  --ink-rgb:        13 13 13;   /* paginachtergrond                        */
+  --sunken-rgb:     22 22 22;   /* verdiept vlak: uitgeklapte rij, dropdown */
+  --card-rgb:       30 30 30;   /* kaart, sidebar, tabelkop, modal          */
+  --line-rgb:       42 42 42;   /* randen, scheidingslijnen, hover-vlak     */
+
+  /* --- Merk ------------------------------------------------------------- */
+  --brand-rgb:      255 209 0;  /* DJ·World geel: knoppen, accenten         */
+  --brand-dark-rgb: 201 170 0;  /* zelfde geel, donkerder, voor hover       */
+
+  /* --- Tekst, van fel naar zacht ---------------------------------------- */
+  /* De Tailwind-klassen tussen haakjes blijven werken; theme.js koppelt ze
+     aan deze variabelen. Je hoeft dus niets in de pagina's aan te passen. */
+  --fg-rgb:         255 255 255;  /* koppen, primaire tekst   (text-white)    */
+  --fg-2-rgb:       209 213 219;  /* iets zachter             (text-gray-300) */
+  --fg-3-rgb:       156 163 175;  /* secundaire tekst         (text-gray-400) */
+  --fg-4-rgb:       107 114 128;  /* labels, bijschriften     (text-gray-500) */
+  --fg-5-rgb:       75 85 99;     /* placeholders, uitgezet   (text-gray-600) */
+  --fg-6-rgb:       55 65 81;     /* nauwelijks zichtbaar     (text-gray-700) */
+
+  /* --- Dezelfde kleuren als gewone waarde, voor losse CSS --------------- */
+  --ink:            rgb(var(--ink-rgb));
+  --sunken:         rgb(var(--sunken-rgb));
+  --card:           rgb(var(--card-rgb));
+  --line:           rgb(var(--line-rgb));
+  --brand:          rgb(var(--brand-rgb));
+  --brand-dark:     rgb(var(--brand-dark-rgb));
+  --fg:             rgb(var(--fg-rgb));
+
+  /* --- Afronding --------------------------------------------------------
+     Gekoppeld aan rounded-lg / rounded-xl / rounded-2xl. Alles in één keer
+     ronder of hoekiger maken doe je hier.                                  */
+  --radius-lg:      0.5rem;
+  --radius-xl:      0.75rem;
+  --radius-2xl:     1rem;
+
+  /* --- Beweging ----------------------------------------------------------
+     --motion-base is de standaardduur van elke transition in het portaal.
+     Rustig houden: Rob werkt hier de hele dag in.                          */
+  --motion-base:    150ms;
+  --motion-slow:    300ms;
+  --motion-slower:  500ms;
+
+  /* --- Typografie -------------------------------------------------------- */
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* --------------------------------------------------------------------------
+   NIET in deze laag (bewust):
+   - Statuskleuren (text-red-400, text-green-400, ...) staan nog op de
+     standaard Tailwind-schaal. Die horen bij betekenis, niet bij het merk,
+     en zijn te divers om nu blind om te zetten. Kan later alsnog.
+   - De licht gekleurde PDF/print-stijlen in afrekening.html, contract.html,
+     legacy-afrekening.html en bulk-afrekening.html (#1a7a3a, #b88a00,
+     #f9f9f9 ...). Dat is de vormgeving van het dócument, niet van het
+     portaal, en die moet los kunnen bewegen.
+   - jsPDF tekent met losse RGB-getallen in JavaScript en leest geen CSS.
+     Die kleuren staan in de pagina's zelf.
+   -------------------------------------------------------------------------- */

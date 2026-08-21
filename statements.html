@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Statements — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
@@ -20,7 +22,7 @@
         <p class="text-gray-500 text-sm mt-0.5">Upload Excel-bestanden (24 sheets per label)</p>
       </div>
       <button onclick="exportAllesExcel()" id="btnExport"
-        class="flex items-center gap-2 border border-[#2a2a2a] text-gray-400 hover:text-white hover:border-gray-500 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
+        class="flex items-center gap-2 border border-line text-gray-400 hover:text-white hover:border-gray-500 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
@@ -29,20 +31,20 @@
     </div>
 
     <!-- Upload sectie -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6 mb-6">
+    <div class="bg-card border border-line rounded-xl p-6 mb-6">
       <h2 class="text-white font-semibold text-sm mb-4">Nieuw statement uploaden</h2>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Periode (bijv. Q1 2025)</label>
           <input type="text" id="period"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="Q1 2025">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Excel bestand</label>
           <input type="file" id="fileInput" accept=".xlsx,.xls,.csv"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-[#FFD100] file:text-white file:font-medium hover:file:bg-[#c9aa00] file:cursor-pointer cursor-pointer">
+            class="w-full bg-ink border border-line text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-brand file:text-white file:font-medium hover:file:bg-brand-dark file:cursor-pointer cursor-pointer">
         </div>
       </div>
 
@@ -51,13 +53,13 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
           <input type="number" id="aggPct" min="0" max="100" step="0.01"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="20">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">DJ·World %</label>
           <input type="number" id="djPct" min="0" max="100" step="0.01"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="50">
         </div>
       </div>
@@ -72,37 +74,37 @@
           <span id="progressLabel">Verwerken...</span>
           <span id="progressPct">0%</span>
         </div>
-        <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-          <div id="progressBar" class="h-2 bg-[#FFD100] rounded-full transition-all duration-300" style="width:0%"></div>
+        <div class="h-2 bg-line rounded-full overflow-hidden">
+          <div id="progressBar" class="h-2 bg-brand rounded-full transition-all duration-300" style="width:0%"></div>
         </div>
       </div>
 
       <!-- Preview na parse -->
-      <div id="parsePreview" class="hidden mb-4 p-4 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg text-sm">
+      <div id="parsePreview" class="hidden mb-4 p-4 bg-ink border border-line rounded-lg text-sm">
         <div id="previewContent"></div>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3">
         <button onclick="parseFile()" id="parseBtn"
-          class="bg-[#2a2a2a] hover:bg-[#333] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+          class="bg-line hover:bg-[#333] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
           Controleren
         </button>
         <button onclick="uploadStatement()" id="uploadBtn" disabled
           title="Druk eerst op Controleren"
-          class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:bg-[#2a2a2a] disabled:text-gray-500 disabled:cursor-not-allowed">
+          class="bg-brand hover:bg-brand-dark text-black font-bold text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors disabled:bg-line disabled:text-gray-500 disabled:cursor-not-allowed">
           Eerst controleren
         </button>
       </div>
     </div>
 
     <!-- Overzicht van statements -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
-      <div class="px-5 py-4 border-b border-[#2a2a2a]">
+    <div class="bg-card border border-line rounded-xl overflow-x-auto">
+      <div class="px-5 py-4 border-b border-line">
         <h2 class="text-white font-semibold text-sm">Geüploade Statements</h2>
       </div>
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium">Bestandsnaam</th>
             <th class="text-left px-5 py-3 font-medium">Periode</th>
             <th class="text-right px-5 py-3 font-medium">Regels</th>
@@ -121,8 +123,8 @@
 
     <!-- Detail modal -->
     <div id="detailModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-line rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 id="detailTitle" class="text-white font-semibold text-base"></h2>
           <button onclick="closeDetail()" class="text-gray-500 hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,8 +134,8 @@
         </div>
         <div class="overflow-auto flex-1 p-1">
           <table class="w-full text-xs">
-            <thead class="sticky top-0 bg-[#1e1e1e]">
-              <tr class="border-b border-[#2a2a2a] text-gray-500 uppercase">
+            <thead class="sticky top-0 bg-card">
+              <tr class="border-b border-line text-gray-500 uppercase">
                 <th class="text-left px-4 py-3 font-medium">Label</th>
                 <th class="text-left px-4 py-3 font-medium">Artiest</th>
                 <th class="text-left px-4 py-3 font-medium">Track</th>
@@ -149,8 +151,8 @@
 
     <!-- Onbekend formaat modal -->
     <div id="formaatModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-red-500/40 rounded-2xl w-full max-w-lg shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-red-500/40 rounded-2xl w-full max-w-lg shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 class="text-white font-semibold text-base">Dit formaat herkennen we niet</h2>
           <button onclick="sluitFormaatModal()" class="text-gray-500 hover:text-white transition-colors">✕</button>
         </div>
@@ -159,18 +161,18 @@
             Het bestand is niet ingelezen. De kolommen komen niet overeen met een van de formaten
             die het portaal kent, en er is <span class="text-white">niets opgeslagen</span>.
           </p>
-          <p class="text-[#FFD100] text-sm font-medium">Neem contact op met support.</p>
-          <div class="bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg p-4">
+          <p class="text-brand text-sm font-medium">Neem contact op met support.</p>
+          <div class="bg-ink border border-line rounded-lg p-4">
             <div class="text-gray-500 text-xs uppercase tracking-wider mb-2">Stuur dit mee</div>
             <div id="formaatDetails" class="text-gray-400 text-xs font-mono break-all leading-relaxed"></div>
           </div>
           <div class="flex gap-3 pt-1">
             <button onclick="kopieerFormaatDetails()"
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
+              class="bg-brand hover:bg-brand-dark text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
               Gegevens kopiëren
             </button>
             <button onclick="sluitFormaatModal()"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
+              class="border border-line text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
               Sluiten
             </button>
           </div>
@@ -180,8 +182,8 @@
 
     <!-- Tarieven wijzigen modal -->
     <div id="tariefModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
+      <div class="bg-card border border-line rounded-2xl w-full max-w-md shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 class="text-white font-semibold text-base">Tarieven wijzigen</h2>
           <button onclick="closeTarief()" class="text-gray-500 hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -198,20 +200,20 @@
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Aggregator %</label>
             <input type="number" id="tariefAgg" min="0" max="100" step="0.01"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors">
           </div>
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">DJ·World %</label>
             <input type="number" id="tariefDj" min="0" max="100" step="0.01"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors">
           </div>
           <div class="flex gap-3 pt-1">
             <button onclick="saveTarief()"
-              class="bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
+              class="bg-brand hover:bg-brand-dark text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors">
               Opslaan
             </button>
             <button onclick="closeTarief()"
-              class="border border-[#2a2a2a] text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
+              class="border border-line text-gray-400 hover:text-white text-sm px-5 py-2.5 rounded-lg transition-colors">
               Annuleren
             </button>
           </div>
@@ -326,24 +328,24 @@
           const open  = netto - b.bedrag
           boeking = `<div><span class="text-green-400">geboekt</span>
                      <span class="text-gray-600">— ${b.n} ${b.n === 1 ? 'persoon' : 'personen'}, ${fmt(b.bedrag)}</span>
-                     <a href="financien.html" class="text-gray-600 hover:text-[#FFD100] ml-1 transition-colors">bekijken</a></div>`
+                     <a href="financien.html" class="text-gray-600 hover:text-brand ml-1 transition-colors">bekijken</a></div>`
           if (open > 0.005) {
             boeking += `<div class="text-red-400 mt-0.5">${fmt(open)} niet geboekt
                         <span class="text-red-400/60">— koppeling of matching ontbreekt</span></div>`
           }
         } else {
-          boeking = `<a href="financien.html" class="text-[#FFD100] hover:underline">nog niet geboekt</a>`
+          boeking = `<a href="financien.html" class="text-brand hover:underline">nog niet geboekt</a>`
         }
         return `
-        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+        <tr class="border-t border-line hover:bg-line/30 transition-colors">
           <td class="px-5 py-3.5 text-white font-medium">${s.filename}</td>
           <td class="px-5 py-3.5 text-gray-500">${s.period || '—'}</td>
           <td class="px-5 py-3.5 text-right text-gray-400">${s.line_count || 0}</td>
-          <td class="px-5 py-3.5 text-right text-[#FFD100] font-semibold">${fmt(s.total_royalties)}</td>
+          <td class="px-5 py-3.5 text-right text-brand font-semibold">${fmt(s.total_royalties)}</td>
           <td class="px-5 py-3.5 text-center whitespace-nowrap">
             <span class="text-gray-400 text-xs">${tarief}</span>
             <button onclick="openTarief('${s.id}')" title="Tarieven wijzigen"
-              class="text-gray-600 hover:text-[#FFD100] text-xs ml-2 transition-colors">wijzig</button>
+              class="text-gray-600 hover:text-brand text-xs ml-2 transition-colors">wijzig</button>
           </td>
           <td class="px-5 py-3.5 text-xs whitespace-nowrap">${boeking}</td>
           <td class="px-5 py-3.5 text-right text-gray-500 text-xs">${fmtDate(s.uploaded_at)}</td>
@@ -568,7 +570,7 @@
         ${sheetWaarschuwing ? `<div class="mb-3 p-3 bg-red-500/10 border border-red-500/40 rounded-lg text-red-300 text-xs leading-relaxed">${sheetWaarschuwing}</div>` : ''}
         <div class="font-medium text-white mb-2">${file.name} <span class="text-xs text-blue-400 font-normal ml-2">${cols.isrc >= 0 ? 'ISRC inbegrepen' : 'zonder ISRC-kolom'}</span></div>
         <div class="text-gray-400 mb-1">
-          ${Object.keys(labelCounts).length} label(s) · ${allLines.length} regels · Totaal: <span class="text-[#FFD100] font-semibold">${fmt(totalRoyalties)}</span>
+          ${Object.keys(labelCounts).length} label(s) · ${allLines.length} regels · Totaal: <span class="text-brand font-semibold">${fmt(totalRoyalties)}</span>
         </div>
         <div class="text-xs mb-2 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
           ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks
@@ -833,7 +835,7 @@
       document.getElementById('previewContent').innerHTML = `
         <div class="font-medium text-white mb-2">${file.name}</div>
         <div class="text-gray-400 mb-1">
-          ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-[#FFD100] font-semibold">${fmt(totalRoyalties)}</span>
+          ${sheetNames.length} labels · ${allLines.length} regels · Totaal: <span class="text-brand font-semibold">${fmt(totalRoyalties)}</span>
         </div>
         <div class="text-xs mb-2 ${matchedLines > 0 ? 'text-green-400' : 'text-gray-600'}">
           ${matchedLines} van ${allLines.length} regels gekoppeld aan bekende tracks
@@ -1132,12 +1134,12 @@
         .order('label_name')
 
       document.getElementById('detailTable').innerHTML = (lines || []).map(l => `
-        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/20">
+        <tr class="border-t border-line hover:bg-line/20">
           <td class="px-4 py-2 text-gray-400">${l.label_name || '—'}</td>
           <td class="px-4 py-2 text-white">${l.artist_name || '—'}</td>
           <td class="px-4 py-2 text-gray-300">${l.track_title || '—'}</td>
           <td class="px-4 py-2 text-gray-500">${l.isrc || '—'}</td>
-          <td class="px-4 py-2 text-right text-[#FFD100] font-medium">${fmt(l.nett_royalty)}</td>
+          <td class="px-4 py-2 text-right text-brand font-medium">${fmt(l.nett_royalty)}</td>
         </tr>
       `).join('')
     }

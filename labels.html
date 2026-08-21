@@ -5,21 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Labels — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
     <div class="flex items-center justify-between mb-5 md:mb-7">
       <div>
         <h1 class="text-xl font-bold">Labels</h1>
-        <p class="text-gray-500 text-sm mt-0.5">Beheer alle record labels &nbsp;·&nbsp; <span id="totalRoyalties" class="text-[#FFD100] font-semibold"></span></p>
+        <p class="text-gray-500 text-sm mt-0.5">Beheer alle record labels &nbsp;·&nbsp; <span id="totalRoyalties" class="text-brand font-semibold"></span></p>
       </div>
       <button onclick="openModal()"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-black font-bold text-sm font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -31,15 +33,15 @@
     <!-- Zoeken -->
     <div class="mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op labelnaam..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full md:w-72 placeholder-gray-600"
+        class="bg-card border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full md:w-72 placeholder-gray-600"
         oninput="filterTable()">
     </div>
 
     <!-- Tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-hidden overflow-x-auto">
+    <div class="bg-card border border-line rounded-xl overflow-hidden overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium">Label</th>
             <th class="text-left px-5 py-3 font-medium">Omschrijving</th>
             <th class="text-right px-5 py-3 font-medium">Totaal Royalties</th>
@@ -55,29 +57,29 @@
 
   <!-- Modal -->
   <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div class="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-2xl">
       <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Label toevoegen</h2>
       <form id="labelForm" class="space-y-4">
         <input type="hidden" id="labelId">
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Naam *</label>
           <input type="text" id="labelName" required
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="bijv. Spinnin Records">
         </div>
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Omschrijving</label>
           <input type="text" id="labelDesc"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="Optionele omschrijving">
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()"
-            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 border border-line text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold font-semibold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-brand hover:bg-brand-dark text-black font-bold font-semibold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -146,10 +148,10 @@
         return
       }
       tbody.innerHTML = labels.map(l => `
-        <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+        <tr class="border-t border-line hover:bg-line/30 transition-colors">
           <td class="px-5 py-3.5 font-medium text-white">${l.name}</td>
           <td class="px-5 py-3.5 text-gray-500">${l.description || '—'}</td>
-          <td class="px-5 py-3.5 text-right ${royaltyByLabel[l.name] ? 'text-[#FFD100] font-semibold' : 'text-gray-600'}">
+          <td class="px-5 py-3.5 text-right ${royaltyByLabel[l.name] ? 'text-brand font-semibold' : 'text-gray-600'}">
             ${royaltyByLabel[l.name] ? fmt(royaltyByLabel[l.name]) : '—'}
           </td>
           <td class="px-5 py-3.5 text-right">

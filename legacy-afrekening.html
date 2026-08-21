@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Legacy Afrekeningen — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -58,9 +60,9 @@
     }
   </style>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 max-w-4xl">
 
@@ -70,17 +72,17 @@
     </div>
 
     <!-- Stap 1: Artiest -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+    <div class="bg-card border border-line rounded-xl p-5 mb-4">
       <h2 class="text-sm font-semibold text-white mb-1">Stap 1 — Artiest</h2>
       <p class="text-gray-500 text-xs mb-3">Typ een naam. De lijst vult automatisch aan met bekende artiesten.</p>
       <input id="artistInput" list="artistOptions" autocomplete="off" placeholder="bijv. Marreman Rojas"
-        class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:border-[#FFD100] focus:outline-none">
+        class="w-full bg-ink border border-line rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:border-brand focus:outline-none">
       <datalist id="artistOptions"></datalist>
       <p id="artistHint" class="text-xs text-gray-600 mt-2"></p>
     </div>
 
     <!-- Stap 2: Statements -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+    <div class="bg-card border border-line rounded-xl p-5 mb-4">
       <h2 class="text-sm font-semibold text-white mb-1">Stap 2 — Statements</h2>
       <p class="text-gray-500 text-xs mb-4">Kies welke periodes in deze uitdraai meegaan</p>
       <div id="stmtList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -93,21 +95,21 @@
     </div>
 
     <!-- Stap 3: Instellingen -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
+    <div class="bg-card border border-line rounded-xl p-5 mb-4">
       <h2 class="text-sm font-semibold text-white mb-1">Stap 3 — Tarieven &amp; periode</h2>
       <p class="text-gray-500 text-xs mb-4">De percentages komen uit de gekozen statements en liggen daar vast</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs text-gray-500 mb-1">Tarieven uit de selectie</label>
           <div id="tariefInfo"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-gray-600">
+            class="w-full bg-ink border border-line rounded-lg px-3 py-2 text-sm text-gray-600">
             Kies eerst statements
           </div>
         </div>
         <div>
           <label class="block text-xs text-gray-500 mb-1">Naam afrekenperiode</label>
           <input id="afrekper" type="text" placeholder="bijv. 2026-Q1"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-[#FFD100] focus:outline-none">
+            class="w-full bg-ink border border-line rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-brand focus:outline-none">
         </div>
       </div>
       <p class="text-xs text-gray-600 mt-2">
@@ -115,35 +117,35 @@
         bij <span class="text-gray-500">afrekper</span> én in de <span class="text-gray-500">period</span>-kolom te staan.
       </p>
       <label class="flex items-center gap-2.5 mt-4 cursor-pointer">
-        <input id="useSplit" type="checkbox" class="w-4 h-4 accent-[#FFD100]">
+        <input id="useSplit" type="checkbox" class="w-4 h-4 accent-brand">
         <span class="text-xs text-gray-400">Split % per track toepassen <span class="text-gray-600">(stond niet in het oude sjabloon — laat uit voor een zuivere vergelijking)</span></span>
       </label>
     </div>
 
     <div class="flex flex-wrap gap-3 mb-6">
       <button onclick="generate()"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold px-5 py-3 rounded-lg text-sm transition-colors">
+        class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-black font-bold px-5 py-3 rounded-lg text-sm transition-colors">
         Genereer afrekening
       </button>
       <button id="btnPdf" onclick="downloadPdf()" disabled
-        class="border border-[#2a2a2a] text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
+        class="border border-line text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
         Download PDF
       </button>
       <button id="btnXls" onclick="downloadXlsx()" disabled
-        class="border border-[#2a2a2a] text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
+        class="border border-line text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
         Download Excel
       </button>
       <button id="btnPrint" onclick="window.print()" disabled
-        class="border border-[#2a2a2a] text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
+        class="border border-line text-gray-500 px-5 py-3 rounded-lg text-sm transition-colors disabled:opacity-40 enabled:hover:text-white enabled:hover:border-gray-500">
         Printen
       </button>
     </div>
 
     <!-- Herkomst / controle -->
-    <div id="infoBox" class="hidden bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-4 text-xs text-gray-400 space-y-1"></div>
+    <div id="infoBox" class="hidden bg-card border border-line rounded-xl p-4 mb-4 text-xs text-gray-400 space-y-1"></div>
 
     <!-- Uitdraai -->
-    <div id="paperWrap" class="hidden rounded-xl overflow-hidden border border-[#2a2a2a] mb-10">
+    <div id="paperWrap" class="hidden rounded-xl overflow-hidden border border-line mb-10">
       <div id="paper"></div>
     </div>
 
@@ -182,15 +184,15 @@
       const rs = selectedRates()
       if (!rs.length) {
         el.textContent = 'Kies eerst statements'
-        el.className = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-gray-600'
+        el.className = 'w-full bg-ink border border-line rounded-lg px-3 py-2 text-sm text-gray-600'
         return
       }
       const aggL = pctLabel(rs.map(r => r.agg))
       const djL  = pctLabel(rs.map(r => r.dj))
       const mix  = aggL === 'wisselend' || djL === 'wisselend'
       el.textContent = `Aggregator ${aggL} · Label ${djL}` + (mix ? ' — specificatie op de uitdraai' : '')
-      el.className = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm ' +
-        (mix ? 'text-[#FFD100]' : 'text-white')
+      el.className = 'w-full bg-ink border border-line rounded-lg px-3 py-2 text-sm ' +
+        (mix ? 'text-brand' : 'text-white')
     }
 
     async function loadStatements() {
@@ -204,8 +206,8 @@
         return
       }
       list.innerHTML = allStatements.map(s => `
-        <label class="flex items-center gap-3 p-2.5 bg-[#0d0d0d] rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
-          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-[#FFD100]">
+        <label class="flex items-center gap-3 p-2.5 bg-ink rounded-lg cursor-pointer hover:bg-line transition-colors">
+          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-brand">
           <span class="text-white text-sm">${esc(s.period || s.filename)}</span>
           ${s.period ? `<span class="text-gray-600 text-xs ml-auto">${esc(s.filename)}</span>` : ''}
         </label>
@@ -526,9 +528,9 @@
       const box = document.getElementById('infoBox')
       const bits = []
       bits.push(`<div>${lineCount} statement-regels verwerkt, samengevoegd tot ${lastDoc.rows.length} regels op de uitdraai.</div>`)
-      if (!artist) bits.push(`<div class="text-[#FFD100]">Deze naam staat niet als artiest in het portaal — alleen gematcht op de artiestnaam in de statements.</div>`)
-      if (nameOnly > 0 && artist) bits.push(`<div class="text-[#FFD100]">${nameOnly} regel(s) kwamen alleen via de artiestnaam in het statement, niet via een gekoppelde track. Check eventueel de trackkoppelingen.</div>`)
-      if (Math.abs(rowsSum - round2(subTotal)) >= 0.005) bits.push(`<div class="text-[#FFD100]">De getoonde regels tellen op tot ${num2(rowsSum)}, het subtotaal staat op ${num2(subTotal)}. Dat komt doordat er intern met alle decimalen wordt gerekend en pas bij het tonen wordt afgerond — precies zoals het oude Excel dat deed.</div>`)
+      if (!artist) bits.push(`<div class="text-brand">Deze naam staat niet als artiest in het portaal — alleen gematcht op de artiestnaam in de statements.</div>`)
+      if (nameOnly > 0 && artist) bits.push(`<div class="text-brand">${nameOnly} regel(s) kwamen alleen via de artiestnaam in het statement, niet via een gekoppelde track. Check eventueel de trackkoppelingen.</div>`)
+      if (Math.abs(rowsSum - round2(subTotal)) >= 0.005) bits.push(`<div class="text-brand">De getoonde regels tellen op tot ${num2(rowsSum)}, het subtotaal staat op ${num2(subTotal)}. Dat komt doordat er intern met alle decimalen wordt gerekend en pas bij het tonen wordt afgerond — precies zoals het oude Excel dat deed.</div>`)
       if (useSplit) bits.push(`<div>Split % per track is toegepast — dit wijkt af van het originele sjabloon.</div>`)
       box.innerHTML = bits.join('')
       box.classList.remove('hidden')

@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tracks — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
 
@@ -19,7 +21,7 @@
         <p class="text-gray-500 text-sm mt-0.5">Alle tracks — koppel artiesten en splits</p>
       </div>
       <button onclick="openModal()"
-        class="flex items-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
+        class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-black font-bold text-sm px-3 md:px-4 py-2.5 rounded-lg transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -31,35 +33,35 @@
     <!-- Zoek + filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input type="text" id="searchInput" placeholder="Zoek op titel, artiest of catalogusnummer..."
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-80 placeholder-gray-600"
+        class="bg-card border border-line text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full sm:w-80 placeholder-gray-600"
         oninput="filterTable()">
       <select id="labelFilter"
-        class="bg-[#1e1e1e] border border-[#2a2a2a] text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors w-full sm:w-auto"
+        class="bg-card border border-line text-gray-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors w-full sm:w-auto"
         onchange="filterTable()">
         <option value="">Alle labels</option>
       </select>
       <button id="noTitleBtn" onclick="toggleNoTitle()"
-        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
         <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
         Zonder naam
       </button>
       <button id="multiArtistBtn" onclick="toggleMultiArtist()"
-        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
         <span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
         Mogelijk meerdere artiesten
       </button>
       <button id="conflictBtn" onclick="toggleConflict()"
-        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
+        class="flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap">
         <span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
         Artiest conflict
       </button>
     </div>
 
     <!-- Tabel -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl overflow-x-auto">
+    <div class="bg-card border border-line rounded-xl overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-[#2a2a2a] text-gray-500 text-xs uppercase">
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
             <th class="text-left px-5 py-3 font-medium">Track</th>
             <th class="text-left px-5 py-3 font-medium">CatalogNumber</th>
             <th class="text-left px-5 py-3 font-medium">ISRC</th>
@@ -82,9 +84,9 @@
       <span id="pageInfo"></span>
       <div class="flex gap-2">
         <button id="prevBtn" onclick="prevPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">← Vorige</button>
+          class="px-3 py-1.5 bg-card border border-line rounded-lg hover:text-white transition-colors">← Vorige</button>
         <button id="nextBtn" onclick="nextPage()"
-          class="px-3 py-1.5 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg hover:text-white transition-colors">Volgende →</button>
+          class="px-3 py-1.5 bg-card border border-line rounded-lg hover:text-white transition-colors">Volgende →</button>
       </div>
     </div>
 
@@ -92,7 +94,7 @@
 
   <!-- ── Track modal ──────────────────────────────────────────────── -->
   <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8">
+    <div class="bg-card border border-line rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8">
       <h2 id="modalTitle" class="text-white font-semibold text-base mb-5">Track toevoegen</h2>
       <form id="trackForm" class="space-y-4">
         <input type="hidden" id="trackId">
@@ -101,7 +103,7 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Titel</label>
           <input type="text" id="trackTitle"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
             placeholder="Leeg laten → ⚠️ onbekende track">
         </div>
 
@@ -109,7 +111,7 @@
         <div>
           <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">ISRC</label>
           <input type="text" id="trackIsrc"
-            class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors font-mono placeholder-gray-600"
+            class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors font-mono placeholder-gray-600"
             placeholder="bijv. NL-BG3-07-00004">
         </div>
 
@@ -119,13 +121,13 @@
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">CatalogNumber *</label>
             <input type="hidden" id="trackReleaseId">
             <input type="text" id="releaseSearch" autocomplete="off" spellcheck="false"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors placeholder-gray-600"
               placeholder="bijv. BBR184-12">
           </div>
           <div>
             <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Label</label>
             <select id="trackLabelId"
-              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors">
+              class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors">
               <option value="">— Geen label —</option>
             </select>
           </div>
@@ -139,18 +141,18 @@
           </div>
           <div id="splitRows" class="space-y-2 mb-2"></div>
           <button type="button" onclick="addSplitRow()"
-            class="w-full py-2.5 border border-dashed border-[#2a2a2a] text-gray-500 hover:text-white hover:border-[#FFD100] rounded-lg text-xs transition-colors">
+            class="w-full py-2.5 border border-dashed border-line text-gray-500 hover:text-white hover:border-brand rounded-lg text-xs transition-colors">
             + Artiest toevoegen
           </button>
         </div>
 
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()"
-            class="flex-1 border border-[#2a2a2a] text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 border border-line text-gray-400 hover:text-white rounded-lg py-3 text-sm transition-colors">
             Annuleren
           </button>
           <button type="submit"
-            class="flex-1 bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold rounded-lg py-3 text-sm transition-colors">
+            class="flex-1 bg-brand hover:bg-brand-dark text-black font-bold rounded-lg py-3 text-sm transition-colors">
             Opslaan
           </button>
         </div>
@@ -307,7 +309,7 @@
           .join(', ')
 
         return `
-          <tr class="border-t border-[#2a2a2a] hover:bg-[#2a2a2a]/30 transition-colors">
+          <tr class="border-t border-line hover:bg-line/30 transition-colors">
             <td class="px-5 py-3 font-medium">
               <div class="flex items-center gap-2">
                 <span class="${noTitle ? 'text-amber-400' : 'text-white'}">
@@ -322,7 +324,7 @@
             <td class="px-5 py-3 text-xs text-gray-400 max-w-[200px]">
               ${artists || '<span class="text-gray-600">—</span>'}
             </td>
-            <td class="px-5 py-3 text-right text-xs ${roy.stream ? 'text-[#FFD100]' : 'text-gray-600'}">
+            <td class="px-5 py-3 text-right text-xs ${roy.stream ? 'text-brand' : 'text-gray-600'}">
               ${roy.stream ? fmt(roy.stream) : '—'}
             </td>
             <td class="px-5 py-3 text-right text-xs ${roy.download ? 'text-blue-400' : 'text-gray-600'}">
@@ -352,7 +354,7 @@
       const btn = document.getElementById('noTitleBtn')
       btn.className = filterNoTitle
         ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-amber-400 text-amber-400 rounded-lg transition-colors whitespace-nowrap'
-        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
       filterTable()
     }
 
@@ -361,7 +363,7 @@
       const btn = document.getElementById('multiArtistBtn')
       btn.className = filterMultiArtist
         ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-purple-400 text-purple-400 rounded-lg transition-colors whitespace-nowrap'
-        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
       filterTable()
     }
 
@@ -370,7 +372,7 @@
       const btn = document.getElementById('conflictBtn')
       btn.className = filterConflict
         ? 'flex items-center gap-2 px-3 py-2.5 text-xs border border-red-400 text-red-400 rounded-lg transition-colors whitespace-nowrap'
-        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-[#2a2a2a] text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
+        : 'flex items-center gap-2 px-3 py-2.5 text-xs border border-line text-gray-500 hover:text-white rounded-lg transition-colors whitespace-nowrap'
       filterTable()
     }
 
@@ -453,12 +455,12 @@
         `<option value="${a.id}" ${a.id === artistId ? 'selected' : ''}>${a.name}</option>`
       ).join('')
       div.innerHTML = `
-        <select class="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FFD100] transition-colors artist-select" onchange="updateSplitTotal()">
+        <select class="flex-1 bg-ink border border-line text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors artist-select" onchange="updateSplitTotal()">
           <option value="">— Artiest —</option>${options}
         </select>
         <div class="flex items-center gap-1 shrink-0">
           <input type="number" min="0" max="100" step="0.01" value="${pct !== '' ? pct : 100}"
-            class="w-20 bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:border-[#FFD100] transition-colors split-input"
+            class="w-20 bg-ink border border-line text-white rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:border-brand transition-colors split-input"
             oninput="updateSplitTotal()">
           <span class="text-gray-500 text-xs">%</span>
         </div>

@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DJ·World — Inloggen</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#0d0d0d] min-h-screen flex items-center justify-center font-sans">
+<body class="bg-ink min-h-screen flex items-center justify-center font-sans">
 
-  <div class="w-full max-w-sm px-8 py-10 bg-[#1e1e1e] rounded-2xl border border-[#2a2a2a] shadow-2xl">
+  <div class="w-full max-w-sm px-8 py-10 bg-card rounded-2xl border border-line shadow-2xl">
 
     <!-- Logo -->
     <div class="text-center mb-8">
-      <div class="text-[#FFD100] text-2xl font-bold tracking-widest uppercase mb-1">DJ·World</div>
+      <div class="text-brand text-2xl font-bold tracking-widest uppercase mb-1">DJ·World</div>
       <div class="text-gray-600 text-xs">Rob Boskamp BV — Beheerportaal</div>
     </div>
 
@@ -22,20 +24,20 @@
       <div>
         <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">E-mailadres</label>
         <input type="email" id="email" required autocomplete="email"
-          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-700"
+          class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors placeholder-gray-700"
           placeholder="jouw@email.nl">
       </div>
       <div>
         <label class="block text-gray-400 text-xs mb-1.5 uppercase tracking-wider">Wachtwoord</label>
         <input type="password" id="password" required autocomplete="current-password"
-          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-700"
+          class="w-full bg-ink border border-line text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors placeholder-gray-700"
           placeholder="••••••••">
       </div>
 
       <div id="errorMsg" class="hidden text-red-400 text-xs text-center py-1.5 bg-red-900/20 rounded-lg px-3"></div>
 
       <button type="submit" id="submitBtn"
-        class="w-full bg-[#FFD100] hover:bg-[#c9aa00] text-black font-bold font-semibold rounded-lg px-4 py-3 text-sm transition-colors mt-1 disabled:opacity-50">
+        class="w-full bg-brand hover:bg-brand-dark text-black font-bold font-semibold rounded-lg px-4 py-3 text-sm transition-colors mt-1 disabled:opacity-50">
         Inloggen
       </button>
     </form>

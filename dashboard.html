@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — DJ·World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
-<body class="bg-[#0d0d0d] text-white min-h-screen font-sans">
+<body class="bg-ink text-white min-h-screen font-sans">
 
-  <aside id="sidebar" class="w-52 bg-[#1e1e1e] border-r border-[#2a2a2a] fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
 
   <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8 min-h-screen">
 
@@ -21,22 +23,22 @@
     </div>
 
     <!-- Filters + type toggle -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 mb-6">
+    <div class="bg-card border border-line rounded-xl p-4 mb-6">
       <div class="flex flex-col gap-3">
         <!-- Type toggle -->
         <div class="flex items-center gap-2">
           <span class="text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap">Type</span>
           <div class="flex gap-1">
             <button onclick="setTypeFilter('all')" id="typeBtnAll"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold">
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-brand text-black font-bold">
               Alles
             </button>
             <button onclick="setTypeFilter('stream')" id="typeBtnStream"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-line">
               Streams
             </button>
             <button onclick="setTypeFilter('download')" id="typeBtnDownload"
-              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]">
+              class="type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-line">
               Downloads
             </button>
           </div>
@@ -49,11 +51,11 @@
           <div id="wrap_track"    class="relative w-full sm:flex-1"></div>
           <div id="wrap_statement" class="relative w-full sm:flex-1"></div>
           <button onclick="resetFilters()"
-            class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-[#2a2a2a] rounded-lg transition-colors whitespace-nowrap">
+            class="w-full sm:w-auto text-gray-500 hover:text-white text-xs px-4 py-2.5 border border-line rounded-lg transition-colors whitespace-nowrap">
             Reset
           </button>
           <button onclick="generateStatementReport()" id="btnStatementReport" disabled title="Selecteer eerst een statement"
-            class="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FFD100] hover:bg-[#c9aa00] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#FFD100] text-black font-bold text-xs px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap">
+            class="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand text-black font-bold text-xs px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
@@ -65,30 +67,30 @@
 
     <!-- Stat cards -->
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Labels</div>
         <div id="statLabels" class="text-3xl font-bold">—</div>
       </div>
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Artiesten</div>
         <div id="statArtists" class="text-3xl font-bold">—</div>
       </div>
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Tracks</div>
         <div id="statTracks" class="text-3xl font-bold">—</div>
       </div>
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Statements</div>
         <div id="statStatements" class="text-3xl font-bold">—</div>
       </div>
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+      <div class="bg-card border border-line rounded-xl p-5">
         <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Bruto Royalties</div>
-        <div id="statRoyalties" class="text-3xl font-bold text-[#FFD100]">—</div>
+        <div id="statRoyalties" class="text-3xl font-bold text-brand">—</div>
       </div>
     </div>
 
     <!-- Royalty flow kaart -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl px-5 py-4 mb-6">
+    <div class="bg-card border border-line rounded-xl px-5 py-4 mb-6">
       <h2 class="text-white font-semibold text-sm mb-3">Royalty verdeling</h2>
 
       <!-- Alleen bedragen. Tarieven worden per statement beheerd op de pagina
@@ -100,7 +102,7 @@
         </div>
         <div class="text-center">
           <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">DJ&middot;World</div>
-          <div id="flowDJWorldAmt" class="text-xl font-bold text-[#FFD100]">&mdash;</div>
+          <div id="flowDJWorldAmt" class="text-xl font-bold text-brand">&mdash;</div>
         </div>
         <div class="text-center">
           <div class="text-gray-300 text-xs uppercase tracking-wider mb-1">Voor artiesten</div>
@@ -110,21 +112,21 @@
     </div>
 
     <!-- Streams vs Downloads kaart -->
-    <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-6">
+    <div class="bg-card border border-line rounded-xl p-5 mb-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-white font-semibold text-sm">Streams vs Downloads</h2>
         <span id="typeTotal" class="text-gray-500 text-xs"></span>
       </div>
       <div class="grid grid-cols-2 gap-4 mb-4">
-        <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+        <div class="bg-ink rounded-xl p-4 border border-line">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-2 h-2 rounded-full bg-[#FFD100]"></div>
+            <div class="w-2 h-2 rounded-full bg-brand"></div>
             <span class="text-gray-400 text-xs uppercase tracking-wider">Streams</span>
           </div>
           <div id="streamAmount" class="text-xl font-bold text-white">—</div>
           <div id="streamPct" class="text-gray-400 text-xs mt-0.5">—</div>
         </div>
-        <div class="bg-[#0d0d0d] rounded-xl p-4 border border-[#2a2a2a]">
+        <div class="bg-ink rounded-xl p-4 border border-line">
           <div class="flex items-center gap-2 mb-2">
             <div class="w-2 h-2 rounded-full bg-blue-400"></div>
             <span class="text-gray-400 text-xs uppercase tracking-wider">Downloads</span>
@@ -134,8 +136,8 @@
         </div>
       </div>
       <!-- Ratio balk -->
-      <div class="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-        <div id="streamBar" class="h-2 bg-[#FFD100] rounded-full transition-all duration-500" style="width:50%"></div>
+      <div class="h-2 bg-line rounded-full overflow-hidden">
+        <div id="streamBar" class="h-2 bg-brand rounded-full transition-all duration-500" style="width:50%"></div>
       </div>
     </div>
 
@@ -143,10 +145,10 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
 
       <!-- Per Label -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
-        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+      <div class="bg-card border border-line rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-line flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Label</h2>
-          <span id="labelTotal" class="text-[#FFD100] text-xs font-semibold"></span>
+          <span id="labelTotal" class="text-brand text-xs font-semibold"></span>
         </div>
         <div id="blockLabels" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -154,10 +156,10 @@
       </div>
 
       <!-- Per Artiest -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
-        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+      <div class="bg-card border border-line rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-line flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Artiest</h2>
-          <span id="artistTotal" class="text-[#FFD100] text-xs font-semibold"></span>
+          <span id="artistTotal" class="text-brand text-xs font-semibold"></span>
         </div>
         <div id="blockArtists" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -165,10 +167,10 @@
       </div>
 
       <!-- Per Track -->
-      <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl flex flex-col">
-        <div class="px-5 py-4 border-b border-[#2a2a2a] flex items-center justify-between">
+      <div class="bg-card border border-line rounded-xl flex flex-col">
+        <div class="px-5 py-4 border-b border-line flex items-center justify-between">
           <h2 class="text-white font-semibold text-sm">Per Track</h2>
-          <span id="trackTotal" class="text-[#FFD100] text-xs font-semibold"></span>
+          <span id="trackTotal" class="text-brand text-xs font-semibold"></span>
         </div>
         <div id="blockTracks" class="flex-1 overflow-y-auto max-h-96 p-4 space-y-1 text-sm text-gray-500">
           Laden...
@@ -272,7 +274,7 @@
       wrap.innerHTML = `
         <input type="text" id="input_${key}"
           placeholder="${placeholder}" autocomplete="off" spellcheck="false"
-          class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-gray-300 rounded-lg px-3 py-2.5 pr-8 text-sm focus:outline-none focus:border-[#FFD100] transition-colors placeholder-gray-600"
+          class="w-full bg-ink border border-line text-gray-300 rounded-lg px-3 py-2.5 pr-8 text-sm focus:outline-none focus:border-brand transition-colors placeholder-gray-600"
           oninput="onFilterInput('${key}')"
           onfocus="showDropdown('${key}')">
         <button id="clear_${key}" onclick="clearFilter('${key}')"
@@ -282,7 +284,7 @@
           </svg>
         </button>
         <div id="dd_${key}"
-          class="hidden absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 max-h-52 overflow-y-auto">
+          class="hidden absolute top-full left-0 right-0 mt-1 bg-sunken border border-line rounded-lg shadow-2xl z-20 max-h-52 overflow-y-auto">
         </div>
       `
     }
@@ -309,12 +311,12 @@
       dd.innerHTML = matches.slice(0, 40).map(o => {
         const hl = escaped
           ? o.replace(new RegExp(`(${escaped})`, 'gi'),
-              '<span style="color:#FFD100;font-weight:600">$1</span>')
+              '<span style="color:var(--brand);font-weight:600">$1</span>')
           : o
         const safeVal = o.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
         return `<button type="button"
           onmousedown="selectFilter('${key}', '${safeVal}'); event.preventDefault()"
-          class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2a2a] hover:text-white transition-colors">${hl}</button>`
+          class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-line hover:text-white transition-colors">${hl}</button>`
       }).join('')
     }
 
@@ -391,9 +393,9 @@
         const btn = document.getElementById(`typeBtn${t.charAt(0).toUpperCase() + t.slice(1)}`)
         if (!btn) return
         if (t === type) {
-          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#FFD100] text-black font-bold'
+          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-brand text-black font-bold'
         } else {
-          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-[#2a2a2a]'
+          btn.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-gray-500 hover:text-white hover:bg-line'
         }
       })
       applyFilters()
@@ -518,10 +520,10 @@
         <div class="mb-2.5">
           <div class="flex justify-between items-baseline mb-1">
             <span class="${isWarn ? 'text-amber-400' : 'text-white'} text-xs truncate max-w-[60%]" title="${isWarn ? 'Geen tracknaam — CatalogNumber als identifier' : name}">${name}</span>
-            <span class="text-[#FFD100] text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
+            <span class="text-brand text-xs font-semibold ml-1 whitespace-nowrap">${fmt(val)}</span>
           </div>
-          <div class="h-1 bg-[#2a2a2a] rounded-full">
-            <div class="h-1 ${isWarn ? 'bg-amber-400' : 'bg-[#FFD100]'} rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
+          <div class="h-1 bg-line rounded-full">
+            <div class="h-1 ${isWarn ? 'bg-amber-400' : 'bg-brand'} rounded-full" style="width:${Math.max(2, val / max * 100).toFixed(1)}%"></div>
           </div>
         </div>`
       }).join('')

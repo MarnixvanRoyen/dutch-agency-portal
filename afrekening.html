@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Royalty Afrekening — DJ·World</title>
+  <link rel="stylesheet" href="theme.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -20,7 +21,7 @@
     }
 
     #printBar {
-      background: #1e1e1e;
+      background: var(--card);
       color: #fff;
       padding: 12px 20px;
       display: flex;
@@ -40,8 +41,8 @@
       cursor: pointer;
       font-size: 12px;
     }
-    #printBar .btn-print { background: #FFD100; color: #000; }
-    #printBar .btn-close  { background: #2a2a2a; color: #fff; }
+    #printBar .btn-print { background: var(--brand); color: #000; }
+    #printBar .btn-close  { background: var(--line); color: #fff; }
 
     @media print {
       @page { margin: 10mm 12mm; size: A4 portrait; }

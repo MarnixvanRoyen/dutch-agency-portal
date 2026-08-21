@@ -321,6 +321,10 @@
       const names = allArtists.map(a => ({ id: a.id, nameLower: a.name.toLowerCase().trim() }))
 
       allArtists.forEach(a => {
+        // Gekoppeld aan een persoon? Dan is de naam bewust zo gekozen en gecontroleerd
+        // — geen aandacht meer nodig, ook niet bij "&" in de naam of bijna-duplicaten.
+        if (a.person_id) return
+
         const n = a.name
 
         // 1. Meerdere artiesten in één naam

@@ -23,27 +23,55 @@
 
     <!-- Stap 1: Statements -->
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
-      <h2 class="text-sm font-semibold text-white mb-1">Stap 1 — Selecteer statements</h2>
+      <h2 class="text-sm font-semibold text-white mb-1">Stap 1 &mdash; Selecteer statements</h2>
       <p class="text-gray-500 text-xs mb-4">Kies de periodes die meegenomen worden in de afrekening</p>
-      <div id="stmtList" class="space-y-2">
-        <p class="text-gray-600 text-sm">Laden...</p>
-      </div>
-      <div class="mt-3 flex gap-3">
-        <button onclick="selectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
-        <button onclick="deselectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+
+      <div class="relative" id="wrap_stmt">
+        <button type="button" onclick="toggleDropdown('stmt')"
+          class="w-full flex items-center justify-between bg-[#0d0d0d] border border-[#2a2a2a] hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
+          <span id="stmtSummary" class="text-white">Laden...</span>
+          <svg id="chev_stmt" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div id="dd_stmt" class="hidden absolute left-0 right-0 mt-1 z-30 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg shadow-2xl overflow-hidden">
+          <div class="flex gap-4 px-3 py-2 border-b border-[#2a2a2a] bg-[#161616]">
+            <button type="button" onclick="selectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
+            <button type="button" onclick="deselectAllStatements()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+          </div>
+          <div id="stmtList" class="max-h-64 overflow-y-auto p-2 space-y-1">
+            <p class="text-gray-600 text-sm p-2">Laden...</p>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Stap 2: Personen -->
     <div class="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 mb-4">
-      <h2 class="text-sm font-semibold text-white mb-1">Stap 2 — Personen</h2>
+      <h2 class="text-sm font-semibold text-white mb-1">Stap 2 &mdash; Personen</h2>
       <p class="text-gray-500 text-xs mb-4">Alle personen met gekoppelde artiesten</p>
-      <div id="personList" class="space-y-1.5">
-        <p class="text-gray-600 text-sm">Laden...</p>
-      </div>
-      <div class="mt-3 flex gap-3">
-        <button onclick="selectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
-        <button onclick="deselectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+
+      <div class="relative" id="wrap_person">
+        <button type="button" onclick="toggleDropdown('person')"
+          class="w-full flex items-center justify-between bg-[#0d0d0d] border border-[#2a2a2a] hover:border-gray-600 rounded-lg px-4 py-2.5 text-sm text-left transition-colors">
+          <span id="personSummary" class="text-white">Laden...</span>
+          <svg id="chev_person" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div id="dd_person" class="hidden absolute left-0 right-0 mt-1 z-30 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg shadow-2xl overflow-hidden">
+          <div class="px-3 pt-2.5 pb-2 border-b border-[#2a2a2a] bg-[#161616]">
+            <input type="text" id="personSearch" oninput="filterPersons()" placeholder="Zoek op naam..."
+              class="w-full bg-[#0d0d0d] border border-[#2a2a2a] text-white rounded-lg px-3 py-1.5 text-xs mb-2 focus:outline-none focus:border-[#FFD100] transition-colors">
+            <div class="flex gap-4">
+              <button type="button" onclick="selectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles selecteren</button>
+              <button type="button" onclick="deselectAllPersons()" class="text-xs text-gray-400 hover:text-white transition-colors">Alles deselecteren</button>
+            </div>
+          </div>
+          <div id="personList" class="max-h-64 overflow-y-auto p-2">
+            <p class="text-gray-600 text-sm p-2">Laden...</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -97,13 +125,18 @@
       const { data } = await db.from('statements').select('id, period, filename').order('uploaded_at', { ascending: false })
       allStatements = data || []
       const list = document.getElementById('stmtList')
-      if (!allStatements.length) { list.innerHTML = '<p class="text-gray-600 text-sm">Geen statements beschikbaar.</p>'; return }
+      if (!allStatements.length) {
+        list.innerHTML = '<p class="text-gray-600 text-sm p-2">Geen statements beschikbaar.</p>'
+        document.getElementById('stmtSummary').textContent = 'Geen statements beschikbaar'
+        return
+      }
       list.innerHTML = allStatements.map(s => `
-        <label class="flex items-center gap-3 p-2.5 bg-[#0d0d0d] rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
-          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-[#FFD100]" checked>
+        <label class="flex items-center gap-3 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
+          <input type="checkbox" value="${s.id}" class="stmtCheck w-4 h-4 accent-[#FFD100]" onchange="updateStmtSummary()" checked>
           <span class="text-white text-sm">${s.period || s.filename}</span>
         </label>
       `).join('')
+      updateStmtSummary()
     }
 
     async function loadPersons() {
@@ -118,20 +151,27 @@
       allPersons = (persons || []).map(p => ({ ...p, artists: byPerson[p.id] || [] }))
 
       const list = document.getElementById('personList')
-      if (!allPersons.length) { list.innerHTML = '<p class="text-gray-600 text-sm">Geen personen gevonden.</p>'; return }
+      if (!allPersons.length) {
+        list.innerHTML = '<p class="text-gray-600 text-sm p-2">Geen personen gevonden.</p>'
+        document.getElementById('personSummary').textContent = 'Geen personen gevonden'
+        return
+      }
       list.innerHTML = allPersons.map(p => {
         const hasArtists = p.artists.length > 0
         const hasEmail   = !!p.email
+        const naam       = `${p.first_name} ${p.last_name}`
         return `
-          <div class="flex items-center justify-between py-2 border-b border-[#2a2a2a]/50 last:border-0">
-            <div class="flex items-center gap-3">
-              <input type="checkbox" value="${p.id}" class="personCheck w-4 h-4 accent-[#FFD100]" ${hasArtists ? 'checked' : 'disabled'}>
-              <div>
-                <span class="text-sm ${hasArtists ? 'text-white' : 'text-gray-600'}">${p.first_name} ${p.last_name}</span>
+          <div class="personRow flex items-center justify-between py-2 px-1 border-b border-[#2a2a2a]/50 last:border-0"
+               data-naam="${naam.toLowerCase()}">
+            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+              <input type="checkbox" value="${p.id}" class="personCheck w-4 h-4 accent-[#FFD100] shrink-0"
+                onchange="updatePersonSummary()" ${hasArtists ? 'checked' : 'disabled'}>
+              <div class="truncate">
+                <span class="text-sm ${hasArtists ? 'text-white' : 'text-gray-600'}">${naam}</span>
                 <span class="text-gray-600 text-xs ml-2">${p.artists.length} artiest${p.artists.length !== 1 ? 'en' : ''}</span>
               </div>
-            </div>
-            <div class="flex items-center gap-2 text-xs">
+            </label>
+            <div class="flex items-center gap-2 text-xs shrink-0 pl-3">
               ${hasEmail
                 ? `<span class="text-gray-400">${p.email}</span>`
                 : `<span class="text-gray-600 italic">geen email</span>`}
@@ -139,12 +179,85 @@
           </div>
         `
       }).join('')
+      updatePersonSummary()
     }
 
-    function selectAllStatements()   { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = true) }
-    function deselectAllStatements() { document.querySelectorAll('.stmtCheck').forEach(c => c.checked = false) }
-    function selectAllPersons()      { document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => c.checked = true) }
-    function deselectAllPersons()    { document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => c.checked = false) }
+    // ── Dropdowns ────────────────────────────────────────────────
+    function toggleDropdown(key) {
+      const dd = document.getElementById(`dd_${key}`)
+      const open = dd.classList.contains('hidden')
+      closeDropdowns()
+      if (open) {
+        dd.classList.remove('hidden')
+        document.getElementById(`chev_${key}`).classList.add('rotate-180')
+        if (key === 'person') document.getElementById('personSearch').focus()
+      }
+    }
+
+    function closeDropdowns() {
+      ;['stmt', 'person'].forEach(k => {
+        document.getElementById(`dd_${k}`)?.classList.add('hidden')
+        document.getElementById(`chev_${k}`)?.classList.remove('rotate-180')
+      })
+    }
+
+    // Klik buiten het blok = dichtklappen
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#wrap_stmt, #wrap_person')) closeDropdowns()
+    })
+
+    // ── Samenvattingsregel op de dichtgeklapte knop ──────────────
+    function updateStmtSummary() {
+      const all = [...document.querySelectorAll('.stmtCheck')]
+      const n   = all.filter(c => c.checked).length
+      const el  = document.getElementById('stmtSummary')
+      if (n === 0)            { el.textContent = 'Geen statements geselecteerd'; el.className = 'text-gray-500' }
+      else if (n === all.length) { el.textContent = `Alle ${n} statement${n !== 1 ? 's' : ''}`; el.className = 'text-white' }
+      else                    { el.textContent = `${n} van ${all.length} statements`; el.className = 'text-white' }
+    }
+
+    function updatePersonSummary() {
+      // Personen zonder artiesten kunnen niet gekozen worden; die tellen niet mee
+      const all = [...document.querySelectorAll('.personCheck:not(:disabled)')]
+      const n   = all.filter(c => c.checked).length
+      const el  = document.getElementById('personSummary')
+      if (n === 0)            { el.textContent = 'Geen personen geselecteerd'; el.className = 'text-gray-500' }
+      else if (n === all.length) { el.textContent = `Alle ${n} perso${n !== 1 ? 'nen' : 'on'}`; el.className = 'text-white' }
+      else                    { el.textContent = `${n} van ${all.length} personen`; el.className = 'text-white' }
+    }
+
+    // ── Zoeken in de personenlijst ───────────────────────────────
+    // Verbergt alleen rijen; de vinkjes blijven staan, dus wat je eerder
+    // aankruiste blijft geselecteerd ook als het buiten beeld valt.
+    function filterPersons() {
+      const q = document.getElementById('personSearch').value.trim().toLowerCase()
+      document.querySelectorAll('.personRow').forEach(row => {
+        // style.display i.p.v. een class: die kan niet botsen met de flex-class
+        row.style.display = (!q || row.dataset.naam.includes(q)) ? '' : 'none'
+      })
+    }
+
+    // ── Alles selecteren / deselecteren ──────────────────────────
+    // Werkt op wat je op dat moment ziet: staat er een zoekterm, dan alleen
+    // op de zichtbare personen.
+    const zichtbaar = c => c.closest('.personRow')?.style.display !== 'none'
+
+    function selectAllStatements() {
+      document.querySelectorAll('.stmtCheck').forEach(c => c.checked = true)
+      updateStmtSummary()
+    }
+    function deselectAllStatements() {
+      document.querySelectorAll('.stmtCheck').forEach(c => c.checked = false)
+      updateStmtSummary()
+    }
+    function selectAllPersons() {
+      document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => { if (zichtbaar(c)) c.checked = true })
+      updatePersonSummary()
+    }
+    function deselectAllPersons() {
+      document.querySelectorAll('.personCheck:not(:disabled)').forEach(c => { if (zichtbaar(c)) c.checked = false })
+      updatePersonSummary()
+    }
 
     function log(msg, type = 'normal') {
       const el = document.getElementById('progressLog')

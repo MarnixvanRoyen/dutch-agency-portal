@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Totaaloverzicht persoon — DJ·World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-ink text-white min-h-screen font-sans">
+
+  <aside id="sidebar" class="w-52 bg-card border-r border-line fixed h-full z-40 top-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"></aside>
+
+  <main class="md:ml-52 p-4 pt-16 md:p-8 md:pt-8">
+
+    <!-- Kop -->
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+      <div class="min-w-0">
+        <a href="persons.html" class="text-gray-600 hover:text-brand text-xs transition-colors">&larr; Terug naar Personen</a>
+        <h1 id="titel" class="text-xl font-bold mt-1">Totaaloverzicht</h1>
+        <p id="ondertitel" class="text-gray-500 text-sm mt-0.5">Alles vanaf het begin — inkomsten, openstaand en uitbetaald</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="persoonKiezer" onchange="wisselPersoon(this.value)"
+          class="bg-card border border-line text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors max-w-[220px]"></select>
+        <button id="pdfKnop" onclick="downloadPdf()" disabled
+          class="flex items-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-40 text-black font-bold text-sm px-4 py-2.5 rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Download PDF
+        </button>
+      </div>
+    </div>
+
+    <div id="laden" class="text-gray-500 text-sm py-10">Overzicht laden...</div>
+    <div id="fout" class="hidden text-red-400 text-sm py-10"></div>
+
+    <div id="inhoud" class="hidden space-y-6">
+
+      <!-- Kerncijfers -->
+      <div id="kerncijfers" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3"></div>
+
+      <!-- Waarschuwing ongeboekt -->
+      <div id="ongeboektBlok" class="hidden bg-card border border-line rounded-xl p-4 text-sm"></div>
+
+      <!-- Per periode -->
+      <section class="bg-card border border-line rounded-xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
+          <h2 class="text-white text-sm font-semibold">Inkomsten per periode</h2>
+          <span class="text-gray-600 text-xs">bedragen na aftrek zoals op dat statement vastgelegd</span>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm"><thead>
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Periode</th>
+            <th class="text-right px-5 py-3 font-medium">Bruto</th>
+            <th class="text-right px-5 py-3 font-medium hidden sm:table-cell">Aggregator</th>
+            <th class="text-right px-5 py-3 font-medium hidden sm:table-cell">DJ&middot;World</th>
+            <th class="text-right px-5 py-3 font-medium">Jouw netto</th>
+            <th class="text-right px-5 py-3 font-medium">In administratie</th>
+          </tr></thead><tbody id="periodeTabel"></tbody></table></div>
+      </section>
+
+      <!-- Per nummer -->
+      <section class="bg-card border border-line rounded-xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-white text-sm font-semibold">Inkomsten per nummer <span id="trackAantal" class="text-gray-600 font-normal"></span></h2>
+          <label class="flex items-center gap-2 text-gray-500 text-xs cursor-pointer">
+            <input type="checkbox" id="verbergLeeg" checked onchange="tekenTracks()" class="w-3.5 h-3.5 accent-brand">
+            Verberg nummers zonder inkomsten
+          </label>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm"><thead>
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Nummer</th>
+            <th class="text-right px-5 py-3 font-medium hidden md:table-cell">Jouw aandeel</th>
+            <th class="text-right px-5 py-3 font-medium hidden lg:table-cell">Streams</th>
+            <th class="text-right px-5 py-3 font-medium hidden lg:table-cell">Downloads</th>
+            <th class="text-right px-5 py-3 font-medium">Bruto</th>
+            <th class="text-right px-5 py-3 font-medium">Jouw netto</th>
+          </tr></thead><tbody id="trackTabel"></tbody></table></div>
+      </section>
+
+      <!-- Grootboek -->
+      <section class="bg-card border border-line rounded-xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
+          <h2 class="text-white text-sm font-semibold">Opbouw van het saldo</h2>
+          <span class="text-gray-600 text-xs">alles wat erbij kwam en eraf ging</span>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm"><thead>
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Datum</th>
+            <th class="text-left px-5 py-3 font-medium">Omschrijving</th>
+            <th class="text-right px-5 py-3 font-medium">Bedrag</th>
+            <th class="text-right px-5 py-3 font-medium">Saldo</th>
+          </tr></thead><tbody id="mutatieTabel"></tbody></table></div>
+      </section>
+
+      <!-- Uitbetalingen -->
+      <section class="bg-card border border-line rounded-xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line">
+          <h2 class="text-white text-sm font-semibold">Uitbetalingen</h2>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm"><thead>
+          <tr class="border-b border-line text-gray-500 text-xs uppercase">
+            <th class="text-left px-5 py-3 font-medium">Gemeld op</th>
+            <th class="text-right px-5 py-3 font-medium">Gemeld bedrag</th>
+            <th class="text-left px-5 py-3 font-medium">Status</th>
+            <th class="text-left px-5 py-3 font-medium hidden sm:table-cell">Factuur</th>
+            <th class="text-left px-5 py-3 font-medium hidden sm:table-cell">Betaald op</th>
+            <th class="text-right px-5 py-3 font-medium">Betaald</th>
+          </tr></thead><tbody id="payoutTabel"></tbody></table></div>
+      </section>
+
+      <p class="text-gray-600 text-xs">
+        Bedragen per nummer staan in vier decimalen — royalty's per track zijn vaak fracties van een cent.
+        De overige tabellen tonen twee decimalen.
+      </p>
+    </div>
+
+  </main>
+
+  <img id="logoBron" src="djworld-logo.png" alt="" class="hidden">
+
+<script src="shared.js"></script>
+  <script>
+    // ════════════════════════════════════════════════════════
+    //  TOTAALOVERZICHT PER PERSOON
+    // ════════════════════════════════════════════════════════
+    //  Eén uitdraai met alles wat er over één persoon te zeggen valt:
+    //    · wat hij ooit heeft verdiend, per periode en per nummer
+    //    · wat daarvan in de administratie staat en wat nog geboekt moet worden
+    //    · wat er is uitbetaald en wat er nog openstaat
+    //
+    //  Het scherm en de PDF komen uit DEZELFDE verzameling data (verzamel()),
+    //  zodat er nooit twee waarheden kunnen ontstaan.
+    //
+    //  Bedragen komen altijd via splitBedrag() met het tarief van het statement
+    //  zelf — per regel splitsen, dan pas optellen. Zie shared.js.
+
+    const params    = new URLSearchParams(location.search)
+    let   persoonId = params.get('person')
+    let   D         = null   // de verzamelde data van de huidige persoon
+    let   alleP     = []
+
+    async function loadPage() {
+      const session = await initPage('persons')
+      if (!session) return
+      await laadPersonen()
+      if (!persoonId) { toonFout('Geen persoon gekozen. Open dit overzicht vanaf de pagina Personen.'); return }
+      await laadOverzicht()
+    }
+
+    async function laadPersonen() {
+      const { data } = await db.from('persons').select('id, first_name, last_name').order('first_name')
+      alleP = (data || []).sort((a, b) =>
+        (a.first_name || '').localeCompare(b.first_name || '', 'nl', { sensitivity: 'base' }) ||
+        (a.last_name  || '').localeCompare(b.last_name  || '', 'nl', { sensitivity: 'base' }))
+      document.getElementById('persoonKiezer').innerHTML =
+        alleP.map(p => `<option value="${p.id}" ${p.id === persoonId ? 'selected' : ''}>${p.first_name} ${p.last_name}</option>`).join('')
+    }
+
+    function wisselPersoon(id) {
+      persoonId = id
+      history.replaceState(null, '', `persoon-overzicht.html?person=${id}`)
+      laadOverzicht()
+    }
+
+    function toonFout(tekst) {
+      document.getElementById('laden').classList.add('hidden')
+      document.getElementById('inhoud').classList.add('hidden')
+      const el = document.getElementById('fout')
+      el.textContent = tekst
+      el.classList.remove('hidden')
+    }
+
+    async function laadOverzicht() {
+      document.getElementById('laden').classList.remove('hidden')
+      document.getElementById('inhoud').classList.add('hidden')
+      document.getElementById('fout').classList.add('hidden')
+      document.getElementById('pdfKnop').disabled = true
+      try {
+        D = await verzamel(persoonId)
+      } catch (e) {
+        toonFout('Kon het overzicht niet laden: ' + e.message)
+        return
+      }
+      teken()
+      document.getElementById('laden').classList.add('hidden')
+      document.getElementById('inhoud').classList.remove('hidden')
+      document.getElementById('pdfKnop').disabled = false
+    }
+
+    // ── Ophalen (Supabase geeft max 1000 rijen per keer) ──────
+    async function paginerend(bouwQuery) {
+      const uit = []
+      let from = 0
+      while (true) {
+        const { data, error } = await bouwQuery(from)
+        if (error) throw new Error(error.message)
+        if (!data || !data.length) break
+        uit.push(...data)
+        if (data.length < 1000) break
+        from += 1000
+      }
+      return uit
+    }
+
+    const som = (rijen, veld) => rijen.reduce((s, r) => s + (r[veld] || 0), 0)
+
+    // ════════════════════════════════════════════════════════
+    //  DATA VERZAMELEN
+    // ════════════════════════════════════════════════════════
+    async function verzamel(personId) {
+      const { data: p } = await db.from('persons').select('*').eq('id', personId).single()
+      if (!p) throw new Error('Persoon niet gevonden.')
+
+      const { data: artiesten } = await db.from('artists').select('id, name').eq('person_id', personId).order('name')
+      const artistIds = (artiesten || []).map(a => a.id)
+
+      const stmts = await paginerend(from => db.from('statements')
+        .select('id, period, filename, uploaded_at, buiten_administratie')
+        .order('uploaded_at').range(from, from + 999))
+
+      const mutaties = await paginerend(from => db.from('ledger_entries')
+        .select('type, amount, entry_date, omschrijving, statement_id, created_at, statements(period, filename)')
+        .eq('person_id', personId)
+        .order('entry_date').order('created_at').range(from, from + 999))
+
+      const { data: payouts } = await db.from('payouts')
+        .select('*').eq('person_id', personId).order('gemeld_op', { ascending: false })
+
+      // ── Welke tracks, en voor hoeveel procent? ──
+      // Eén persoon kan met meerdere artiestennamen op dezelfde track staan;
+      // die aandelen tellen bij elkaar op.
+      const splitPerTrack = {}, infoPerTrack = {}
+      if (artistIds.length) {
+        const tas = await paginerend(from => db.from('track_artists')
+          .select('track_id, split_percentage, tracks(id, title, isrc)')
+          .in('artist_id', artistIds).range(from, from + 999))
+        tas.forEach(t => {
+          if (!t.track_id) return
+          splitPerTrack[t.track_id] = (splitPerTrack[t.track_id] || 0) + (parseFloat(t.split_percentage) || 0) / 100
+          infoPerTrack[t.track_id] = { titel: t.tracks?.title || '(geen titel)', isrc: t.tracks?.isrc || '' }
+        })
+      }
+      const trackIds = Object.keys(splitPerTrack)
+
+      // ── Alle statementregels van die tracks, over alle periodes ──
+      // In stukken van 120 track-ids, anders wordt de URL te lang.
+      const regels = []
+      for (let i = 0; i < trackIds.length; i += 120) {
+        const stuk = trackIds.slice(i, i + 120)
+        const deel = await paginerend(from => db.from('statement_lines')
+          .select('statement_id, track_id, nett_royalty, usage_type')
+          .in('track_id', stuk).range(from, from + 999))
+        regels.push(...deel)
+      }
+
+      // ── Optellen per nummer en per statement ──
+      const perTrack = {}, perStatement = {}
+      regels.forEach(l => {
+        const pct = splitPerTrack[l.track_id] || 0
+        if (!pct) return
+        const s = splitBedrag(l.nett_royalty, l.statement_id)
+
+        if (!perTrack[l.track_id]) perTrack[l.track_id] = {
+          titel: infoPerTrack[l.track_id]?.titel || '(geen titel)',
+          isrc:  infoPerTrack[l.track_id]?.isrc  || '',
+          splitPct: Math.round(pct * 10000) / 100,   // afronden: anders levert 0,5+0,5 een 100.00000000000001 op
+          stream: 0, download: 0, bruto: 0, agg: 0, dj: 0, netto: 0,
+        }
+        const t = perTrack[l.track_id]
+        t.bruto += s.bruto * pct; t.agg += s.aggAmt * pct
+        t.dj    += s.djAmt * pct; t.netto += s.netAmt * pct
+        if (l.usage_type === 'stream')   t.stream   += s.bruto * pct
+        if (l.usage_type === 'download') t.download += s.bruto * pct
+
+        if (!perStatement[l.statement_id]) perStatement[l.statement_id] = { bruto: 0, agg: 0, dj: 0, netto: 0 }
+        const st = perStatement[l.statement_id]
+        st.bruto += s.bruto * pct; st.agg += s.aggAmt * pct
+        st.dj    += s.djAmt * pct; st.netto += s.netAmt * pct
+      })
+
+      // ── Wat staat er al in het grootboek geboekt? ──
+      const geboektPerStmt = {}
+      mutaties.filter(m => m.type === 'royalty' && m.statement_id).forEach(m => {
+        geboektPerStmt[m.statement_id] = (geboektPerStmt[m.statement_id] || 0) + (parseFloat(m.amount) || 0)
+      })
+
+      const periodes = stmts.filter(s => perStatement[s.id]).map(s => {
+        const r = perStatement[s.id]
+        const geboekt = geboektPerStmt[s.id]
+        return {
+          periode: s.period || s.filename,
+          bruto: r.bruto, agg: r.agg, dj: r.dj, netto: r.netto,
+          geboekt: geboekt == null ? null : geboekt,
+          status: s.buiten_administratie ? 'buiten' : (geboekt == null ? 'open' : 'geboekt'),
+        }
+      })
+
+      const tracks = Object.values(perTrack).sort((a, b) => b.netto - a.netto)
+
+      const saldo        = mutaties.reduce((s, m) => s + (parseFloat(m.amount) || 0), 0)
+      // Aftrekken in de reduce zelf: zonder uitbetalingen komt er dan een nette 0
+      // uit en niet een min-nul, die als "-€ 0,00" op het scherm zou komen.
+      const uitbetaald   = mutaties.filter(m => m.type === 'uitbetaling')
+                                   .reduce((s, m) => s - (parseFloat(m.amount) || 0), 0)
+      const nogTeBoeken  = som(periodes.filter(x => x.status === 'open'),   'netto')
+      const buitenAdmin  = som(periodes.filter(x => x.status === 'buiten'), 'netto')
+      const inBehandeling = (payouts || [])
+        .filter(u => u.status === 'gemeld' || u.status === 'factuur_ontvangen')
+        .reduce((s, u) => s + (parseFloat(u.gemeld_bedrag) || 0), 0)
+
+      return {
+        p, artiesten: artiesten || [], periodes, tracks, mutaties, payouts: payouts || [],
+        totaal: {
+          bruto: som(periodes, 'bruto'), agg: som(periodes, 'agg'),
+          dj: som(periodes, 'dj'), netto: som(periodes, 'netto'),
+          saldo, uitbetaald, nogTeBoeken, buitenAdmin, inBehandeling,
+        },
+      }
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  SCHERM
+    // ════════════════════════════════════════════════════════
+
+    // Vier decimalen voor de trackregels: royalty's per nummer zijn vaak
+    // fracties van een cent, met twee decimalen zou de halve tabel 0,00 zijn.
+    const eur4 = v => new Intl.NumberFormat('nl-NL',
+      { style: 'currency', currency: 'EUR', minimumFractionDigits: 4 }).format(v || 0)
+
+    const STATUS_LABEL = {
+      geboekt: '<span class="text-green-400">geboekt</span>',
+      open:    '<span class="text-orange-400">nog te boeken</span>',
+      buiten:  '<span class="text-gray-500">buiten administratie</span>',
+    }
+
+    function teken() {
+      const naam = `${D.p.first_name} ${D.p.last_name}`
+      document.getElementById('titel').textContent = naam
+      const namen = D.artiesten.map(a => a.name).join(' · ')
+      document.getElementById('ondertitel').innerHTML =
+        `Totaaloverzicht vanaf het begin${namen ? ' — artiestennamen: <span class="text-gray-400">' + namen + '</span>' : ' — <span class="text-orange-400">geen artiestennamen gekoppeld</span>'}`
+      document.title = `${naam} — Totaaloverzicht`
+      tekenKerncijfers()
+      tekenPeriodes()
+      tekenTracks()
+      tekenMutaties()
+      tekenPayouts()
+    }
+
+    function tegel(label, waarde, kleur = 'text-white', toelichting = '') {
+      return `
+        <div class="bg-card border border-line rounded-xl px-4 py-3.5">
+          <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">${label}</div>
+          <div class="${kleur} text-lg font-bold">${waarde}</div>
+          ${toelichting ? `<div class="text-gray-600 text-xs mt-0.5">${toelichting}</div>` : ''}
+        </div>`
+    }
+
+    function tekenKerncijfers() {
+      const t = D.totaal
+      document.getElementById('kerncijfers').innerHTML = [
+        tegel('Bruto inkomsten',  fmt(t.bruto),       'text-white',  'vóór aftrek, hele historie'),
+        tegel('Jouw netto',       fmt(t.netto),       'text-white',  'na aggregator en DJ·World'),
+        tegel('Al uitbetaald',    fmt(t.uitbetaald),  'text-gray-300'),
+        tegel('Openstaand saldo', fmt(t.saldo),       t.saldo < 0 ? 'text-red-400' : 'text-green-400', 'volgens het grootboek'),
+        tegel('Nog te boeken',    fmt(t.nogTeBoeken), t.nogTeBoeken > 0 ? 'text-orange-400' : 'text-gray-500', 'nog niet in het saldo'),
+        tegel('In behandeling',   fmt(t.inBehandeling), 'text-gray-300', 'gemeld, nog niet betaald'),
+      ].join('')
+
+      const open = D.periodes.filter(x => x.status === 'open')
+      const blok = document.getElementById('ongeboektBlok')
+      if (!open.length) { blok.classList.add('hidden'); return }
+      blok.classList.remove('hidden')
+      blok.innerHTML = `
+        <div class="flex items-start gap-3">
+          <span class="text-orange-400 text-lg leading-none">●</span>
+          <div>
+            <div class="text-white">Er staat nog ${fmt(D.totaal.nogTeBoeken)} klaar dat niet in het saldo zit.</div>
+            <div class="text-gray-500 text-xs mt-1">
+              Deze periodes zijn wel geüpload maar nog niet geboekt: ${open.map(o => o.periode).join(', ')}.
+              Boeken doe je op <a href="financien.html" class="text-brand hover:underline">Financiën → Statements boeken</a>.
+            </div>
+          </div>
+        </div>`
+    }
+
+    function tekenPeriodes() {
+      const rijen = D.periodes
+      const el = document.getElementById('periodeTabel')
+      if (!rijen.length) {
+        el.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Geen inkomsten gevonden.</td></tr>'
+        return
+      }
+      el.innerHTML = rijen.map(r => `
+        <tr class="border-t border-line">
+          <td class="px-5 py-3 text-white">${r.periode}</td>
+          <td class="px-5 py-3 text-right text-gray-300">${fmt(r.bruto)}</td>
+          <td class="px-5 py-3 text-right text-gray-500 hidden sm:table-cell">-${fmt(r.agg)}</td>
+          <td class="px-5 py-3 text-right text-gray-500 hidden sm:table-cell">-${fmt(r.dj)}</td>
+          <td class="px-5 py-3 text-right text-white font-medium">${fmt(r.netto)}</td>
+          <td class="px-5 py-3 text-right text-xs">${STATUS_LABEL[r.status]}${
+            r.status === 'geboekt' && Math.abs(r.geboekt - r.netto) > 0.005
+              ? `<div class="text-gray-600">als ${fmt(r.geboekt)}</div>` : ''}</td>
+        </tr>`).join('') + `
+        <tr class="border-t border-line bg-sunken font-bold">
+          <td class="px-5 py-3 text-white">Totaal</td>
+          <td class="px-5 py-3 text-right text-white">${fmt(D.totaal.bruto)}</td>
+          <td class="px-5 py-3 text-right text-gray-400 hidden sm:table-cell">-${fmt(D.totaal.agg)}</td>
+          <td class="px-5 py-3 text-right text-gray-400 hidden sm:table-cell">-${fmt(D.totaal.dj)}</td>
+          <td class="px-5 py-3 text-right text-brand">${fmt(D.totaal.netto)}</td>
+          <td></td>
+        </tr>`
+    }
+
+    function zichtbareTracks() {
+      const verberg = document.getElementById('verbergLeeg').checked
+      return verberg ? D.tracks.filter(t => Math.abs(t.netto) >= 0.00005) : D.tracks
+    }
+
+    function tekenTracks() {
+      const rijen = zichtbareTracks()
+      document.getElementById('trackAantal').textContent =
+        `(${rijen.length}${rijen.length !== D.tracks.length ? ' van ' + D.tracks.length : ''})`
+      const el = document.getElementById('trackTabel')
+      if (!rijen.length) {
+        el.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Geen nummers met inkomsten.</td></tr>'
+        return
+      }
+      el.innerHTML = rijen.map(t => `
+        <tr class="border-t border-line">
+          <td class="px-5 py-3 text-white">${t.titel}${t.isrc ? `<div class="text-gray-600 text-xs font-mono">${t.isrc}</div>` : ''}</td>
+          <td class="px-5 py-3 text-right text-gray-500 hidden md:table-cell">${fmtPct(t.splitPct)}</td>
+          <td class="px-5 py-3 text-right text-gray-500 hidden lg:table-cell">${eur4(t.stream)}</td>
+          <td class="px-5 py-3 text-right text-gray-500 hidden lg:table-cell">${eur4(t.download)}</td>
+          <td class="px-5 py-3 text-right text-gray-300">${eur4(t.bruto)}</td>
+          <td class="px-5 py-3 text-right text-white font-medium">${eur4(t.netto)}</td>
+        </tr>`).join('') + `
+        <tr class="border-t border-line bg-sunken font-bold">
+          <td class="px-5 py-3 text-white" colspan="2">Totaal ${rijen.length} nummer${rijen.length === 1 ? '' : 's'}</td>
+          <td class="px-5 py-3 text-right text-gray-400 hidden lg:table-cell">${eur4(som(rijen, 'stream'))}</td>
+          <td class="px-5 py-3 text-right text-gray-400 hidden lg:table-cell">${eur4(som(rijen, 'download'))}</td>
+          <td class="px-5 py-3 text-right text-white">${eur4(som(rijen, 'bruto'))}</td>
+          <td class="px-5 py-3 text-right text-brand">${eur4(som(rijen, 'netto'))}</td>
+        </tr>`
+    }
+
+    function omschrijvingVan(m) {
+      if (m.omschrijving) return m.omschrijving
+      const periode = m.statements?.period || m.statements?.filename
+      const labels = { royalty: "Royalty's", uitbetaling: 'Uitbetaling', beginsaldo: 'Beginsaldo',
+                       correctie: 'Correctie', voorschot: 'Voorschot', kosten: 'Doorbelaste kosten' }
+      return (labels[m.type] || m.type) + (periode ? ' ' + periode : '')
+    }
+
+    function tekenMutaties() {
+      const el = document.getElementById('mutatieTabel')
+      if (!D.mutaties.length) {
+        el.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-gray-600 text-sm">Nog niets geboekt in de financiële administratie.</td></tr>'
+        return
+      }
+      let loop = 0
+      el.innerHTML = D.mutaties.map(m => {
+        const bedrag = parseFloat(m.amount) || 0
+        loop += bedrag
+        return `
+          <tr class="border-t border-line">
+            <td class="px-5 py-3 text-gray-400 whitespace-nowrap">${fmtDate(m.entry_date)}</td>
+            <td class="px-5 py-3 text-white">${omschrijvingVan(m)}</td>
+            <td class="px-5 py-3 text-right ${bedrag < 0 ? 'text-red-400' : 'text-green-400'}">${fmt(bedrag)}</td>
+            <td class="px-5 py-3 text-right text-gray-300">${fmt(loop)}</td>
+          </tr>`
+      }).join('') + `
+        <tr class="border-t border-line bg-sunken font-bold">
+          <td class="px-5 py-3 text-white" colspan="3">Openstaand saldo</td>
+          <td class="px-5 py-3 text-right ${D.totaal.saldo < 0 ? 'text-red-400' : 'text-brand'}">${fmt(D.totaal.saldo)}</td>
+        </tr>`
+    }
+
+    const PAYOUT_STATUS = {
+      gemeld:            '<span class="text-orange-400">gemeld</span>',
+      factuur_ontvangen: '<span class="text-blue-400">factuur ontvangen</span>',
+      betaald:           '<span class="text-green-400">betaald</span>',
+      geannuleerd:       '<span class="text-gray-600">geannuleerd</span>',
+    }
+
+    function tekenPayouts() {
+      const el = document.getElementById('payoutTabel')
+      if (!D.payouts.length) {
+        el.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-gray-600 text-sm">Nog geen uitbetalingen gemeld.</td></tr>'
+        return
+      }
+      el.innerHTML = D.payouts.map(u => `
+        <tr class="border-t border-line">
+          <td class="px-5 py-3 text-gray-400 whitespace-nowrap">${fmtDate(u.gemeld_op)}</td>
+          <td class="px-5 py-3 text-right text-white">${fmt(u.gemeld_bedrag)}</td>
+          <td class="px-5 py-3 text-xs">${PAYOUT_STATUS[u.status] || u.status}</td>
+          <td class="px-5 py-3 text-gray-500 text-xs hidden sm:table-cell">${u.factuurnummer || '—'}</td>
+          <td class="px-5 py-3 text-gray-500 text-xs hidden sm:table-cell">${u.betaald_op ? fmtDate(u.betaald_op) : '—'}</td>
+          <td class="px-5 py-3 text-right text-gray-300">${u.betaald_bedrag != null ? fmt(u.betaald_bedrag) : '—'}</td>
+        </tr>`).join('') + `
+        <tr class="border-t border-line bg-sunken font-bold">
+          <td class="px-5 py-3 text-white" colspan="5">Totaal daadwerkelijk betaald</td>
+          <td class="px-5 py-3 text-right text-brand">${fmt(D.totaal.uitbetaald)}</td>
+        </tr>`
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  PDF
+    // ════════════════════════════════════════════════════════
+    //  Gebouwd met jsPDF + autoTable (niet met een schermafdruk), zodat lange
+    //  tabellen netjes over pagina's worden verdeeld en niets halverwege
+    //  doormidden wordt gesneden.
+    //
+    //  ⚠ headStyles/footStyles winnen van columnStyles: kolomkoppen en
+    //  totaalregels moeten daarom PER CEL rechts uitgelijnd worden met rechts().
+
+    const rechts  = tekst => ({ content: tekst, styles: { halign: 'right' } })
+
+    // Eigen euro-opmaak: fmt() zet er een niet-brekende spatie in die in
+    // sommige PDF-lettertypen als een vreemd teken uitkomt.
+    function eurPdf(v, decimalen = 2) {
+      const n = Math.abs(v) < (decimalen === 2 ? 0.005 : 0.00005) ? 0 : (v || 0)
+      const tekst = new Intl.NumberFormat('nl-NL',
+        { minimumFractionDigits: decimalen, maximumFractionDigits: decimalen }).format(Math.abs(n))
+      return (n < 0 ? '-€ ' : '€ ') + tekst
+    }
+    const eurPdf4 = v => eurPdf(v, 4)
+
+    function haalLogo() {
+      const el = document.getElementById('logoBron')
+      if (el?.complete && el.naturalWidth > 0) {
+        try {
+          const c = document.createElement('canvas')
+          c.width = el.naturalWidth; c.height = el.naturalHeight
+          c.getContext('2d').drawImage(el, 0, 0)
+          return { data: c.toDataURL('image/png'), aspect: el.naturalWidth / el.naturalHeight }
+        } catch (e) {}
+      }
+      return null
+    }
+
+    const STATUS_PDF = { geboekt: 'geboekt', open: 'nog te boeken', buiten: 'buiten administratie' }
+
+    function downloadPdf() {
+      if (!D) return
+      const { jsPDF } = window.jspdf
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pw  = doc.internal.pageSize.getWidth()
+      const ph  = doc.internal.pageSize.getHeight()
+      const GEEL = [255, 209, 0], GROEN = [26, 122, 58], DONKER = [30, 30, 30], GRIJS = [120, 120, 120]
+      const p    = D.p
+      const t    = D.totaal
+      const naam = `${p.first_name} ${p.last_name}`
+      const vandaagNL = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+      // ── Briefhoofd ──
+      doc.setFillColor(...GEEL).rect(0, 0, pw, 7, 'F')
+      const logo = haalLogo()
+      if (logo) doc.addImage(logo.data, 'PNG', 14, 10, Math.min(logo.aspect * 22, 62), 22)
+      else { doc.setFontSize(18).setFont('helvetica', 'bold').setTextColor(...DONKER); doc.text('DJ·World', 14, 24) }
+
+      doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...DONKER)
+      doc.text(naam, pw - 14, 14, { align: 'right' })
+      doc.setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...GRIJS)
+      let ay = 19
+      ;[p.street, [p.postal_code, p.city].filter(Boolean).join(' '), p.email]
+        .filter(Boolean).forEach(r => { doc.text(String(r), pw - 14, ay, { align: 'right' }); ay += 4.5 })
+
+      doc.setDrawColor(...DONKER).setLineWidth(0.4).line(14, 36, pw - 14, 36)
+      let y = 44
+
+      doc.setFontSize(15).setFont('helvetica', 'bold').setTextColor(...DONKER)
+      doc.text('Totaaloverzicht', 14, y); y += 6
+      doc.setFontSize(8.5).setFont('helvetica', 'normal').setTextColor(...GRIJS)
+      doc.text(`Opgemaakt op ${vandaagNL} · alles vanaf het begin`, 14, y); y += 4.5
+      const namen = D.artiesten.map(a => a.name).join(' · ')
+      if (namen) { doc.text(`Artiestennamen: ${namen}`, 14, y); y += 4.5 }
+      y += 4
+
+      // ── Kerncijfers: zes vakjes, drie naast elkaar ──
+      const vakjes = [
+        ['BRUTO INKOMSTEN',  eurPdf(t.bruto),        DONKER],
+        ['JOUW NETTO',       eurPdf(t.netto),        DONKER],
+        ['AL UITBETAALD',    eurPdf(t.uitbetaald),   DONKER],
+        ['OPENSTAAND SALDO', eurPdf(t.saldo),        t.saldo < 0 ? [190, 60, 60] : GROEN],
+        ['NOG TE BOEKEN',    eurPdf(t.nogTeBoeken),  t.nogTeBoeken > 0 ? [184, 138, 0] : GRIJS],
+        ['IN BEHANDELING',   eurPdf(t.inBehandeling), DONKER],
+      ]
+      const vb = (pw - 28 - 8) / 3    // breedte per vakje, 4mm tussenruimte
+      vakjes.forEach((v, i) => {
+        const kol = i % 3, rij = Math.floor(i / 3)
+        const vx = 14 + kol * (vb + 4), vy = y + rij * 20
+        doc.setFillColor(249, 249, 249).setDrawColor(221, 221, 221).setLineWidth(0.3)
+        doc.roundedRect(vx, vy, vb, 16, 1.5, 1.5, 'FD')
+        doc.setFontSize(6.5).setFont('helvetica', 'normal').setTextColor(...GRIJS)
+        doc.text(v[0], vx + 3, vy + 5.5)
+        doc.setFontSize(11).setFont('helvetica', 'bold').setTextColor(...v[2])
+        doc.text(v[1], vx + 3, vy + 12.5)
+      })
+      y += 46
+
+      if (t.buitenAdmin) {
+        doc.setFontSize(7.5).setFont('helvetica', 'italic').setTextColor(...GRIJS)
+        doc.text(`${eurPdf(t.buitenAdmin)} hiervan is buiten de tool om afgerekend en zit niet in het saldo.`, 14, y)
+        y += 7
+      }
+
+      // ── Hulpje: kop + tabel, met paginawissel als het niet meer past ──
+      const blok = (titel, opties) => {
+        if (y > ph - 50) { doc.addPage(); y = 20 }
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(...DONKER)
+        doc.text(titel, 14, y)
+        doc.autoTable(Object.assign({
+          startY: y + 2,
+          margin: { left: 14, right: 14 },
+          // Kop op elke pagina herhalen, de totaalregel ALLEEN op de laatste.
+          // Anders staat het eindtotaal onderaan elke pagina alsof dat het
+          // totaal van die pagina is.
+          showHead: 'everyPage',
+          showFoot: 'lastPage',
+          styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [...DONKER] },
+          headStyles: { fillColor: [...DONKER], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' },
+          footStyles: { fillColor: [248, 248, 248], textColor: [...DONKER], fontStyle: 'bold', fontSize: 7.5 },
+        }, opties))
+        y = doc.lastAutoTable.finalY + 10
+      }
+
+      // ── 1. Per periode ──
+      blok('Inkomsten per periode', {
+        head: [['Periode', ...['Bruto', 'Aggregator', 'DJ·World', 'Jouw netto'].map(rechts), 'In administratie']],
+        body: D.periodes.map(r => [
+          r.periode, rechts(eurPdf(r.bruto)), rechts(eurPdf(-r.agg)),
+          rechts(eurPdf(-r.dj)), rechts(eurPdf(r.netto)), STATUS_PDF[r.status],
+        ]),
+        foot: [['Totaal', rechts(eurPdf(t.bruto)), rechts(eurPdf(-t.agg)),
+                rechts(eurPdf(-t.dj)), rechts(eurPdf(t.netto)), '']],
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 24 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 },
+          4: { cellWidth: 26 }, 5: { cellWidth: 30 },
+        },
+      })
+
+      // ── 2. Per nummer ──
+      const tr = zichtbareTracks()
+      blok('Inkomsten per nummer', {
+        head: [['Nummer', ...['Aandeel', 'Streams', 'Downloads', 'Bruto', 'Jouw netto'].map(rechts)]],
+        body: tr.map(x => [
+          x.titel, rechts(fmtPct(x.splitPct)), rechts(eurPdf4(x.stream)),
+          rechts(eurPdf4(x.download)), rechts(eurPdf4(x.bruto)), rechts(eurPdf4(x.netto)),
+        ]),
+        foot: [['Totaal', '', rechts(eurPdf4(som(tr, 'stream'))), rechts(eurPdf4(som(tr, 'download'))),
+                rechts(eurPdf4(som(tr, 'bruto'))), rechts(eurPdf4(som(tr, 'netto')))]],
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 17 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 },
+          4: { cellWidth: 26 }, 5: { cellWidth: 26 },
+        },
+      })
+
+      // ── 3. Grootboek ──
+      let loop = 0
+      blok('Opbouw van het saldo', {
+        head: [['Datum', 'Omschrijving', rechts('Bedrag'), rechts('Saldo')]],
+        body: D.mutaties.map(m => {
+          const bedrag = parseFloat(m.amount) || 0
+          loop += bedrag
+          return [fmtDate(m.entry_date), omschrijvingVan(m), rechts(eurPdf(bedrag)), rechts(eurPdf(loop))]
+        }),
+        foot: [['', 'Openstaand saldo', '', rechts(eurPdf(t.saldo))]],
+        columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 28 }, 3: { cellWidth: 28 } },
+      })
+
+      // ── 4. Uitbetalingen ──
+      if (D.payouts.length) {
+        blok('Uitbetalingen', {
+          head: [['Gemeld op', rechts('Gemeld bedrag'), 'Status', 'Factuur', 'Betaald op', rechts('Betaald')]],
+          body: D.payouts.map(u => [
+            fmtDate(u.gemeld_op), rechts(eurPdf(u.gemeld_bedrag)),
+            (u.status || '').replace('_', ' '), u.factuurnummer || '—',
+            u.betaald_op ? fmtDate(u.betaald_op) : '—',
+            rechts(u.betaald_bedrag != null ? eurPdf(u.betaald_bedrag) : '—'),
+          ]),
+          foot: [['', '', '', '', 'Totaal betaald', rechts(eurPdf(t.uitbetaald))]],
+          columnStyles: {
+            0: { cellWidth: 24 }, 1: { cellWidth: 28 }, 2: { cellWidth: 'auto' },
+            3: { cellWidth: 28 }, 4: { cellWidth: 24 }, 5: { cellWidth: 26 },
+          },
+        })
+      }
+
+      // ── Voettekst op elke pagina ──
+      const paginas = doc.internal.getNumberOfPages()
+      for (let i = 1; i <= paginas; i++) {
+        doc.setPage(i)
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(...GRIJS)
+        doc.text(`DJ·World · Rob Boskamp BV · Totaaloverzicht ${naam}`, 14, ph - 8)
+        doc.text(`${i} / ${paginas}`, pw - 14, ph - 8, { align: 'right' })
+      }
+
+      doc.save(`DJWorld totaaloverzicht ${naam} ${new Date().toISOString().slice(0, 10)}.pdf`
+        .replace(/[\\/:*?"<>|]/g, '-'))
+    }
+
+    loadPage()
+  </script>
+</body>
+</html>

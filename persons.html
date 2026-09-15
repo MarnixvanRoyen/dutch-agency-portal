@@ -252,6 +252,7 @@
                 : '<span class="text-gray-600">—</span>'}
             </td>
             <td class="px-5 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+              <a href="persoon-overzicht.html?person=${p.id}" target="_blank" class="text-gray-500 hover:text-brand text-xs mr-3 transition-colors">Overzicht</a>
               <button onclick="openStatementPicker('${p.id}')" class="text-gray-500 hover:text-brand text-xs mr-3 transition-colors">Afrekening</button>
               <button onclick='editPerson(${JSON.stringify(p)})' class="text-gray-500 hover:text-white text-xs mr-3 transition-colors">Bewerken</button>
               <button onclick="deletePerson('${p.id}', '${fullName.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-red-400 text-xs transition-colors">Verwijderen</button>

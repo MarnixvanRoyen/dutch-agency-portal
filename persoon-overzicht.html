@@ -119,6 +119,8 @@
       <p class="text-gray-600 text-xs">
         Bedragen per nummer staan in vier decimalen — royalty's per track zijn vaak fracties van een cent.
         De overige tabellen tonen twee decimalen.
+        Bij streams en downloads staat bovenaan het aantal (het totaal van het nummer, niet naar jouw aandeel omgerekend)
+        en daaronder de bruto opbrengst daarvan voor jouw aandeel.
       </p>
     </div>
 
@@ -256,7 +258,7 @@
       for (let i = 0; i < trackIds.length; i += 120) {
         const stuk = trackIds.slice(i, i + 120)
         const deel = await paginerend(from => db.from('statement_lines')
-          .select('statement_id, track_id, nett_royalty, usage_type')
+          .select('statement_id, track_id, nett_royalty, usage_type, quantity')
           .in('track_id', stuk).range(from, from + 999))
         regels.push(...deel)
       }
@@ -273,12 +275,19 @@
           isrc:  infoPerTrack[l.track_id]?.isrc  || '',
           splitPct: Math.round(pct * 10000) / 100,   // afronden: anders levert 0,5+0,5 een 100.00000000000001 op
           stream: 0, download: 0, bruto: 0, agg: 0, dj: 0, netto: 0,
+          nStream: 0, nDownload: 0, metAantal: false,   // aantallen: NIET maal het aandeel — een stream is een stream
         }
         const t = perTrack[l.track_id]
         t.bruto += s.bruto * pct; t.agg += s.aggAmt * pct
         t.dj    += s.djAmt * pct; t.netto += s.netAmt * pct
         if (l.usage_type === 'stream')   t.stream   += s.bruto * pct
         if (l.usage_type === 'download') t.download += s.bruto * pct
+        const q = parseInt(l.quantity)
+        if (Number.isFinite(q)) {
+          t.metAantal = true
+          if (l.usage_type === 'stream')   t.nStream   += q
+          if (l.usage_type === 'download') t.nDownload += q
+        }
 
         if (!perStatement[l.statement_id]) perStatement[l.statement_id] = { bruto: 0, agg: 0, dj: 0, netto: 0 }
         const st = perStatement[l.statement_id]
@@ -332,6 +341,9 @@
 
     // Vier decimalen voor de trackregels: royalty's per nummer zijn vaak
     // fracties van een cent, met twee decimalen zou de halve tabel 0,00 zijn.
+    // Aantallen: '—' als er voor dit nummer geen enkele regel met een aantal is.
+    const aantal = (n, heeft = true) => heeft ? new Intl.NumberFormat('nl-NL').format(n || 0) : '—'
+
     const eur4 = v => new Intl.NumberFormat('nl-NL',
       { style: 'currency', currency: 'EUR', minimumFractionDigits: 4 }).format(v || 0)
 
@@ -438,15 +450,15 @@
         <tr class="border-t border-line">
           <td class="px-5 py-3 text-white">${t.titel}${t.isrc ? `<div class="text-gray-600 text-xs font-mono">${t.isrc}</div>` : ''}</td>
           <td class="px-5 py-3 text-right text-gray-500 hidden md:table-cell">${fmtPct(t.splitPct)}</td>
-          <td class="px-5 py-3 text-right text-gray-500 hidden lg:table-cell">${eur4(t.stream)}</td>
-          <td class="px-5 py-3 text-right text-gray-500 hidden lg:table-cell">${eur4(t.download)}</td>
+          <td class="px-5 py-3 text-right text-gray-300 hidden lg:table-cell">${aantal(t.nStream, t.metAantal)}<div class="text-gray-600 text-xs">${eur4(t.stream)}</div></td>
+          <td class="px-5 py-3 text-right text-gray-300 hidden lg:table-cell">${aantal(t.nDownload, t.metAantal)}<div class="text-gray-600 text-xs">${eur4(t.download)}</div></td>
           <td class="px-5 py-3 text-right text-gray-300">${eur4(t.bruto)}</td>
           <td class="px-5 py-3 text-right text-white font-medium">${eur4(t.netto)}</td>
         </tr>`).join('') + `
         <tr class="border-t border-line bg-sunken font-bold">
           <td class="px-5 py-3 text-white" colspan="2">Totaal ${rijen.length} nummer${rijen.length === 1 ? '' : 's'}</td>
-          <td class="px-5 py-3 text-right text-gray-400 hidden lg:table-cell">${eur4(som(rijen, 'stream'))}</td>
-          <td class="px-5 py-3 text-right text-gray-400 hidden lg:table-cell">${eur4(som(rijen, 'download'))}</td>
+          <td class="px-5 py-3 text-right text-white hidden lg:table-cell">${aantal(som(rijen, 'nStream'))}<div class="text-gray-500 text-xs font-normal">${eur4(som(rijen, 'stream'))}</div></td>
+          <td class="px-5 py-3 text-right text-white hidden lg:table-cell">${aantal(som(rijen, 'nDownload'))}<div class="text-gray-500 text-xs font-normal">${eur4(som(rijen, 'download'))}</div></td>
           <td class="px-5 py-3 text-right text-white">${eur4(som(rijen, 'bruto'))}</td>
           <td class="px-5 py-3 text-right text-brand">${eur4(som(rijen, 'netto'))}</td>
         </tr>`
@@ -654,10 +666,13 @@
       blok('Inkomsten per nummer', {
         head: [['Nummer', ...['Aandeel', 'Streams', 'Downloads', 'Bruto', 'Jouw netto'].map(rechts)]],
         body: tr.map(x => [
-          x.titel, rechts(fmtPct(x.splitPct)), rechts(eurPdf4(x.stream)),
-          rechts(eurPdf4(x.download)), rechts(eurPdf4(x.bruto)), rechts(eurPdf4(x.netto)),
+          x.titel, rechts(fmtPct(x.splitPct)),
+          rechts(aantal(x.nStream, x.metAantal) + '\n' + eurPdf4(x.stream)),
+          rechts(aantal(x.nDownload, x.metAantal) + '\n' + eurPdf4(x.download)),
+          rechts(eurPdf4(x.bruto)), rechts(eurPdf4(x.netto)),
         ]),
-        foot: [['Totaal', '', rechts(eurPdf4(som(tr, 'stream'))), rechts(eurPdf4(som(tr, 'download'))),
+        foot: [['Totaal', '', rechts(aantal(som(tr, 'nStream')) + '\n' + eurPdf4(som(tr, 'stream'))),
+                rechts(aantal(som(tr, 'nDownload')) + '\n' + eurPdf4(som(tr, 'download'))),
                 rechts(eurPdf4(som(tr, 'bruto'))), rechts(eurPdf4(som(tr, 'netto')))]],
         columnStyles: {
           0: { cellWidth: 'auto' },
